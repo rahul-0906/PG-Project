@@ -97,7 +97,7 @@ export default function Reports() {
       </div>
 
       {/* Summary KPIs */}
-      <div className="stats-grid" style={{ gridTemplateColumns:'repeat(auto-fit,minmax(160px,1fr))', marginBottom:'1.5rem' }}>
+      <div className="stats-grid" style={{ marginBottom:'1.5rem' }}>
         <StatCard label="Total Revenue" value={`₹${(totalRevenue/1000).toFixed(0)}K`} icon="💰" color="#6366f1" />
         <StatCard label="Avg Occupancy" value={`${avgOccupancy}%`} icon="🛏️" color="#10b981" />
         <StatCard label="Invoices Paid" value={payments?.paid ?? '—'} icon="✅" color="#22d3ee" />
