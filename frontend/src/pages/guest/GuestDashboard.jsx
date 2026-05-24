@@ -117,10 +117,10 @@ export default function GuestDashboard() {
             <h2 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 700 }}>📈 Monthly Spending Trend</h2>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#f1f5f9' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
                 <Bar dataKey="rent" fill="#6366f1" radius={[4,4,0,0]} name="Rent" />
                 <Bar dataKey="food" fill="#10b981" radius={[4,4,0,0]} name="Food" />
                 <Bar dataKey="eb" fill="#f59e0b" radius={[4,4,0,0]} name="EB" />

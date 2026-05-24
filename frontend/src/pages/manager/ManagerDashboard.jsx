@@ -49,7 +49,7 @@ export default function ManagerDashboard() {
                     dataKey="value" paddingAngle={3}>
                     {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#f1f5f9' }} />
+                  <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
