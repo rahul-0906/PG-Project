@@ -1,0 +1,66 @@
+
+# ── Maven / Java ──────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
+hs_err_pid*
+replay_pid*
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ── Spring Boot ───────────────────────────────────────────
+HELP.md
+spring-shell.log
+
+# ── Node / npm (frontend) ─────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
+
+# ── Environment / secrets ─────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── IDEs ──────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+*.launch
+.vscode/
+*.code-workspace
+
+# ── OS ────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────
+*.log
+boot_log.txt
+logs/
+
+# ── Apache Maven bundled ──────────────────────────────────
+apache-maven-*/
+!apache-maven-*/bin/
+!apache-maven-*/conf/
+
+# ── H2 database files (if persisted) ─────────────────────
+*.db
+*.h2.mv.db
+*.h2.trace.db

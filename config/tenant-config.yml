@@ -1,0 +1,32 @@
+pg:
+  system:
+    branding:
+      name: "My PG Name"        # ← Change this to the PG owner's business name
+      short-title: "PG"
+    rules:
+      food-included-in-rent: false  # true = food rolled into rent, not billed separately
+      allow-meal-cancellations: true
+      eb-split-method: "EQUAL_SPLIT"
+      has-washing-machine: true
+      payment-due-day-of-month: 5
+      notice-period-days: 30
+      breakfast-enabled: true
+      lunch-enabled: true
+      dinner-enabled: true
+      breakfast-lockout-time: "22:00:00"
+      dinner-lockout-time: "17:00:00"
+      invoice-whatsapp-template: "Hi {guestName}, your invoice for {month} is ready. Rent: {rent}, EB: {eb}, Food: {food}, Laundry: {wm}. Total: {total}. Due by {dueDate}."
+      default-whatsapp-template: "Hi {guestName}, this is a notification from your PG."
+      default-email-template: "Hi {guestName},\n\nThis is a notification from your PG."
+    pricing:
+      breakfast: 60.00
+      lunch: 65.00
+      dinner: 60.00
+      washing-machine: 50.00
+      omelette: 18.00
+      boiled-egg: 18.00
+    rent-config:
+      "1": 12000   # Single occupancy
+      "2": 9000    # Double sharing
+      "3": 7500    # Triple sharing
+      "4": 6000    # Four sharing

@@ -1,0 +1,95 @@
+spring:
+  application:
+    name: pg-crm
+  config:
+    import: "classpath:tenant-config.yml"
+
+  # ─── H2 (Active for development / MVP) ─────────────────────────
+  datasource:
+    url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ─── PostgreSQL (Uncomment below + comment H2 block for production) ─
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/pgcrmdb
+  #   driver-class-name: org.postgresql.Driver
+  #   username: ${DB_USERNAME:pgcrm}
+  #   password: ${DB_PASSWORD:pgcrm123}
+  # jpa:
+  #   database-platform: org.hibernate.dialect.PostgreSQLDialect
+  #   hibernate:
+  #     ddl-auto: update
+
+  # ─── Email / Gmail SMTP ─────────────────────────────────────────
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:your-gmail@gmail.com}
+    password: ${MAIL_PASSWORD:your-gmail-app-password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+    default-encoding: UTF-8
+
+  thymeleaf:
+    cache: false
+    mode: HTML
+
+# ─── JWT ─────────────────────────────────────────────────────────
+app:
+  jwt:
+    secret: ${JWT_SECRET:ThisIsAVeryLongSecretKeyForPGCRMAppThatShouldBeAtLeast256BitsForHS256}
+    access-token-expiration: 900000       # 15 min
+    refresh-token-expiration: 604800000   # 7 days
+  mail:
+    from: ${MAIL_FROM:noreply@pgcrm.com}
+    from-name: "PG CRM"
+    enabled: ${MAIL_ENABLED:false}        # set true after configuring Gmail App Password
+
+# ─── Razorpay ────────────────────────────────────────────────────
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
+  key-secret: ${RAZORPAY_KEY_SECRET:placeholder_secret}
+  enabled: ${RAZORPAY_ENABLED:false}     # set true after adding real keys
+
+# ─── Twilio WhatsApp ─────────────────────────────────────────────
+twilio:
+  account-sid: ${TWILIO_ACCOUNT_SID:PLACEHOLDER_SID}
+  auth-token: ${TWILIO_AUTH_TOKEN:PLACEHOLDER_TOKEN}
+  whatsapp-from: ${TWILIO_WHATSAPP_FROM:whatsapp:+14155238886}
+  enabled: ${TWILIO_ENABLED:false}
+
+# ─── Server ──────────────────────────────────────────────────────
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# ─── Logging ─────────────────────────────────────────────────────
+logging:
+  level:
+    com.pgcrm: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG

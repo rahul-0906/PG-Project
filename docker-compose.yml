@@ -1,0 +1,98 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PG CRM — Single-Tenant White-Label Deployment
+#
+# HOW TO USE:
+#   1. Edit tenant-config.yml with your PG's branding and pricing rules.
+#   2. Set secrets via a .env file or environment variables:
+#        DB_PASSWORD, JWT_SECRET, RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, etc.
+#   3. Run:  docker compose up --build   (first time / after code changes)
+#            docker compose up -d        (background start)
+#            docker compose down         (stop)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── PostgreSQL Database ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: pgcrm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pgcrmdb
+      POSTGRES_USER: pgcrm
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pgcrm123}
+    volumes:
+      - pgcrm_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pgcrm -d pgcrmdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pgcrm_net
+
+  # ── Spring Boot Backend ───────────────────────────────────────────────────
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pgcrm_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pgcrmdb
+      DB_USERNAME: pgcrm
+      DB_PASSWORD: ${DB_PASSWORD:-pgcrm123}
+      # JWT — use a strong random secret in production
+      JWT_SECRET: ${JWT_SECRET:-ProductionSecretKeyThatIsAtLeast256BitsLongForHS256Algorithm}
+      # ── Mail (set MAIL_ENABLED=true + Gmail App Password to send emails) ──
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      # ── Razorpay (set RAZORPAY_ENABLED=true with real keys to go live) ──
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-rzp_test_placeholder}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-placeholder_secret}
+      RAZORPAY_ENABLED: ${RAZORPAY_ENABLED:-false}
+      # ── Twilio WhatsApp (optional) ────────────────────────────────────────
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-PLACEHOLDER_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-PLACEHOLDER_TOKEN}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-whatsapp:+14155238886}
+      TWILIO_ENABLED: ${TWILIO_ENABLED:-false}
+    volumes:
+      # ✦ White-label this deployment by editing tenant-config.yml — no rebuild needed!
+      - ./tenant-config.yml:/config/tenant-config.yml:ro
+    networks:
+      - pgcrm_net
+
+  # ── React Frontend (nginx reverse-proxy + SPA) ────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pgcrm_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    networks:
+      - pgcrm_net
+
+volumes:
+  pgcrm_data:
+
+networks:
+  pgcrm_net:
+    driver: bridge

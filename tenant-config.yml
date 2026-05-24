@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PG CRM — Tenant Configuration
+#
+# Edit this file to white-label the app for a specific PG owner.
+# When running with Docker, this file is mounted into the container —
+# restart the app container to pick up changes (no rebuild required).
+# ─────────────────────────────────────────────────────────────────────────────
+
+pg:
+  system:
+    branding:
+      name: "PG CRM"          # Shown in the sidebar and browser tab title
+      short-title: "PG"       # Short abbreviation (e.g. for compact displays)
+
+    rules:
+      food-included-in-rent: false   # If true, food is not billed separately
+      allow-meal-cancellations: true
+      eb-split-method: "EQUAL_SPLIT" # EQUAL_SPLIT or METER_READING
+      has-washing-machine: true
+      payment-due-day-of-month: 5    # Day of month rent is due
+      notice-period-days: 30
+      breakfast-enabled: true
+      lunch-enabled: true
+      dinner-enabled: true
+      breakfast-lockout-time: "22:00:00"  # Cutoff to mark next day's breakfast
+      dinner-lockout-time: "17:00:00"     # Cutoff to mark same day's dinner
+      invoice-whatsapp-template: "Hi {guestName}, your invoice for {month} is ready. Rent: {rent}, EB: {eb}, Food: {food}, Laundry: {wm}. Total: {total}. Due by {dueDate}."
+      default-whatsapp-template: "Hi {guestName}, this is a notification from PG CRM."
+      default-email-template: "Hi {guestName},\n\nThis is a notification from PG CRM."
+
+    pricing:
+      breakfast: 60.00
+      lunch: 65.00
+      dinner: 60.00
+      washing-machine: 50.00
+      omelette: 18.00
+      boiled-egg: 18.00
+
+    rent-config:
+      "1": 12000   # Single occupancy
+      "2": 9000    # Double sharing
+      "3": 7500    # Triple sharing
+      "4": 6000    # Quad sharing

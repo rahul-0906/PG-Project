@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Production Profile — active when SPRING_PROFILES_ACTIVE=prod
+# Overrides the H2 dev settings from application.yml with PostgreSQL.
+# All sensitive values are read from environment variables.
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pgcrmdb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:pgcrm}
+    password: ${DB_PASSWORD:pgcrm123}
+
+  h2:
+    console:
+      enabled: false   # Disable H2 console in production
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update   # Auto-create/update tables on startup
+    show-sql: false
+
+# ─── Production Logging ───────────────────────────────────────────────────────
+logging:
+  level:
+    com.pgcrm: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
