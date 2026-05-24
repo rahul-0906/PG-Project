@@ -34,6 +34,7 @@ public class User {
     private boolean active = true;
 
     @Column(name = "first_login")
+    @Builder.Default
     private boolean firstLogin = true;
 
     /** If true, user is forced to change password before accessing any page */

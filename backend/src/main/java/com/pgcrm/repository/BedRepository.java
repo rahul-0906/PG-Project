@@ -21,9 +21,9 @@ public interface BedRepository extends JpaRepository<Bed, String> {
     @Query("SELECT b FROM Bed b WHERE b.status = 'VACANT' ORDER BY b.bedLabel")
     List<Bed> findVacant();
 
-    @Query("SELECT COUNT(b) FROM Bed b WHERE b.room.block.floor.building.id = :buildingId AND b.status = 'VACANT'")
+    @Query("SELECT COUNT(b) FROM Bed b WHERE b.room.floor.building.id = :buildingId AND b.status = 'VACANT'")
     long countVacantByBuildingId(String buildingId);
 
-    @Query("SELECT COUNT(b) FROM Bed b WHERE b.room.block.floor.building.id = :buildingId")
+    @Query("SELECT COUNT(b) FROM Bed b WHERE b.room.floor.building.id = :buildingId")
     long countTotalByBuildingId(String buildingId);
 }

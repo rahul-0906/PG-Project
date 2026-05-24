@@ -31,7 +31,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
         SELECT g FROM Guest g
         WHERE g.active = true
-        AND g.bed.room.block.floor.building.id = :buildingId
+        AND g.bed.room.floor.building.id = :buildingId
         """)
     List<Guest> findActiveGuestsByBuildingId(String buildingId);
 

@@ -188,7 +188,12 @@ public class PgManagerController {
     }
 
     @PostMapping("/maintenance")
-    public ResponseEntity<MaintenanceTicket> createTicket(@RequestBody MaintenanceTicket ticket) {
+    public ResponseEntity<MaintenanceTicket> createTicket(
+            @RequestBody MaintenanceTicket ticket,
+            @RequestAttribute(required = false) String branchId) {
+        if (ticket.getBuildingId() == null && branchId != null) {
+            ticket.setBuildingId(branchId);
+        }
         return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
     }
 

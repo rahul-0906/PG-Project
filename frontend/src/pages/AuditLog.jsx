@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
+import Sidebar from '../components/Sidebar';
 
 const ACTION_LABELS = {
   GUEST_CHECKIN: '🛏️ Check-In', GUEST_CHECKOUT_NOTICE: '📋 Notice Given',
@@ -64,12 +65,14 @@ export default function AuditLog() {
   };
 
   return (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'1rem' }}>
-        <div>
-          <h1 style={{ fontSize:'1.75rem', fontWeight:800, color:'var(--text-primary)', margin:0 }}>
-            🗂️ Audit Log
-          </h1>
+    <div className="layout">
+      <Sidebar />
+      <div className="main-content fade-in">
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'1rem' }}>
+          <div>
+            <h1 style={{ fontSize:'1.75rem', fontWeight:800, color:'var(--text-primary)', margin:0 }}>
+              🗂️ Audit Log
+            </h1>
           <p style={{ color:'var(--text-muted)', margin:'0.25rem 0 0', fontSize:'0.9rem' }}>
             Complete trail of all business actions — {total} total entries
           </p>
@@ -180,5 +183,6 @@ export default function AuditLog() {
         )}
       </div>
     </div>
+  </div>
   );
 }

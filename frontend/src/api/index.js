@@ -62,6 +62,7 @@ export const managerApi = {
   createTicket: (data) => api.post('/manager/maintenance', data),
   resolveTicket: (id) => api.put(`/manager/maintenance/${id}/resolve`),
   getVacancies: () => api.get('/manager/vacancies'),
+  getVacantBeds: () => api.get('/inventory/vacant-beds'),
   // Guest add-ons (egg/omelette/veg/WM) — managed by manager
   getGuestLog: (guestId, date) => api.get(`/manager/guest-log/${guestId}/${date}`),
   updateGuestLog: (guestId, date, data) => api.put(`/manager/guest-log/${guestId}/${date}`, data),

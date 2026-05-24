@@ -25,7 +25,7 @@ public interface DailyLogRepository extends JpaRepository<DailyLog, String> {
             SUM(d.boiledEggCount) as boiledEggs,
             SUM(d.washingMachineCount) as laundry
         FROM DailyLog d
-        WHERE d.guest.bed.room.block.floor.building.id = :buildingId
+        WHERE d.guest.bed.room.floor.building.id = :buildingId
         AND d.logDate = :date
         """)
     Object[] getFoodCountByBuildingAndDate(String buildingId, LocalDate date);

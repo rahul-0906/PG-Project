@@ -6,6 +6,7 @@ import { useSystemConfig } from '../context/SystemConfigContext';
 const navMap = {
   PG_OWNER: [
     { to: '/owner/dashboard', icon: '📊', label: 'Dashboard' },
+    { to: '/manager/maintenance',  icon: '🔧', label: 'Maintenance' },
     { to: '/owner/reports',   icon: '📈', label: 'Reports' },
     { to: '/owner/audit',     icon: '🗂️', label: 'Audit Log' },
   ],

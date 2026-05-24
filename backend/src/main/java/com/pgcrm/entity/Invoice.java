@@ -32,6 +32,7 @@ public class Invoice {
 
 
     @Column(name = "total_amount", precision = 10, scale = 2)
+    @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)

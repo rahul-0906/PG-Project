@@ -67,6 +67,7 @@ public class Guest {
     private LocalDate actualCheckOutDate;
 
     @Column(name = "advance_deposit", precision = 10, scale = 2)
+    @Builder.Default
     private BigDecimal advanceDeposit = BigDecimal.ZERO;
 
     @Column(name = "is_active")
