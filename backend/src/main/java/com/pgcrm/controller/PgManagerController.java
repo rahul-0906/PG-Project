@@ -26,6 +26,7 @@ public class PgManagerController {
     private final DailyLogRepository dailyLogRepository;
     private final InvoiceService invoiceService;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     // ── Dashboard ─────────────────────────────────────────────────
 
@@ -56,8 +57,9 @@ public class PgManagerController {
 
     @PostMapping("/guests")
     public ResponseEntity<Guest> checkIn(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(guestService.checkIn(
-
+        LocalDate checkInDate = body.get("checkInDate") != null
+                ? LocalDate.parse(body.get("checkInDate").toString()) : LocalDate.now();
+        Guest guest = guestService.checkIn(
                 (String) body.get("bedId"),
                 (String) body.get("fullName"),
                 (String) body.get("email"),
@@ -65,9 +67,49 @@ public class PgManagerController {
                 (String) body.get("whatsappNumber"),
                 body.get("advanceDeposit") != null
                         ? new BigDecimal(body.get("advanceDeposit").toString()) : BigDecimal.ZERO,
-                body.get("checkInDate") != null
-                        ? LocalDate.parse(body.get("checkInDate").toString()) : LocalDate.now()
-        ));
+                checkInDate,
+                (String) body.get("vehicleRegistration")
+        );
+
+        DailyLog log = DailyLog.builder()
+                .guest(guest)
+                .logDate(checkInDate)
+                .isVeg(body.get("isVeg") == null || (Boolean) body.get("isVeg"))
+                .breakfastOpted(body.get("breakfastOpted") != null && (Boolean) body.get("breakfastOpted"))
+                .lunchOpted(body.get("lunchOpted") != null && (Boolean) body.get("lunchOpted"))
+                .dinnerOpted(body.get("dinnerOpted") != null && (Boolean) body.get("dinnerOpted"))
+                .build();
+        dailyLogRepository.save(log);
+
+        return ResponseEntity.ok(guest);
+    }
+
+    @PutMapping("/guests/{guestId}")
+    public ResponseEntity<Guest> updateGuestDetails(@PathVariable String guestId,
+                                                    @RequestBody Map<String, Object> body) {
+        Guest guest = guestRepository.findById(guestId)
+                .orElseThrow(() -> new RuntimeException("Guest not found"));
+
+        if (body.containsKey("fullName")) guest.setFullName((String) body.get("fullName"));
+        if (body.containsKey("email")) guest.setEmail((String) body.get("email"));
+        if (body.containsKey("phone")) guest.setPhone((String) body.get("phone"));
+        if (body.containsKey("whatsappNumber")) guest.setWhatsappNumber((String) body.get("whatsappNumber"));
+        if (body.containsKey("advanceDeposit")) {
+            guest.setAdvanceDeposit(new BigDecimal(body.get("advanceDeposit").toString()));
+        }
+        if (body.containsKey("kycStatus")) {
+            guest.setKycStatus(com.pgcrm.entity.enums.KycStatus.valueOf((String) body.get("kycStatus")));
+        }
+
+        User user = guest.getUser();
+        if (user != null) {
+            if (body.containsKey("fullName")) user.setFullName((String) body.get("fullName"));
+            if (body.containsKey("email")) user.setEmail((String) body.get("email"));
+            if (body.containsKey("phone")) user.setPhone((String) body.get("phone"));
+            userRepository.save(user);
+        }
+
+        return ResponseEntity.ok(guestRepository.save(guest));
     }
 
     @PostMapping("/guests/{guestId}/initiate-checkout")
@@ -128,8 +170,10 @@ public class PgManagerController {
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
                 .orElse(DailyLog.builder().guest(guest).logDate(logDate).build());
 
-        // Manager updates only add-ons — does NOT override guest's meal selections
         if (body.containsKey("isVeg"))              log.setVeg((Boolean) body.get("isVeg"));
+        if (body.containsKey("breakfastOpted"))      log.setBreakfastOpted((Boolean) body.get("breakfastOpted"));
+        if (body.containsKey("lunchOpted"))          log.setLunchOpted((Boolean) body.get("lunchOpted"));
+        if (body.containsKey("dinnerOpted"))         log.setDinnerOpted((Boolean) body.get("dinnerOpted"));
         if (body.containsKey("omeletteCount"))      log.setOmeletteCount(Integer.parseInt(body.get("omeletteCount").toString()));
         if (body.containsKey("boiledEggCount"))     log.setBoiledEggCount(Integer.parseInt(body.get("boiledEggCount").toString()));
         if (body.containsKey("washingMachineCount")) log.setWashingMachineCount(Integer.parseInt(body.get("washingMachineCount").toString()));
@@ -157,6 +201,9 @@ public class PgManagerController {
             item.put("guestId",             g.getId());
             item.put("guestName",           g.getFullName());
             item.put("isVeg",               log != null ? log.isVeg() : true);
+            item.put("breakfastOpted",      log != null ? log.isBreakfastOpted() : false);
+            item.put("lunchOpted",          log != null ? log.isLunchOpted() : false);
+            item.put("dinnerOpted",         log != null ? log.isDinnerOpted() : false);
             item.put("omeletteCount",        log != null ? log.getOmeletteCount() : 0);
             item.put("boiledEggCount",       log != null ? log.getBoiledEggCount() : 0);
             item.put("washingMachineCount",  log != null ? log.getWashingMachineCount() : 0);

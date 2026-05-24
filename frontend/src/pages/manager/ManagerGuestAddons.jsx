@@ -56,11 +56,12 @@ function VegToggle({ isVeg, onChange }) {
 export default function ManagerGuestAddons() {
   const [date, setDate] = useState(TODAY);
   const [guests, setGuests] = useState([]);
-  const [logs, setLogs] = useState({});        // { guestId: { omeletteCount, boiledEggCount, washingMachineCount, isVeg } }
+  const [logs, setLogs] = useState({});        // { guestId: { omeletteCount, boiledEggCount, washingMachineCount, isVeg, breakfastOpted, lunchOpted, dinnerOpted } }
   const [saving, setSaving] = useState({});
   const [saved, setSaved] = useState({});
   const [loading, setLoading] = useState(true);
-  const [config, setConfig] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGuestId, setSelectedGuestId] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -68,23 +69,46 @@ export default function ManagerGuestAddons() {
       managerApi.getGuests(),
       managerApi.getGuestsByDate(date),
     ]).then(([gRes, logRes]) => {
-      setGuests(gRes.data || []);
+      const activeGuests = gRes.data || [];
+      setGuests(activeGuests);
+      
       // Build logs map from response
       const logMap = {};
       (logRes.data || []).forEach(item => {
         logMap[item.guestId] = {
-          omeletteCount:      item.omeletteCount      ?? 0,
-          boiledEggCount:     item.boiledEggCount     ?? 0,
+          omeletteCount:       item.omeletteCount       ?? 0,
+          boiledEggCount:      item.boiledEggCount      ?? 0,
           washingMachineCount: item.washingMachineCount ?? 0,
-          isVeg:              item.isVeg              ?? true,
+          isVeg:               item.isVeg               ?? true,
+          breakfastOpted:      item.breakfastOpted      ?? false,
+          lunchOpted:          item.lunchOpted          ?? false,
+          dinnerOpted:         item.dinnerOpted         ?? false,
         };
       });
       setLogs(logMap);
+      
+      // Default select first matching guest if none selected or if currently selected is not in guest list
+      if (activeGuests.length > 0) {
+        const stillActive = activeGuests.some(g => g.id === selectedGuestId);
+        if (!stillActive) {
+          setSelectedGuestId(activeGuests[0].id);
+        }
+      } else {
+        setSelectedGuestId('');
+      }
     }).catch(console.error)
     .finally(() => setLoading(false));
   }, [date]);
 
-  const getLog = (guestId) => logs[guestId] || { omeletteCount:0, boiledEggCount:0, washingMachineCount:0, isVeg:true };
+  const getLog = (guestId) => logs[guestId] || { 
+    omeletteCount: 0, 
+    boiledEggCount: 0, 
+    washingMachineCount: 0, 
+    isVeg: true,
+    breakfastOpted: false,
+    lunchOpted: false,
+    dinnerOpted: false
+  };
 
   const updateField = (guestId, field, value) => {
     setLogs(prev => ({ ...prev, [guestId]: { ...getLog(guestId), [field]: value } }));
@@ -99,6 +123,11 @@ export default function ManagerGuestAddons() {
     } catch (err) { alert('Save failed: ' + (err.response?.data?.error || err.message)); }
     finally { setSaving(s => ({ ...s, [guestId]: false })); }
   };
+
+  const selectedGuest = guests.find(g => g.id === selectedGuestId);
+  const filteredGuestsForSearch = guests.filter(g => 
+    g.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="layout">
@@ -130,6 +159,37 @@ export default function ManagerGuestAddons() {
           ))}
         </div>
 
+        {/* Search Panel */}
+        <div className="card" style={{ marginBottom: '1.5rem', maxWidth: '600px' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
+              <label className="form-label">🔍 Find Guest (Search by Name)</label>
+              <input 
+                type="text" 
+                placeholder="Type guest name..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="form-input"
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
+              <label className="form-label">👤 Select Guest</label>
+              <select 
+                value={selectedGuestId} 
+                onChange={e => setSelectedGuestId(e.target.value)}
+                className="form-input"
+              >
+                <option value="">-- Choose Guest --</option>
+                {filteredGuestsForSearch.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.fullName} ({g.bed?.bedLabel ?? 'No Bed'})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
             ⏳ Loading guest list...
@@ -138,44 +198,84 @@ export default function ManagerGuestAddons() {
           <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
             No active guests found.
           </div>
-        ) : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:'1rem' }}>
-            {guests.map(guest => {
+        ) : selectedGuest ? (
+          <div style={{ display:'flex', justifyContent:'center' }}>
+            {(() => {
+              const guest = selectedGuest;
               const log = getLog(guest.id);
               const isSaving = saving[guest.id];
               const isSaved  = saved[guest.id];
               return (
-                <div key={guest.id} className="card" style={{ padding:'1rem' }}>
+                <div key={guest.id} className="card" style={{ padding:'1.5rem', width: '100%', maxWidth: '500px' }}>
                   {/* Guest header */}
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1rem', paddingBottom:'0.75rem', borderBottom:'2px solid var(--border)' }}>
-                    <div style={{ width:40, height:40, borderRadius:'50%', background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                      display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:'1rem', flexShrink:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.25rem', paddingBottom:'1rem', borderBottom:'2px solid var(--border)' }}>
+                    <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                      display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:'1.2rem', flexShrink:0 }}>
                       {guest.fullName?.charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontWeight:700, color:'var(--text-primary)', fontSize:'0.9rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{guest.fullName}</div>
-                      <div style={{ fontSize:'0.72rem', color:'var(--text-muted)' }}>Bed: {guest.bed?.bedLabel ?? '—'}</div>
+                      <div style={{ fontWeight:800, color:'var(--text-primary)', fontSize:'1.05rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{guest.fullName}</div>
+                      <div style={{ fontSize:'0.8rem', color:'var(--text-muted)' }}>Bed: {guest.bed?.bedLabel ?? '—'}</div>
                     </div>
                     <button id={`btn-save-addon-${guest.id?.slice(0,8)}`}
                       onClick={() => saveGuest(guest.id)} disabled={isSaving}
-                      className="btn btn-primary" style={{ fontSize:'0.75rem', padding:'0.3rem 0.75rem', flexShrink:0 }}>
-                      {isSaving ? '⏳' : isSaved ? '✅' : '💾 Save'}
+                      className="btn btn-primary" style={{ fontSize:'0.85rem', padding:'0.4rem 1.1rem', flexShrink:0 }}>
+                      {isSaving ? '⏳ Saving...' : isSaved ? '✅ Saved' : '💾 Save Changes'}
                     </button>
                   </div>
 
-                  {/* Veg/Non-Veg */}
-                  <VegToggle isVeg={log.isVeg} onChange={v => updateField(guest.id, 'isVeg', v)} />
+                  {/* Veg/Non-Veg Preference */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    <VegToggle isVeg={log.isVeg} onChange={v => updateField(guest.id, 'isVeg', v)} />
+                  </div>
 
-                  {/* Counters */}
-                  <AddOnCounter label="Omelette" icon="🍳" value={log.omeletteCount}
-                    unit="₹18 each" onChange={v => updateField(guest.id, 'omeletteCount', v)} />
-                  <AddOnCounter label="Boiled Egg" icon="🥚" value={log.boiledEggCount}
-                    unit="₹18 each" onChange={v => updateField(guest.id, 'boiledEggCount', v)} />
-                  <AddOnCounter label="Washing Machine" icon="🫧" value={log.washingMachineCount}
-                    unit="₹50/use" onChange={v => updateField(guest.id, 'washingMachineCount', v)} />
+                  {/* Meal Options based on Preference */}
+                  <div style={{ background: 'var(--bg-main)', padding: '1rem', borderRadius: '8px', marginBottom: '1.25rem', border: '1px solid var(--border)' }}>
+                    <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem' }}>
+                      🍽️ Meal Options ({log.isVeg ? 'Veg 🌱' : 'Non-Veg 🍗'})
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                      {[
+                        { key: 'breakfastOpted', label: 'Breakfast 🌅' },
+                        { key: 'lunchOpted',     label: 'Lunch ☀️' },
+                        { key: 'dinnerOpted',    label: 'Dinner 🌙' }
+                      ].map(m => (
+                        <div key={m.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                          <span style={{ fontSize:'0.85rem', fontWeight: 600, color:'var(--text-secondary)' }}>
+                            {m.label} ({log.isVeg ? 'Veg' : 'Non-Veg'})
+                          </span>
+                          <label className="toggle">
+                            <input 
+                              type="checkbox" 
+                              checked={!!log[m.key]} 
+                              onChange={e => updateField(guest.id, m.key, e.target.checked)} 
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Daily Add-ons Counters */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem', marginTop: '0.25rem' }}>
+                      ➕ Daily Add-ons &amp; Services
+                    </div>
+                    <AddOnCounter label="Omelette" icon="🍳" value={log.omeletteCount}
+                      unit="₹18 each" onChange={v => updateField(guest.id, 'omeletteCount', v)} />
+                    <AddOnCounter label="Boiled Egg" icon="🥚" value={log.boiledEggCount}
+                      unit="₹18 each" onChange={v => updateField(guest.id, 'boiledEggCount', v)} />
+                    <AddOnCounter label="Washing Machine" icon="🫧" value={log.washingMachineCount}
+                      unit="₹50/use" onChange={v => updateField(guest.id, 'washingMachineCount', v)} />
+                  </div>
                 </div>
               );
-            })}
+            })()}
+          </div>
+        ) : (
+          <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
+            🔍 Please search or select a guest from the panel above.
           </div>
         )}
       </div>

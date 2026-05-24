@@ -53,6 +53,7 @@ export const managerApi = {
   getDashboard: () => api.get('/manager/dashboard'),
   getGuests: () => api.get('/manager/guests'),
   checkIn: (data) => api.post('/manager/guests', data),
+  updateGuest: (id, data) => api.put(`/manager/guests/${id}`, data),
   initiateCheckout: (id) => api.post(`/manager/guests/${id}/initiate-checkout`),
   confirmCheckout: (id) => api.post(`/manager/guests/${id}/confirm-checkout`),
   recordEbBill: (data) => api.post('/manager/eb-bill', data),
