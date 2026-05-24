@@ -4,20 +4,36 @@ spring:
   config:
     import: "classpath:tenant-config.yml"
 
-  # ─── H2 (Active for development / MVP) ─────────────────────────
+  # ─── H2 (Commented out to use local PostgreSQL) ─────────────────────────
+  # datasource:
+  #   url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+  #   driver-class-name: org.h2.Driver
+  #   username: sa
+  #   password: password
+
+  # h2:
+  #   console:
+  #     enabled: true
+  #     path: /h2-console
+
+  # jpa:
+  #   database-platform: org.hibernate.dialect.H2Dialect
+  #   hibernate:
+  #     ddl-auto: update
+  #   show-sql: false
+  #   open-in-view: true
+  #   properties:
+  #     hibernate:
+  #       format_sql: true
+
+  # ─── PostgreSQL (Active for local PostgreSQL deployment) ────────────────────
   datasource:
-    url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: password
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pgcrmdb}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -25,17 +41,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-
-  # ─── PostgreSQL (Uncomment below + comment H2 block for production) ─
-  # datasource:
-  #   url: jdbc:postgresql://localhost:5432/pgcrmdb
-  #   driver-class-name: org.postgresql.Driver
-  #   username: ${DB_USERNAME:pgcrm}
-  #   password: ${DB_PASSWORD:pgcrm123}
-  # jpa:
-  #   database-platform: org.hibernate.dialect.PostgreSQLDialect
-  #   hibernate:
-  #     ddl-auto: update
 
   # ─── Email / Gmail SMTP ─────────────────────────────────────────
   mail:
