@@ -37,22 +37,21 @@ export default function Sidebar() {
 
   return (
     <div className="sidebar">
-      <div className="sidebar-logo">🏠 {brandName}</div>
+      <div className="sidebar-logo">{brandName}</div>
       {items.map(item => (
         <NavLink key={item.to} to={item.to}
           className={({ isActive }) => `sidebar-item${isActive ? ' active' : ''}`}>
-          <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
           <span>{item.label}</span>
         </NavLink>
       ))}
       <div style={{ marginTop: 'auto' }}>
-        <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: 'var(--bg-card)', marginBottom: '0.5rem' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>SIGNED IN AS</div>
+        <div style={{ padding: '0.75rem 1rem', borderRadius: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', marginBottom: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>SIGNED IN AS</div>
           <div style={{ fontSize: '0.8rem', color: 'var(--accent)', fontWeight: 600, marginTop: '0.2rem' }}>{user?.role}</div>
         </div>
         <button id="btn-sidebar-logout" className="sidebar-item btn-ghost" onClick={handleLogout}
           style={{ color: 'var(--danger)', marginTop: '0.25rem' }}>
-          <span>🚪</span><span>Logout</span>
+          <span>Logout</span>
         </button>
       </div>
     </div>

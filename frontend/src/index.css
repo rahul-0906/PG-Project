@@ -40,9 +40,9 @@ body {
 .layout { display: flex; min-height: 100vh; }
 
 .sidebar {
-  width: 260px;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  width: 190px;
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
   padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
@@ -56,9 +56,7 @@ body {
 .sidebar-logo {
   font-size: 1.4rem;
   font-weight: 800;
-  background: var(--gradient-accent);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #0f172a;
   margin-bottom: 2rem;
   padding: 0 0.5rem;
 }
@@ -69,7 +67,7 @@ body {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  color: #475569;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
@@ -81,15 +79,30 @@ body {
   text-align: left;
 }
 
-.sidebar-item:hover, .sidebar-item.active {
-  background: var(--accent-glow);
-  color: var(--text-primary);
+.sidebar-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
-.sidebar-item.active { color: var(--accent); }
+.sidebar-item.active {
+  background: #e2e8f0;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.sidebar-item.btn-ghost {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid transparent;
+}
+
+.sidebar-item.btn-ghost:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
 
 .main-content {
-  margin-left: 260px;
+  margin-left: 190px;
   flex: 1;
   padding: 2rem;
   min-height: 100vh;
@@ -344,9 +357,6 @@ tr:hover td { background: var(--bg-card-hover); }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .sidebar { width: 60px; padding: 1rem 0.5rem; }
-  .sidebar-logo, .sidebar-item span { display: none; }
-  .main-content { margin-left: 60px; }
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
