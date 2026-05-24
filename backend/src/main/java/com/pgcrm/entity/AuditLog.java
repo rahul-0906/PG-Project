@@ -12,8 +12,8 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "audit_logs", indexes = {
-    @Index(name = "idx_audit_tenant_time", columnList = "tenant_id, timestamp"),
-    @Index(name = "idx_audit_action",      columnList = "action")
+    @Index(name = "idx_audit_time",   columnList = "timestamp"),
+    @Index(name = "idx_audit_action", columnList = "action")
 })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class AuditLog {
