@@ -1,6 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import Sidebar from '../../components/Sidebar';
+import { createPortal } from 'react-dom';
+import AppLayout from '../../components/AppLayout';
 import { managerApi } from '../../api';
+import { 
+  Users, 
+  X, 
+  Plus, 
+  MapPin, 
+  Layers, 
+  Home, 
+  Utensils, 
+  Leaf, 
+  Search, 
+  Edit2, 
+  LogOut, 
+  AlertTriangle, 
+  Loader2 
+} from 'lucide-react';
 
 export default function ManagerGuests() {
   const [guests, setGuests] = useState([]);
@@ -150,287 +166,328 @@ export default function ManagerGuests() {
   });
 
   return (
-    <div className="layout">
-      <Sidebar />
-      <div className="main-content fade-in">
-        <div className="page-header">
-          <div><h1 className="page-title">Guests 👥</h1><p className="page-subtitle">{filteredGuests.length} showing ({guests.length} total active)</p></div>
-          <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>{showForm ? '✕ Cancel' : '+ Check In'}</button>
+    <AppLayout>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <Users className="w-6 h-6 text-primary" />
+            <span>Guests</span>
+          </h1>
+          <p className="page-subtitle">{filteredGuests.length} showing ({guests.length} total active)</p>
         </div>
-        {showForm && (
-          <div className="card" style={{ marginBottom: '1.5rem' }}>
-            <h3 style={{ marginBottom:'1rem', fontWeight:700 }}>New Guest Check-In</h3>
-            
-            {/* Step 1: Bed Selection */}
-            <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
-              <h4 style={{ marginBottom: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
-                1. Select an Available Bed
-              </h4>
-              {loadingBeds ? (
-                <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>⏳ Loading available beds...</div>
-              ) : vacantBeds.length === 0 ? (
-                <div style={{ color: 'var(--danger)', fontSize: '0.85rem' }}>⚠️ No vacant beds available in the building.</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {/* Horizontal Floor Selection Tabs */}
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                    {floors.map(f => (
-                      <button
-                        key={f}
-                        type="button"
-                        onClick={() => setActiveFloorTab(f)}
-                        className="btn"
-                        style={{
-                          padding: '0.4rem 1.1rem',
-                          fontSize: '0.8rem',
-                          background: currentFloor === f ? 'var(--accent)' : 'var(--bg-card)',
-                          color: currentFloor === f ? '#fff' : 'var(--text-secondary)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '8px',
-                          fontWeight: 600,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        📍 {f}
-                      </button>
-                    ))}
-                  </div>
-
-                  {currentFloor && groupedBeds[currentFloor] && (
-                    <div style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.75rem' }}>📍 {currentFloor}</div>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        {Object.entries(groupedBeds[currentFloor]).map(([blockName, rooms]) => (
-                          <div key={blockName} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>🧱 {blockName}</div>
-                            
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                              {Object.entries(rooms).map(([roomNum, beds]) => (
-                                <div key={roomNum} style={{ 
-                                  background: 'var(--bg-secondary)', 
-                                  padding: '0.75rem 1rem', 
-                                  borderRadius: '8px', 
-                                  border: '1px solid var(--border)', 
-                                  display: 'flex', 
-                                  flexDirection: 'column', 
-                                  gap: '0.5rem',
-                                  minWidth: '220px'
-                                }}>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)' }}>🚪 Room {roomNum}</span>
-                                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
-                                    {beds.map(bed => {
-                                      const isSelected = form.bedId === bed.id;
-                                      return (
-                                        <button
-                                          key={bed.id}
-                                          type="button"
-                                          onClick={() => {
-                                            setForm(f => ({ ...f, bedId: bed.id }));
-                                            setSelectedBedInfo(bed);
-                                          }}
-                                          style={{
-                                            padding: '0.2rem 0.5rem',
-                                            borderRadius: '4px',
-                                            border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                            background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
-                                            color: isSelected ? '#fff' : 'var(--text-primary)',
-                                            fontSize: '0.75rem',
-                                            fontWeight: 700,
-                                            cursor: 'pointer',
-                                            transition: 'all 0.15s'
-                                          }}
-                                        >
-                                          {bed.bedLabel}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            
-            {/* Step 2: Guest Details Form */}
-            {form.bedId && selectedBedInfo && (
-              <form onSubmit={checkIn} className="fade-in">
-                <h4 style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
-                  2. Guest Details for Bed <span style={{ color: 'var(--success)' }}>{selectedBedInfo.bedLabel}</span> (Room {selectedBedInfo.room?.roomNumber}, Rent: ₹{selectedBedInfo.room?.baseRent})
-                </h4>
-                <div className="grid-3">
-                  {[['fullName','Full Name'],['email','Email ID'],['phone','Phone'],['whatsappNumber','WhatsApp Number'],['advanceDeposit','Advance Deposit (₹)']].map(([key, label]) => (
-                    <div key={key} className="form-group">
-                      <label className="form-label">{label}</label>
-                      <input className="form-input" value={form[key]} onChange={e => setForm(f=>({...f,[key]:e.target.value}))} required={key === 'fullName' || key === 'email' || key === 'phone'} />
-                    </div>
+        <button className="btn btn-primary flex items-center gap-1.5" onClick={() => setShowForm(!showForm)}>
+          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          <span>{showForm ? 'Cancel' : 'Check In'}</span>
+        </button>
+      </div>
+      {showForm && (
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginBottom:'1rem', fontWeight:700 }}>New Guest Check-In</h3>
+          
+          {/* Step 1: Bed Selection */}
+          <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
+            <h4 style={{ marginBottom: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+              1. Select an Available Bed
+            </h4>
+            {loadingBeds ? (
+              <div className="flex items-center gap-2 text-slate-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Loading available beds...</span>
+              </div>
+            ) : vacantBeds.length === 0 ? (
+              <div className="flex items-center gap-1.5 text-rose-500 text-sm">
+                <AlertTriangle className="w-4 h-4" />
+                <span>No vacant beds available in the building.</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Horizontal Floor Selection Tabs */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                  {floors.map(f => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setActiveFloorTab(f)}
+                      className="btn flex items-center gap-1"
+                      style={{
+                        padding: '0.4rem 1.1rem',
+                        fontSize: '0.8rem',
+                        background: currentFloor === f ? 'var(--accent)' : 'var(--bg-card)',
+                        color: currentFloor === f ? '#fff' : 'var(--text-secondary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '8px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>{f}</span>
+                    </button>
                   ))}
-                  <div className="form-group">
-                    <label className="form-label">Check-In Date</label>
-                    <input type="date" className="form-input" value={form.checkInDate} onChange={e => setForm(f=>({...f,checkInDate:e.target.value}))} required />
-                  </div>
                 </div>
 
-                {/* Meal Preferences & Selection */}
-                <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)', marginTop: '1rem', marginBottom: '1.25rem' }}>
-                  <h5 style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--accent)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    🍽️ Meal Preferences &amp; Selections
-                  </h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-                    {/* Veg / Non Veg */}
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Food Preference</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                        <span style={{ fontWeight: 600, color: form.isVeg ? '#10b981' : 'var(--text-muted)' }}>Veg 🌱</span>
-                        <label className="toggle">
-                          <input type="checkbox" checked={!form.isVeg} onChange={() => setForm(f => ({ ...f, isVeg: !f.isVeg }))} />
-                          <span className="toggle-slider" />
-                        </label>
-                        <span style={{ fontWeight: 600, color: !form.isVeg ? '#ef4444' : 'var(--text-muted)' }}>Non-Veg 🍗</span>
-                      </div>
+                {currentFloor && groupedBeds[currentFloor] && (
+                  <div style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center gap-1 font-bold text-sm text-primary mb-3">
+                      <MapPin className="w-4 h-4" />
+                      <span>{currentFloor}</span>
                     </div>
                     
-                    {/* Meal Choices */}
-                    <div className="form-group" style={{ margin: 0 }}>
-                      <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Meal Opt-In Options</label>
-                      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        {[
-                          { key: 'breakfastOpted', label: 'Breakfast 🌅' },
-                          { key: 'lunchOpted',     label: 'Lunch ☀️' },
-                          { key: 'dinnerOpted',    label: 'Dinner 🌙' }
-                        ].map(m => (
-                          <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
-                            <input 
-                              type="checkbox" 
-                              checked={form[m.key]} 
-                              onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
-                            />
-                            <span>{m.label}</span>
-                          </label>
-                        ))}
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      {Object.entries(groupedBeds[currentFloor]).map(([blockName, rooms]) => (
+                        <div key={blockName} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
+                          <div className="flex items-center gap-1 text-slate-500 font-semibold text-xs mb-1">
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>{blockName}</span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            {Object.entries(rooms).map(([roomNum, beds]) => (
+                              <div key={roomNum} style={{ 
+                                background: 'var(--bg-secondary)', 
+                                padding: '0.75rem 1rem', 
+                                borderRadius: '8px', 
+                                border: '1px solid var(--border)', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                gap: '0.5rem',
+                                minWidth: '220px'
+                              }}>
+                                <span className="flex items-center gap-1 font-bold text-xs text-slate-700">
+                                  <Home className="w-3.5 h-3.5 text-slate-400" />
+                                  <span>Room {roomNum}</span>
+                                </span>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                                  {beds.map(bed => {
+                                    const isSelected = form.bedId === bed.id;
+                                    return (
+                                      <button
+                                        key={bed.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setForm(f => ({ ...f, bedId: bed.id }));
+                                          setSelectedBedInfo(bed);
+                                        }}
+                                        style={{
+                                          padding: '0.2rem 0.5rem',
+                                          borderRadius: '4px',
+                                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
+                                          color: isSelected ? '#fff' : 'var(--text-primary)',
+                                          fontSize: '0.75rem',
+                                          fontWeight: 700,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s'
+                                        }}
+                                      >
+                                        {bed.bedLabel}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Step 2: Guest Details Form */}
+          {form.bedId && selectedBedInfo && (
+            <form onSubmit={checkIn} className="fade-in-up">
+              <h4 style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+                2. Guest Details for Bed <span style={{ color: 'var(--success)' }}>{selectedBedInfo.bedLabel}</span> (Room {selectedBedInfo.room?.roomNumber}, Rent: ₹{selectedBedInfo.room?.baseRent})
+              </h4>
+              <div className="grid-3">
+                {[['fullName','Full Name'],['email','Email ID'],['phone','Phone'],['whatsappNumber','WhatsApp Number'],['advanceDeposit','Advance Deposit (₹)']].map(([key, label]) => (
+                  <div key={key} className="form-group">
+                    <label className="form-label">{label}</label>
+                    <input className="form-input" value={form[key]} onChange={e => setForm(f=>({...f,[key]:e.target.value}))} required={key === 'fullName' || key === 'email' || key === 'phone'} />
+                  </div>
+                ))}
+                <div className="form-group">
+                  <label className="form-label">Check-In Date</label>
+                  <input type="date" className="form-input" value={form.checkInDate} onChange={e => setForm(f=>({...f,checkInDate:e.target.value}))} required />
+                </div>
+              </div>
+
+              {/* Meal Preferences & Selection */}
+              <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)', marginTop: '1rem', marginBottom: '1.25rem' }}>
+                <div className="flex items-center gap-1.5 font-bold text-xs text-primary mb-3 uppercase tracking-wider">
+                  <Utensils className="w-4 h-4" />
+                  <span>Meal Preferences &amp; Selections</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                  {/* Veg / Non Veg */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Food Preference</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
+                      <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : 'var(--text-muted)' }}>
+                        <Leaf className="w-3.5 h-3.5" />
+                        <span>Veg</span>
+                      </span>
+                      <label className="toggle">
+                        <input type="checkbox" checked={!form.isVeg} onChange={() => setForm(f => ({ ...f, isVeg: !f.isVeg }))} />
+                        <span className="toggle-slider" />
+                      </label>
+                      <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : 'var(--text-muted)' }}>
+                        <Utensils className="w-3.5 h-3.5" />
+                        <span>Non-Veg</span>
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Meal Choices */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Meal Opt-In Options</label>
+                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                      {[
+                        { key: 'breakfastOpted', label: 'Breakfast' },
+                        { key: 'lunchOpted',     label: 'Lunch' },
+                        { key: 'dinnerOpted',    label: 'Dinner' }
+                      ].map(m => (
+                        <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                          <input 
+                            type="checkbox" 
+                            checked={form[m.key]} 
+                            onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
+                          />
+                          <span>{m.label}</span>
+                        </label>
+                      ))}
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={saving}>{saving?'Saving...':'Confirm Check-In'}</button>
-              </form>
-            )}
+              <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={saving}>{saving?'Saving...':'Confirm Check-In'}</button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {/* Filter Toolbar for Guests List */}
+      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
+            <label className="form-label flex items-center gap-1.5">
+              <Search className="w-4 h-4 text-slate-400" />
+              <span>Search Guest (Name / Email / Phone)</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="form-input"
+            />
           </div>
-        )}
-
-        {/* Filter Toolbar for Guests List */}
-        <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
-              <label className="form-label">🔍 Search Guest (Name / Email / Phone)</label>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="form-input"
-              />
-            </div>
-            <div className="form-group" style={{ margin: 0, width: '200px' }}>
-              <label className="form-label">📍 Filter by Floor</label>
-              <select
-                value={selectedFloor}
-                onChange={e => setSelectedFloor(e.target.value)}
-                className="form-input"
-              >
-                {guestFloors.map(floor => (
-                  <option key={floor} value={floor}>{floor}</option>
-                ))}
-              </select>
-            </div>
+          <div className="form-group" style={{ margin: 0, width: '200px' }}>
+            <label className="form-label flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-slate-400" />
+              <span>Filter by Floor</span>
+            </label>
+            <select
+              value={selectedFloor}
+              onChange={e => setSelectedFloor(e.target.value)}
+              className="form-input"
+            >
+              {guestFloors.map(floor => (
+                <option key={floor} value={floor}>{floor}</option>
+              ))}
+            </select>
           </div>
         </div>
-
-        <div className="card">
-          <div className="table-wrap">
-            <table>
-              <thead><tr><th>Name</th><th>Bed</th><th>Check-In</th><th>KYC</th><th>Actions</th></tr></thead>
-              <tbody>
-                {filteredGuests.map(g => (
-                  <tr key={g.id}>
-                    <td style={{fontWeight:600}}>{g.fullName}<div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div></td>
-                    <td><span className="badge badge-accent">{g.bed?.bedLabel ?? 'N/A'}</span></td>
-                    <td style={{color:'var(--text-muted)'}}>{g.checkInDate}</td>
-                    <td><span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>{g.kycStatus}</span></td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.4rem' }}>
-                        <button className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => startEdit(g)}>
-                          ✏️ Edit
-                        </button>
-                        <button className="btn btn-ghost" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g.id)}>
-                          🚪 Notice
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredGuests.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
-                      No active guests match the search filters.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Edit Guest Modal */}
-        {editingGuest && (
-          <div className="modal-overlay">
-            <div className="modal-content card fade-in" style={{ maxWidth: 500, width: '100%' }}>
-              <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)' }}>✏️ Edit Guest Details</h3>
-              <form onSubmit={handleUpdate}>
-                <div className="form-group">
-                  <label className="form-label">Full Name</label>
-                  <input className="form-input" value={editForm.fullName} onChange={e => setEditForm(f => ({ ...f, fullName: e.target.value }))} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email ID</label>
-                  <input type="email" className="form-input" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Phone</label>
-                  <input className="form-input" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">WhatsApp Number</label>
-                  <input className="form-input" value={editForm.whatsappNumber} onChange={e => setEditForm(f => ({ ...f, whatsappNumber: e.target.value }))} />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Advance Deposit (₹)</label>
-                  <input type="number" className="form-input" value={editForm.advanceDeposit} onChange={e => setEditForm(f => ({ ...f, advanceDeposit: e.target.value }))} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">KYC Status</label>
-                  <select className="form-input" value={editForm.kycStatus} onChange={e => setEditForm(f => ({ ...f, kycStatus: e.target.value }))}>
-                    <option value="PENDING">PENDING</option>
-                    <option value="VERIFIED">VERIFIED</option>
-                    <option value="REJECTED">REJECTED</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.75rem' }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setEditingGuest(null)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={updating}>{updating ? 'Saving...' : 'Save Changes'}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Bed</th><th>Check-In</th><th>KYC</th><th>Actions</th></tr></thead>
+            <tbody>
+              {filteredGuests.map(g => (
+                <tr key={g.id}>
+                  <td style={{fontWeight:600}}>{g.fullName}<div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div></td>
+                  <td><span className="badge badge-accent">{g.bed?.bedLabel ?? 'N/A'}</span></td>
+                  <td style={{color:'var(--text-muted)'}}>{g.checkInDate}</td>
+                  <td><span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>{g.kycStatus}</span></td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button className="btn btn-primary flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => startEdit(g)}>
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span>Edit</span>
+                      </button>
+                      <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g.id)}>
+                        <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Notice</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filteredGuests.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                    No active guests match the search filters.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Edit Guest Modal */}
+      {editingGuest && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up" style={{ maxWidth: 500, width: '100%' }}>
+            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Edit2 className="w-5 h-5 text-primary" />
+              <span>Edit Guest Details</span>
+            </h3>
+            <form onSubmit={handleUpdate}>
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" value={editForm.fullName} onChange={e => setEditForm(f => ({ ...f, fullName: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Email ID</label>
+                <input type="email" className="form-input" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Phone</label>
+                <input className="form-input" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">WhatsApp Number</label>
+                <input className="form-input" value={editForm.whatsappNumber} onChange={e => setEditForm(f => ({ ...f, whatsappNumber: e.target.value }))} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Advance Deposit (₹)</label>
+                <input type="number" className="form-input" value={editForm.advanceDeposit} onChange={e => setEditForm(f => ({ ...f, advanceDeposit: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label">KYC Status</label>
+                <select className="form-input" value={editForm.kycStatus} onChange={e => setEditForm(f => ({ ...f, kycStatus: e.target.value }))}>
+                  <option value="PENDING">PENDING</option>
+                  <option value="VERIFIED">VERIFIED</option>
+                  <option value="REJECTED">REJECTED</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.75rem' }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setEditingGuest(null)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={updating}>{updating ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+    </AppLayout>
   );
 }

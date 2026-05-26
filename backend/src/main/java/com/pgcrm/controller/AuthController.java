@@ -47,6 +47,10 @@ public class AuthController {
             @RequestBody Map<String, String> body,
             Authentication auth) {
 
+        if (auth == null) {
+            return ResponseEntity.status(401)
+                    .body(Map.of("error", "Unauthorized: Session expired or invalid. Please login again."));
+        }
         String userId = auth.getName();
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

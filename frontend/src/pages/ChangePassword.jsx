@@ -4,11 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api';
 
 export default function ChangePassword() {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ current: '', newPass: '', confirm: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (!user) {
+      navigate('/login');
+    }
+  }, [user, navigate]);
 
   const handle = async (e) => {
     e.preventDefault();
@@ -16,14 +22,12 @@ export default function ChangePassword() {
     if (form.newPass.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setLoading(true); setError('');
     try {
-      await api.post('/api/auth/change-password', {
+      await api.post('/auth/change-password', {
         currentPassword: form.current,
         newPassword: form.newPass
       });
-      // Update localStorage to clear mustChangePassword
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
-      stored.mustChangePassword = 'false';
-      localStorage.setItem('user', JSON.stringify(stored));
+      // Update mustChangePassword in context
+      updateUser({ mustChangePassword: false });
       // Navigate to role dashboard
       const map = { PLATFORM_ADMIN: '/platform/dashboard', PG_OWNER: '/owner/dashboard',
         PG_MANAGER: '/manager/dashboard', GUEST: '/guest/dashboard' };
@@ -38,7 +42,7 @@ export default function ChangePassword() {
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'var(--bg-main)', padding: '1rem'
     }}>
-      <div className="login-card fade-in" style={{ maxWidth: 480, width: '100%' }}>
+      <div className="login-card fade-in-up" style={{ maxWidth: 480, width: '100%' }}>
         <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
           <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>
@@ -90,7 +94,13 @@ export default function ChangePassword() {
           </button>
         </form>
 
-        <button type="button" onClick={logout}
+        <button type="button" onClick={() => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            logout();
+            navigate('/login', { replace: true });
+          }}
           style={{ background: 'none', border: 'none', color: 'var(--text-muted)',
             width: '100%', marginTop: '1rem', cursor: 'pointer', fontSize: '0.8rem' }}>
           ← Back to Login

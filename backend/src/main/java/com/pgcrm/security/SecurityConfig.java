@@ -36,7 +36,15 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .headers(h -> h.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)) // H2 console
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((req, res, authEx) -> {
+                    res.setContentType("application/json");
+                    res.setStatus(401);
+                    res.getWriter().write("{\"error\": \"Unauthorized: Session expired or invalid. Please login again.\"}");
+                })
+            )
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/auth/change-password").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook
                 .requestMatchers("/api/system/config").permitAll()    // Public branding endpoint

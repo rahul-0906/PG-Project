@@ -34,23 +34,35 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
+        String path = request.getRequestURI();
         String token = extractToken(request);
+        System.out.println("JwtAuthenticationFilter: Path=" + path + ", Token present=" + (token != null));
 
-        if (token != null && jwtUtil.isTokenValid(token)) {
-            Claims claims = jwtUtil.extractAllClaims(token);
-            String userId = claims.getSubject();
-            String role = claims.get("role", String.class);
-            String branchId = claims.get("branch_id", String.class);
+        if (token != null) {
+            try {
+                if (jwtUtil.isTokenValid(token)) {
+                    Claims claims = jwtUtil.extractAllClaims(token);
+                    String userId = claims.getSubject();
+                    String role = claims.get("role", String.class);
+                    String branchId = claims.get("branch_id", String.class);
+                    System.out.println("JwtAuthenticationFilter: Token valid. User=" + userId + ", Role=" + role);
 
-            // Store branchId in request attribute for manager scope checks
-            if (branchId != null) {
-                request.setAttribute("branchId", branchId);
+                    // Store branchId in request attribute for manager scope checks
+                    if (branchId != null) {
+                        request.setAttribute("branchId", branchId);
+                    }
+
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                    var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                } else {
+                    System.out.println("JwtAuthenticationFilter: jwtUtil.isTokenValid returned false");
+                }
+            } catch (Exception e) {
+                System.out.println("JwtAuthenticationFilter: Exception validating token: " + e.getMessage());
+                e.printStackTrace();
             }
-
-            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
-            var auth = new UsernamePasswordAuthenticationToken(userId, null, authorities);
-            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
         filterChain.doFilter(request, response);

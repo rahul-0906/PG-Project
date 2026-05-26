@@ -1,7 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import Sidebar from '../../components/Sidebar';
+import { createPortal } from 'react-dom';
+import AppLayout from '../../components/AppLayout';
 import { guestApi } from '../../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { 
+  User, 
+  Edit2, 
+  FileText, 
+  Bell, 
+  ChefHat, 
+  Coffee, 
+  CheckCircle2, 
+  TrendingUp,
+  ShieldAlert
+} from 'lucide-react';
+
+function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400', children }) {
+  return (
+    <div className="stat-card flex flex-col gap-1.5">
+      <div className="flex items-center justify-between w-full">
+        <span className="stat-label">{label}</span>
+        {Icon && <Icon className={`w-4 h-4 ${iconColor}`} />}
+      </div>
+      {value !== undefined ? <div className="stat-value">{value}</div> : children}
+    </div>
+  );
+}
 
 export default function GuestDashboard() {
   const [data, setData] = useState(null);
@@ -49,87 +73,95 @@ export default function GuestDashboard() {
   }));
 
   return (
-    <div className="layout">
-      <Sidebar />
-      <div className="main-content fade-in">
-        <div className="page-header">
-          <div>
-            <h1 className="page-title">Welcome back, {data?.guestName || '...'} 👋</h1>
-            <p className="page-subtitle">Bed: {data?.bedLabel} • Checked in: {data?.checkInDate}</p>
-          </div>
-          <button className="btn btn-secondary" onClick={openProfile}>✏️ Edit Profile</button>
+    <AppLayout showRightPanel={true}>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title flex items-center gap-2">
+            <User className="w-6 h-6 text-primary" />
+            <span>Welcome back, {data?.guestName || '...'}</span>
+          </h1>
+          <p className="page-subtitle">Bed: {data?.bedLabel} • Checked in: {data?.checkInDate}</p>
         </div>
-
-        {showProfileModal && (
-          <div className="modal-overlay">
-            <div className="modal-content card fade-in" style={{ maxWidth: 500 }}>
-              <h3 style={{ marginBottom: '1rem', fontWeight: 700 }}>Edit Profile</h3>
-              <form onSubmit={saveProfile}>
-                <div className="form-group">
-                  <label className="form-label">Full Name</label>
-                  <input className="form-input" value={profileForm.fullName} onChange={e => setProfileForm(f => ({...f, fullName: e.target.value}))} required />
-                </div>
-                <div className="grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Phone</label>
-                    <input className="form-input" value={profileForm.phone} onChange={e => setProfileForm(f => ({...f, phone: e.target.value}))} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">WhatsApp Number</label>
-                    <input className="form-input" value={profileForm.whatsappNumber} onChange={e => setProfileForm(f => ({...f, whatsappNumber: e.target.value}))} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Vehicle Registration (2-Wheeler)</label>
-                  <input className="form-input" value={profileForm.vehicleRegistration} onChange={e => setProfileForm(f => ({...f, vehicleRegistration: e.target.value}))} placeholder="e.g. TN-01-AB-1234" />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                  <button type="button" className="btn btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
-                  <button type="submit" className="btn btn-primary" disabled={savingProfile}>{savingProfile ? 'Saving...' : 'Save Changes'}</button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-          <div className="stat-card">
-            <div className="stat-value">{data?.totalInvoices ?? '—'}</div>
-            <div className="stat-label">📄 Total Invoices</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{data?.unreadNotifications ?? '—'}</div>
-            <div className="stat-label">🔔 Unread Notifications</div>
-          </div>
-          <div className="stat-card">
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <span className={`badge ${data?.foodIncludedInRent ? 'badge-success' : 'badge-info'}`}>
-                {data?.foodIncludedInRent ? '🍛 Food Included' : '🍽️ Food À La Carte'}
-              </span>
-              {data?.allowMealCancellations && <span className="badge badge-accent">✅ Cancellations Allowed</span>}
-            </div>
-            <div className="stat-label">Food Plan</div>
-          </div>
-        </div>
-
-        {chartData.length > 0 && (
-          <div className="card">
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.1rem', fontWeight: 700 }}>📈 Monthly Spending Trend</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
-                <Bar dataKey="rent" fill="#6366f1" radius={[4,4,0,0]} name="Rent" />
-                <Bar dataKey="food" fill="#10b981" radius={[4,4,0,0]} name="Food" />
-                <Bar dataKey="eb" fill="#f59e0b" radius={[4,4,0,0]} name="EB" />
-                <Bar dataKey="wm" fill="#3b82f6" radius={[4,4,0,0]} name="Laundry" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <button className="btn btn-ghost flex items-center gap-1.5 text-xs" onClick={openProfile}>
+          <Edit2 className="w-3.5 h-3.5" />
+          <span>Edit Profile</span>
+        </button>
       </div>
-    </div>
+
+      {showProfileModal && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
+            <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-primary" />
+              <span>Edit Profile</span>
+            </h3>
+            <form onSubmit={saveProfile}>
+              <div className="form-group">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" value={profileForm.fullName} onChange={e => setProfileForm(f => ({...f, fullName: e.target.value}))} required />
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Phone</label>
+                  <input className="form-input" value={profileForm.phone} onChange={e => setProfileForm(f => ({...f, phone: e.target.value}))} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">WhatsApp Number</label>
+                  <input className="form-input" value={profileForm.whatsappNumber} onChange={e => setProfileForm(f => ({...f, whatsappNumber: e.target.value}))} />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Vehicle Registration (2-Wheeler)</label>
+                <input className="form-input" value={profileForm.vehicleRegistration} onChange={e => setProfileForm(f => ({...f, vehicleRegistration: e.target.value}))} placeholder="e.g. TN-01-AB-1234" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={savingProfile}>{savingProfile ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+        <StatCard label="Total Invoices" value={data?.totalInvoices ?? '—'} icon={FileText} iconColor="text-blue-500" />
+        <StatCard label="Unread Notifications" value={data?.unreadNotifications ?? '—'} icon={Bell} iconColor="text-rose-500" />
+        <StatCard label="Food Plan" icon={ChefHat} iconColor="text-emerald-500">
+          <div className="flex flex-col gap-1.5 mt-1">
+            <span className={`badge w-max ${data?.foodIncludedInRent ? 'badge-success' : 'badge-info'}`}>
+              {data?.foodIncludedInRent ? 'Food Included' : 'Food À La Carte'}
+            </span>
+            {data?.allowMealCancellations && (
+              <span className="badge badge-accent w-max flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Cancellations Allowed</span>
+              </span>
+            )}
+          </div>
+        </StatCard>
+      </div>
+
+      {chartData.length > 0 && (
+        <div className="card">
+          <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-slate-400" />
+            <span>Monthly Spending Trend</span>
+          </h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
+              <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
+              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
+              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
+              <Bar dataKey="rent" fill="#2563eb" radius={[4,4,0,0]} name="Rent" />
+              <Bar dataKey="food" fill="#10b981" radius={[4,4,0,0]} name="Food" />
+              <Bar dataKey="eb" fill="#f59e0b" radius={[4,4,0,0]} name="EB" />
+              <Bar dataKey="wm" fill="#3b82f6" radius={[4,4,0,0]} name="Laundry" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </AppLayout>
   );
 }
