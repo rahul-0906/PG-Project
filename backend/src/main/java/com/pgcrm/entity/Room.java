@@ -18,12 +18,12 @@ public class Room {
     /** Null for ground-floor standalone rooms with no block */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "block_id")
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("rooms")
     private Block block;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "floor_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"rooms", "standaloneRooms"})
     private Floor floor;
 
     @Column(name = "room_number", nullable = false)

@@ -15,7 +15,7 @@ public class Bed {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("beds")
     private Room room;
 
     /** e.g. "A1", "A2", "B1" */

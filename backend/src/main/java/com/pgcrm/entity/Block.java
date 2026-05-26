@@ -16,7 +16,7 @@ public class Block {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "floor_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"blocks", "standaloneRooms"})
     private Floor floor;
 
     @Column(nullable = false)
