@@ -1,0 +1,116 @@
+building:
+  name: "Main Building"
+  address: "123 Main St"
+
+floors:
+  - number: 0
+    label: "Ground Floor"
+    rooms:
+      - sharing: 4
+        count: 1
+        baseRent: 7500.00
+  - number: 1
+    label: "Floor 1"
+    blocks:
+      - name: "Block A"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block B"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block C"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block D"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+  - number: 2
+    label: "Floor 2"
+    blocks:
+      - name: "Block A"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block B"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block C"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block D"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+  - number: 3
+    label: "Floor 3"
+    blocks:
+      - name: "Block A"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block B"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block C"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00
+      - name: "Block D"
+        roomConfigurations:
+          - sharing: 2
+            count: 2
+            baseRent: 9000.00
+          - sharing: 4
+            count: 1
+            baseRent: 7500.00

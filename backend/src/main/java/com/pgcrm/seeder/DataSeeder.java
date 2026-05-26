@@ -5,11 +5,18 @@ import com.pgcrm.entity.enums.*;
 import com.pgcrm.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.ClassPathResource;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -38,6 +45,9 @@ public class DataSeeder implements CommandLineRunner {
     private final GuestRepository guestRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private Building building;
+    private User manager;
+
     private final InvoiceRepository invoiceRepository;
     private final DailyLogRepository dailyLogRepository;
     private final MaintenanceTicketRepository maintenanceTicketRepository;
@@ -50,6 +60,147 @@ public class DataSeeder implements CommandLineRunner {
         seedDefaultBusiness();
     }
 
+    @Getter @Setter @NoArgsConstructor
+    public static class PgLayoutConfig {
+        private BuildingConfig building;
+        private List<FloorConfig> floors;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class BuildingConfig {
+        private String name;
+        private String address;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class FloorConfig {
+        private int number;
+        private String label;
+        private List<RoomConfig> rooms;
+        private List<BlockConfig> blocks;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class BlockConfig {
+        private String name;
+        private List<RoomConfig> roomConfigurations;
+    }
+
+    @Getter @Setter @NoArgsConstructor
+    public static class RoomConfig {
+        private int sharing;
+        private int count;
+        private BigDecimal baseRent;
+    }
+
+    private boolean seedLayoutFromYaml() {
+        try {
+            ClassPathResource resource = new ClassPathResource("pg-layout.yml");
+            if (!resource.exists()) {
+                log.info("ℹ️ pg-layout.yml not found on classpath, using default hardcoded layout.");
+                return false;
+            }
+
+            ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+            PgLayoutConfig config;
+            try (InputStream is = resource.getInputStream()) {
+                config = mapper.readValue(is, PgLayoutConfig.class);
+            }
+
+            if (config == null || config.getBuilding() == null) {
+                log.warn("⚠️ Invalid or empty pg-layout.yml, using default hardcoded layout.");
+                return false;
+            }
+
+            log.info("⚙️ Seeding layout dynamically from pg-layout.yml...");
+
+            // 1. Save building
+            BuildingConfig bConfig = config.getBuilding();
+            building = Building.builder()
+                    .name(bConfig.getName() != null ? bConfig.getName() : "Main Building")
+                    .address(bConfig.getAddress() != null ? bConfig.getAddress() : "123 Main St")
+                    .build();
+            building = buildingRepository.save(building);
+
+            // 2. Manager User (assigned to this building)
+            manager = createUser("manager@pgcrm.com", "PG Manager",
+                    Role.PG_MANAGER, building.getId());
+            log.info("✅ PG_MANAGER seeded: manager@pgcrm.com / Manager@123");
+
+            // 3. Seed floors, blocks, rooms, and beds
+            if (config.getFloors() != null) {
+                for (FloorConfig fConfig : config.getFloors()) {
+                    Floor floor = createFloor(building, fConfig.getNumber(), fConfig.getLabel());
+
+                    // Seed direct rooms if any
+                    if (fConfig.getRooms() != null) {
+                        int roomIndex = 1;
+                        for (RoomConfig rConfig : fConfig.getRooms()) {
+                            int sharing = rConfig.getSharing();
+                            int count = rConfig.getCount();
+                            BigDecimal baseRent = rConfig.getBaseRent();
+                            for (int i = 0; i < count; i++) {
+                                String floorNumPrefix = fConfig.getNumber() == 0 ? "G" : String.valueOf(fConfig.getNumber());
+                                String roomNum = floorNumPrefix + "-" + String.format("%02d", roomIndex);
+                                Room room = createRoom(floor, null, roomNum, sharing, baseRent);
+                                createBeds(room, sharing, floorNumPrefix);
+                                roomIndex++;
+                            }
+                        }
+                    }
+
+                    // Seed blocks if any
+                    if (fConfig.getBlocks() != null) {
+                        for (BlockConfig blConfig : fConfig.getBlocks()) {
+                            Block block = Block.builder()
+                                    .floor(floor)
+                                    .name(blConfig.getName())
+                                    .build();
+                            block = blockRepository.save(block);
+
+                            // Extract block code/letter (e.g. "A" from "Block A")
+                            String blockName = blConfig.getName();
+                            String blockCode = blockName;
+                            if (blockName.contains(" ")) {
+                                blockCode = blockName.substring(blockName.lastIndexOf(" ") + 1);
+                            }
+
+                            if (blConfig.getRoomConfigurations() != null) {
+                                for (RoomConfig rConfig : blConfig.getRoomConfigurations()) {
+                                    int sharing = rConfig.getSharing();
+                                    int count = rConfig.getCount();
+                                    BigDecimal baseRent = rConfig.getBaseRent();
+
+                                    for (int r = 1; r <= count; r++) {
+                                        String roomNum;
+                                        String bedPrefix;
+
+                                        if (count == 1) {
+                                            roomNum = fConfig.getNumber() + blockCode + "-" + sharing + "S";
+                                            bedPrefix = fConfig.getNumber() + blockCode + sharing;
+                                        } else {
+                                            roomNum = fConfig.getNumber() + blockCode + "-" + sharing + "S" + r;
+                                            bedPrefix = fConfig.getNumber() + blockCode + r;
+                                        }
+
+                                        Room room = createRoom(floor, block, roomNum, sharing, baseRent);
+                                        createBeds(room, sharing, bedPrefix);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            log.info("✅ PG Layout successfully seeded dynamically from pg-layout.yml");
+            return true;
+        } catch (Exception e) {
+            log.error("❌ Failed to parse pg-layout.yml: " + e.getMessage(), e);
+            return false;
+        }
+    }
+
     private void seedDefaultBusiness() {
         if (buildingRepository.count() > 0) return; // already seeded
 
@@ -57,40 +208,43 @@ public class DataSeeder implements CommandLineRunner {
         User owner = createUser("owner@pgcrm.com", "PG Owner", Role.PG_OWNER, null);
         log.info("✅ PG_OWNER seeded: owner@pgcrm.com / Owner@123");
 
-        // 4. Building
-        Building building = Building.builder()
-                .name("Main Building").address("123 Main St").build();
-        building = buildingRepository.save(building);
+        // Try seeding layout from YAML. If fails or not found, fall back to default hardcoded layout.
+        if (!seedLayoutFromYaml()) {
+            // 4. Building
+            building = Building.builder()
+                    .name("Main Building").address("123 Main St").build();
+            building = buildingRepository.save(building);
 
-        // 5. Manager (assigned to this building)
-        User manager = createUser("manager@pgcrm.com", "PG Manager",
-                Role.PG_MANAGER, building.getId());
-        log.info("✅ PG_MANAGER seeded: manager@pgcrm.com / Manager@123");
+            // 5. Manager (assigned to this building)
+            manager = createUser("manager@pgcrm.com", "PG Manager",
+                    Role.PG_MANAGER, building.getId());
+            log.info("✅ PG_MANAGER seeded: manager@pgcrm.com / Manager@123");
 
-        // 6. Ground Floor — no blocks, one 4-sharing room (4 beds)
-        Floor groundFloor = createFloor(building, 0, "Ground Floor");
-        Room groundRoom = createRoom(groundFloor, null, "G-01", 4, BigDecimal.valueOf(7500));
-        createBeds(groundRoom, 4, "G");
+            // 6. Ground Floor — no blocks, one 4-sharing room (4 beds)
+            Floor groundFloor = createFloor(building, 0, "Ground Floor");
+            Room groundRoom = createRoom(groundFloor, null, "G-01", 4, BigDecimal.valueOf(7500));
+            createBeds(groundRoom, 4, "G");
 
-        // 7. Floors 1, 2, 3 — 4 blocks each, each block: 2×2-sharing + 1×4-sharing
-        String[] blockNames = {"A", "B", "C", "D"};
-        for (int floorNum = 1; floorNum <= 3; floorNum++) {
-            Floor floor = createFloor(building, floorNum, "Floor " + floorNum);
-            for (int b = 0; b < 4; b++) {
-                Block block = Block.builder()
-                        .floor(floor).name("Block " + blockNames[b]).build();
-                block = blockRepository.save(block);
+            // 7. Floors 1, 2, 3 — 4 blocks each, each block: 2×2-sharing + 1×4-sharing
+            String[] blockNames = {"A", "B", "C", "D"};
+            for (int floorNum = 1; floorNum <= 3; floorNum++) {
+                Floor floor = createFloor(building, floorNum, "Floor " + floorNum);
+                for (int b = 0; b < 4; b++) {
+                    Block block = Block.builder()
+                            .floor(floor).name("Block " + blockNames[b]).build();
+                    block = blockRepository.save(block);
 
-                // 2 × 2-sharing rooms
-                for (int r = 1; r <= 2; r++) {
-                    String roomNum = floorNum + blockNames[b] + "-2S" + r;
-                    Room room = createRoom(floor, block, roomNum, 2, BigDecimal.valueOf(9000));
-                    createBeds(room, 2, floorNum + blockNames[b] + r + "");
+                    // 2 × 2-sharing rooms
+                    for (int r = 1; r <= 2; r++) {
+                        String roomNum = floorNum + blockNames[b] + "-2S" + r;
+                        Room room = createRoom(floor, block, roomNum, 2, BigDecimal.valueOf(9000));
+                        createBeds(room, 2, floorNum + blockNames[b] + r + "");
+                    }
+                    // 1 × 4-sharing room
+                    String roomNum4 = floorNum + blockNames[b] + "-4S";
+                    Room room4 = createRoom(floor, block, roomNum4, 4, BigDecimal.valueOf(7500));
+                    createBeds(room4, 4, floorNum + blockNames[b] + "4");
                 }
-                // 1 × 4-sharing room
-                String roomNum4 = floorNum + blockNames[b] + "-4S";
-                Room room4 = createRoom(floor, block, roomNum4, 4, BigDecimal.valueOf(7500));
-                createBeds(room4, 4, floorNum + blockNames[b] + "4");
             }
         }
 
