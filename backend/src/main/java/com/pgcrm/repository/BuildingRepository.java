@@ -7,4 +7,8 @@ import java.util.List;
 
 @Repository
 public interface BuildingRepository extends JpaRepository<Building, String> {
+
+    boolean existsByNameIgnoreCase(String name);
+
+    java.util.Optional<Building> findByNameIgnoreCase(String name);
 }
