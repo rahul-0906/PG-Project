@@ -27,7 +27,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-function DailyRosterCell({ log }) {
+function DailyRosterCell({ log, day }) {
   if (!log) return (
     <div className="flex items-center justify-center gap-0.5 text-slate-200">
       <span>•</span><span>•</span><span>•</span>
@@ -38,6 +38,15 @@ function DailyRosterCell({ log }) {
   const lOpt = log.lunch;
   const dOpt = log.dinner;
   const hasAddons = (log.omelettes || 0) > 0 || (log.boiledEggs || 0) > 0 || (log.laundry || 0) > 0;
+
+  let positionClass = "left-1/2 -translate-x-1/2";
+  if (day !== undefined) {
+    if (day <= 5) {
+      positionClass = "left-0 translate-x-0";
+    } else if (day >= 27) {
+      positionClass = "right-0 left-auto translate-x-0";
+    }
+  }
 
   return (
     <div className="flex flex-col items-center justify-center gap-0.5 relative group py-1">
@@ -51,7 +60,7 @@ function DailyRosterCell({ log }) {
       )}
       
       {/* Tooltip on hover */}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-900 text-white text-[9px] rounded px-2 py-1.5 z-30 whitespace-nowrap shadow-md pointer-events-none">
+      <div className={`absolute bottom-full mb-1 hidden group-hover:block bg-slate-900/95 backdrop-blur-sm text-white text-[9px] rounded-lg px-2.5 py-1.5 z-30 whitespace-nowrap border border-slate-700/50 shadow-lg shadow-slate-900/20 pointer-events-none ${positionClass}`}>
         <div>B: {bOpt ? 'Yes' : 'No'} | L: {lOpt ? 'Yes' : 'No'} | D: {dOpt ? 'Yes' : 'No'}</div>
         {hasAddons && (
           <div className="mt-0.5 border-t border-slate-700 pt-0.5 font-semibold text-indigo-300">
@@ -84,6 +93,7 @@ export default function ManagerGuestAddons() {
   const [loading, setLoading] = useState(true);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedGuestId, setExpandedGuestId] = useState(null);
 
   // Daily logs fetch
   useEffect(() => {
@@ -506,14 +516,12 @@ export default function ManagerGuestAddons() {
               <table className="min-w-full text-xxs">
                 <thead>
                   <tr className="bg-slate-50">
-                    <th className="sticky left-0 bg-slate-50 z-20 min-w-[140px] border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.01)] py-2">Guest Name</th>
-                    <th className="min-w-[50px] border-r border-slate-200 text-center py-2">Bed</th>
-                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
-                      <th key={day} className="text-center w-8 min-w-[30px] p-0 font-bold border-r border-slate-100 py-2">{day}</th>
-                    ))}
-                    <th className="text-center font-bold text-indigo-600 bg-indigo-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Breakfast count">B</th>
-                    <th className="text-center font-bold text-emerald-600 bg-emerald-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Lunch count">L</th>
-                    <th className="text-center font-bold text-blue-600 bg-blue-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Dinner count">D</th>
+                    <th className="py-2.5 px-3 text-left font-bold text-slate-600">Guest Name</th>
+                    <th className="text-center py-2.5 font-bold text-slate-600">Bed</th>
+                    <th className="text-center font-bold text-indigo-600 bg-indigo-50/30 py-2.5" title="Breakfast count">Breakfast (B)</th>
+                    <th className="text-center font-bold text-emerald-600 bg-emerald-50/30 py-2.5" title="Lunch count">Lunch (L)</th>
+                    <th className="text-center font-bold text-blue-600 bg-blue-50/30 py-2.5" title="Dinner count">Dinner (D)</th>
+                    <th className="text-center py-2.5 font-bold text-slate-600">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -525,25 +533,78 @@ export default function ManagerGuestAddons() {
                       if (dayLog.dinner) dCount++;
                     });
 
+                    const isExpanded = expandedGuestId === row.guestId;
+
                     return (
-                      <tr key={row.guestId}>
-                        <td className="sticky left-0 bg-white z-10 font-extrabold text-slate-800 border-r border-slate-200 py-2 px-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.025)]">
-                          {row.guestName}
-                        </td>
-                        <td className="text-slate-500 font-bold text-center border-r border-slate-200">{row.bedLabel}</td>
-                        {Array.from({ length: daysInMonth }, (_, i) => {
-                          const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
-                          const dayLog = row.days?.[dayStr];
-                          return (
-                            <td key={i} className="text-center border-r border-slate-100 p-0">
-                              <DailyRosterCell log={dayLog} />
+                      <React.Fragment key={row.guestId}>
+                        <tr 
+                          className={`hover:bg-slate-50 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                          onClick={() => setExpandedGuestId(isExpanded ? null : row.guestId)}
+                        >
+                          <td className="py-3 px-3 font-extrabold text-slate-800 text-xs">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xxs">
+                                {row.guestName?.charAt(0).toUpperCase()}
+                              </div>
+                              <span>{row.guestName}</span>
+                            </div>
+                          </td>
+                          <td className="text-slate-500 font-bold text-center text-xs">{row.bedLabel}</td>
+                          <td className="text-center font-black text-indigo-600 bg-indigo-50/5 text-xs">{bCount}</td>
+                          <td className="text-center font-black text-emerald-600 bg-emerald-50/5 text-xs">{lCount}</td>
+                          <td className="text-center font-black text-blue-600 bg-blue-50/5 text-xs">{dCount}</td>
+                          <td className="text-center py-2.5">
+                            <button
+                              type="button"
+                              className={`btn text-[10px] py-1 px-2.5 ${isExpanded ? 'btn-secondary' : 'btn-primary'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedGuestId(isExpanded ? null : row.guestId);
+                              }}
+                            >
+                              {isExpanded ? 'Hide Days' : 'View Days'}
+                            </button>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={6} className="bg-slate-50/60 p-4 border-b border-slate-200">
+                              <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-slate-100 pb-2">
+                                  <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                                    <span>Daily Opt-in Breakdown for {row.guestName}</span>
+                                  </h4>
+                                  <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                                    {MONTHS[month - 1]} {year}
+                                  </div>
+                                </div>
+                                <div className="overflow-x-auto pb-1">
+                                  <div className="flex gap-2 min-w-max p-1">
+                                    {Array.from({ length: daysInMonth }, (_, i) => {
+                                      const dayNum = i + 1;
+                                      const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                      const dayLog = row.days?.[dayStr];
+
+                                      return (
+                                        <div 
+                                          key={dayNum} 
+                                          className="flex flex-col items-center border border-slate-100 rounded-lg p-2 bg-slate-50/50 min-w-[50px] shadow-sm hover:border-indigo-200/60 transition-colors"
+                                        >
+                                          <span className="text-[9px] font-bold text-slate-400 mb-1">{dayNum}</span>
+                                          <div className="h-6 flex items-center justify-center">
+                                            <DailyRosterCell log={dayLog} day={dayNum} />
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
                             </td>
-                          );
-                        })}
-                        <td className="text-center font-bold text-indigo-600 bg-indigo-50/10 border-l border-slate-200">{bCount}</td>
-                        <td className="text-center font-bold text-emerald-600 bg-emerald-50/10 border-l border-slate-200">{lCount}</td>
-                        <td className="text-center font-bold text-blue-600 bg-blue-50/10 border-l border-slate-200">{dCount}</td>
-                      </tr>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
