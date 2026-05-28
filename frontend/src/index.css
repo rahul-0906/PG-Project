@@ -115,6 +115,14 @@ body {
     @apply bg-slate-50/50;
   }
 
+  .table-compact th {
+    @apply py-1.5 px-3 text-[10px] !important;
+  }
+
+  .table-compact td {
+    @apply h-auto py-1 px-3 text-xs !important;
+  }
+
   /* Status Badges */
   .badge {
     @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border;

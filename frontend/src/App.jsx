@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
+import Settings from './pages/Settings';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import OwnerBuildingCreator from './pages/owner/OwnerBuildingCreator';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
@@ -56,6 +57,8 @@ export default function App() {
       <Route path="/" element={<RoleRedirect />} />
       <Route path="/login" element={<Login />} />
       <Route path="/change-password" element={<ChangePassword />} />
+      <Route path="/settings" element={
+        <PrivateRoute><Settings /></PrivateRoute>} />
       <Route path="/unauthorized" element={<div style={{color:'white',padding:'2rem',textAlign:'center'}}>
         <h2>🚫 Unauthorized</h2><p>You don't have permission to view this page.</p>
       </div>} />

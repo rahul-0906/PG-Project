@@ -47,9 +47,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String branchId = claims.get("branch_id", String.class);
                     System.out.println("JwtAuthenticationFilter: Token valid. User=" + userId + ", Role=" + role);
 
-                    // Store branchId in request attribute for manager scope checks
+                    String selectedBranchId = request.getHeader("X-Selected-Branch-Id");
+                    String activeBranchId = null;
                     if (branchId != null) {
-                        request.setAttribute("branchId", branchId);
+                        String[] allowedBranches = branchId.split(",");
+                        if (selectedBranchId != null && java.util.Arrays.asList(allowedBranches).contains(selectedBranchId)) {
+                            activeBranchId = selectedBranchId;
+                        } else {
+                            activeBranchId = allowedBranches[0];
+                        }
+                    }
+
+                    if (activeBranchId != null) {
+                        request.setAttribute("branchId", activeBranchId);
                     }
 
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));

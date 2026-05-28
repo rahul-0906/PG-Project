@@ -411,7 +411,7 @@ export default function GuestDashboard() {
           </div>
         ) : (
           <div className="table-wrap">
-            <table>
+            <table className="table-compact">
               <thead>
                 <tr>
                   <th>Date</th>

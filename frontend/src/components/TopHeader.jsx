@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
 import { Bell } from 'lucide-react';
+import { managerApi } from '../api';
 
 const ROLE_LABELS = {
   PG_OWNER: 'Owner',
@@ -25,6 +26,32 @@ export default function TopHeader() {
   const { user } = useAuth();
   const { config } = useSystemConfig();
   const brandName = config?.branding?.name || 'PG CRM';
+
+  const [assignedBuildings, setAssignedBuildings] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState(() => localStorage.getItem('selectedBranchId') || '');
+
+  useEffect(() => {
+    if (user && (user.role === 'PG_MANAGER' || user.role === 'PG_OWNER')) {
+      managerApi.getAssignedBuildings().then(res => {
+        setAssignedBuildings(res.data || []);
+        const stored = localStorage.getItem('selectedBranchId');
+        if (res.data && res.data.length > 0) {
+          const match = res.data.find(b => b.id === stored);
+          if (!match) {
+            localStorage.setItem('selectedBranchId', res.data[0].id);
+            setSelectedBranch(res.data[0].id);
+          }
+        }
+      }).catch(console.error);
+    }
+  }, [user]);
+
+  const handleBranchChange = (e) => {
+    const val = e.target.value;
+    localStorage.setItem('selectedBranchId', val);
+    setSelectedBranch(val);
+    window.location.reload();
+  };
 
   const badgeClass = ROLE_CLASSES[user?.role] || 'bg-slate-50 text-slate-700 border-slate-200';
   const dotClass = ROLE_DOTS[user?.role] || 'bg-slate-500';
@@ -51,11 +78,24 @@ export default function TopHeader() {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* User Badge */}
-        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-          {user?.fullName || ROLE_LABELS[user?.role] || user?.role}
-        </div>
+        {/* User Badge / Building Selector */}
+        {user?.role === 'PG_MANAGER' && assignedBuildings.length > 1 ? (
+          <select
+            value={selectedBranch}
+            onChange={handleBranchChange}
+            className="form-input py-1 text-xs font-semibold"
+            style={{ width: 'auto', minWidth: '160px', padding: '0.2rem 1.5rem 0.2rem 0.5rem', background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#6d28d9', borderRadius: '9999px', cursor: 'pointer' }}
+          >
+            {assignedBuildings.map(b => (
+              <option key={b.id} value={b.id}>🏢 {b.name}</option>
+            ))}
+          </select>
+        ) : (
+          <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+            {user?.fullName || ROLE_LABELS[user?.role] || user?.role}
+          </div>
+        )}
 
         {/* Notification Bell */}
         <button 

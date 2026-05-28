@@ -70,6 +70,7 @@ export default function ManagerPricing() {
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState('');
   const [savingRoom, setSavingRoom] = useState('');
+  const [savingSharing, setSavingSharing] = useState('');
   const [toast, setToast] = useState('');
   const [schedulerEnabled, setSchedulerEnabled] = useState(false);
   const [savingScheduler, setSavingScheduler] = useState(false);
@@ -139,6 +140,16 @@ export default function ManagerPricing() {
       showToast('Room rent updated');
     } catch { showToast('Failed to update room rent'); }
     finally { setSavingRoom(''); }
+  };
+
+  const handleSharingRentUpdate = async (sharingType, baseRent) => {
+    setSavingSharing(sharingType);
+    try {
+      await managerApi.updateSharingRent(sharingType, baseRent, selectedBuildingId);
+      await loadPricing();
+      showToast('Sharing type rent updated');
+    } catch { showToast('Failed to update sharing type rent'); }
+    finally { setSavingSharing(''); }
   };
 
   const handleToggleScheduler = async (e) => {
@@ -267,90 +278,50 @@ export default function ManagerPricing() {
             </div>
           </div>
 
-          {/* Room Rents */}
-          {bldgData.map(bldg => (
-            <div key={bldg.id} className="card">
-              <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Bed className="w-5 h-5 text-blue-500" />
-                Room Rents — {bldg.name}
-              </h3>
-
-              {bldg.floors?.map(floor => (
-                <div key={floor.id} className="mb-5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded bg-indigo-100 flex items-center justify-center">
-                      <span className="text-indigo-700 text-xs font-bold">
-                        {floor.number === 0 ? 'G' : floor.number}
-                      </span>
+          {/* Room Rents by Sharing Type */}
+          <div className="card">
+            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <Bed className="w-5 h-5 text-blue-500" />
+              Room Rents by Sharing Type (Global for Building)
+            </h3>
+            <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+              {Object.keys(SHARING_LABELS).map(sharingType => {
+                const bldg = bldgData.find(b => b.id === selectedBuildingId);
+                const rooms = [];
+                bldg?.floors?.forEach(f => {
+                  f.blocks?.forEach(bl => {
+                    bl.rooms?.forEach(r => {
+                      if (r.sharingType === parseInt(sharingType)) rooms.push(r);
+                    });
+                  });
+                  f.standaloneRooms?.forEach(r => {
+                    if (r.sharingType === parseInt(sharingType)) rooms.push(r);
+                  });
+                });
+                
+                if (rooms.length === 0) return null;
+                const baseRent = rooms[0]?.baseRent ?? 0;
+                
+                return (
+                  <div key={sharingType} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🛏️</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-slate-700">{SHARING_LABELS[sharingType]} Sharing</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{rooms.length} rooms</span>
+                      </div>
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">{floor.label}</span>
+                    <EditablePrice
+                      value={baseRent}
+                      onSave={(v) => handleSharingRentUpdate(parseInt(sharingType), v)}
+                      saving={savingSharing === parseInt(sharingType)}
+                    />
                   </div>
-
-                  {/* Blocks */}
-                  {floor.blocks?.map(block => (
-                    <div key={block.id} className="ml-4 mb-4">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">{block.name}</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                        {block.rooms?.map(room => (
-                          <div key={room.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all text-xs">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Bed className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-semibold text-slate-800 truncate">{room.roomNumber}</span>
-                                <span className="text-[9px] text-slate-400 font-medium truncate">
-                                  {SHARING_LABELS[room.sharingType] || room.sharingType + 'S'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex-shrink-0 ml-2">
-                              <EditablePrice
-                                value={room.baseRent}
-                                onSave={(v) => handleRoomRentUpdate(room.id, v)}
-                                saving={savingRoom === room.id}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Standalone rooms */}
-                  {floor.standaloneRooms?.length > 0 && (
-                    <div className="ml-4 mb-4">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Standalone</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
-                        {floor.standaloneRooms.map(room => (
-                          <div key={room.id} className="flex items-center justify-between py-1.5 px-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-white transition-all text-xs">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Bed className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-semibold text-slate-800 truncate">{room.roomNumber}</span>
-                                <span className="text-[9px] text-slate-400 font-medium truncate">
-                                  {SHARING_LABELS[room.sharingType] || room.sharingType + 'S'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex-shrink-0 ml-2">
-                              <EditablePrice
-                                value={room.baseRent}
-                                onSave={(v) => handleRoomRentUpdate(room.id, v)}
-                                saving={savingRoom === room.id}
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-
-              {(!bldg.floors || bldg.floors.length === 0) && (
-                <p className="text-slate-400 text-sm">No rooms configured for this building yet.</p>
-              )}
+                );
+              })}
             </div>
-          ))}
+            <p className="text-xs text-slate-400 mt-3">Click any price to edit. Changes apply building-wide immediately.</p>
+          </div>
         </div>
       )}
     </AppLayout>

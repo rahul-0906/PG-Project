@@ -152,6 +152,46 @@ public class PricingController {
         return ResponseEntity.ok(roomToMap(roomRepository.save(room)));
     }
 
+    /**
+     * PUT /api/manager/pricing/sharing/{sharingType}/rent?buildingId=xxx
+     * Updates the base rent of all rooms in a building matching the sharingType.
+     */
+    @PutMapping("/sharing/{sharingType}/rent")
+    public ResponseEntity<?> updateSharingRent(
+            @PathVariable int sharingType,
+            @RequestParam(required = false) String buildingId,
+            @RequestAttribute(required = false) String branchId,
+            @RequestBody Map<String, Object> body) {
+
+        String effectiveBuildingId = buildingId != null ? buildingId : branchId;
+        if (effectiveBuildingId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Building ID required"));
+        }
+
+        Object valObj = body.get("baseRent");
+        if (valObj == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "'baseRent' field required"));
+        }
+
+        BigDecimal rent;
+        try {
+            rent = new BigDecimal(valObj.toString());
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid numeric value"));
+        }
+
+        List<Room> rooms = roomRepository.findByFloor_Building_Id(effectiveBuildingId);
+        List<Room> updated = new ArrayList<>();
+        for (Room r : rooms) {
+            if (r.getSharingType() == sharingType) {
+                r.setBaseRent(rent);
+                updated.add(roomRepository.save(r));
+            }
+        }
+
+        return ResponseEntity.ok(Map.of("updatedCount", updated.size(), "baseRent", rent));
+    }
+
     private Map<String, Object> roomToMap(Room room) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", room.getId());

@@ -296,7 +296,7 @@ export default function ManagerGuestAddons() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table>
+              <table className="table-compact">
                 <thead>
                   <tr>
                     <th className="min-w-[160px]">Guest Name</th>
@@ -513,7 +513,7 @@ export default function ManagerGuestAddons() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table className="min-w-full text-xxs">
+              <table className="min-w-full table-compact">
                 <thead>
                   <tr className="bg-slate-50">
                     <th className="py-2.5 px-3 text-left font-bold text-slate-600">Guest Name</th>

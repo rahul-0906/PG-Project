@@ -14,7 +14,8 @@ import {
   LogOut,
   Building2,
   Tag,
-  Receipt
+  Receipt,
+  Settings as SettingsIcon
 } from 'lucide-react';
 
 const navMap = {
@@ -24,6 +25,7 @@ const navMap = {
     { to: '/manager/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/owner/reports', label: 'Reports', icon: BarChart3 },
     { to: '/owner/audit', label: 'Audit Log', icon: History },
+    { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ],
   PG_MANAGER: [
     { to: '/manager/dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -35,11 +37,13 @@ const navMap = {
     { to: '/manager/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/manager/reports', label: 'Reports', icon: BarChart3 },
     { to: '/manager/audit', label: 'Audit Log', icon: History },
+    { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ],
   GUEST: [
     { to: '/guest/dashboard', label: 'Dashboard', icon: LayoutGrid },
     { to: '/guest/daily-log', label: 'Meal Planner', icon: CalendarDays },
     { to: '/guest/invoices', label: 'Invoices', icon: FileText },
+    { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ],
 };
 

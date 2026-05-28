@@ -93,6 +93,17 @@ public class PgOwnerController {
         return ResponseEntity.ok(userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_MANAGER));
     }
 
+    @PutMapping("/managers/{id}")
+    public ResponseEntity<User> updateManager(@PathVariable String id, @RequestBody Map<String, String> body) {
+        User manager = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Manager not found"));
+        if (body.containsKey("fullName")) manager.setFullName(body.get("fullName"));
+        if (body.containsKey("email")) manager.setEmail(body.get("email"));
+        if (body.containsKey("branchId")) manager.setBranchId(body.get("branchId"));
+        if (body.containsKey("active")) manager.setActive(Boolean.parseBoolean(body.get("active")));
+        return ResponseEntity.ok(userRepository.save(manager));
+    }
+
     @GetMapping("/config")
     public ResponseEntity<String> getConfig() {
         return ResponseEntity.ok("Use /api/system/config");

@@ -5,6 +5,10 @@ const api = axios.create({ baseURL: '/api' });
 api.interceptors.request.use(config => {
   const token = localStorage.getItem('accessToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const selectedBranchId = localStorage.getItem('selectedBranchId');
+  if (selectedBranchId) {
+    config.headers['X-Selected-Branch-Id'] = selectedBranchId;
+  }
   return config;
 });
 
@@ -46,6 +50,7 @@ export const ownerApi = {
   getBranches: () => api.get('/owner/branches'),
   getManagers: () => api.get('/owner/managers'),
   createManager: (data) => api.post('/owner/managers', data),
+  updateManager: (id, data) => api.put(`/owner/managers/${id}`, data),
   getConfig: () => api.get('/owner/config'),
   // Building Creator
   createBuilding: (data) => api.post('/owner/buildings', data),
@@ -82,6 +87,8 @@ export const managerApi = {
   generateInvoice: (guestId, month, year) => api.post('/manager/billing/generate', { guestId, month, year }),
   generateAllInvoices: (month, year) => api.post('/manager/invoices/generate-all', { month, year }),
   getMonthlyMeals: (month, year) => api.get('/manager/monthly-meals', { params: { month, year } }),
+  getAssignedBuildings: () => api.get('/manager/assigned-buildings'),
+  updateSharingRent: (sharingType, baseRent, buildingId) => api.put(`/manager/pricing/sharing/${sharingType}/rent`, { baseRent }, { params: buildingId ? { buildingId } : {} }),
 };
 
 export const guestApi = {
@@ -96,6 +103,7 @@ export const guestApi = {
   markRead: (id) => api.put(`/guest/notifications/${id}/read`),
   getConfig: () => api.get('/guest/tenant-config'),
   getAddons: () => api.get('/guest/addons'),
+  getMonthlyLogs: (yearMonth) => api.get(`/guest/daily-log/month/${yearMonth}`),
 };
 
 export default api;

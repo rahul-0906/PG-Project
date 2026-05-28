@@ -5,6 +5,7 @@ import com.pgcrm.repository.*;
 import com.pgcrm.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -27,6 +28,20 @@ public class PgManagerController {
     private final InvoiceService invoiceService;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final BuildingRepository buildingRepository;
+
+    @GetMapping("/assigned-buildings")
+    public ResponseEntity<List<Building>> getAssignedBuildings(Authentication auth) {
+        User user = userRepository.findById(auth.getName()).orElseThrow(() -> new RuntimeException("User not found"));
+        if (user.getRole() == com.pgcrm.entity.enums.Role.PG_OWNER) {
+            return ResponseEntity.ok(buildingRepository.findAll());
+        }
+        if (user.getBranchId() == null || user.getBranchId().isBlank()) {
+            return ResponseEntity.ok(List.of());
+        }
+        List<String> ids = java.util.Arrays.asList(user.getBranchId().split(","));
+        return ResponseEntity.ok(buildingRepository.findAllById(ids));
+    }
 
     // ── Dashboard ─────────────────────────────────────────────────
 

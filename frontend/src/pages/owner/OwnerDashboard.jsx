@@ -40,8 +40,9 @@ export default function OwnerDashboard() {
   const [branches, setBranches] = useState([]);
   const [managers, setManagers] = useState([]);
   const [showManagerModal, setShowManagerModal] = useState(false);
-  const [managerForm, setManagerForm] = useState({ fullName: '', email: '', branchId: '' });
+  const [managerForm, setManagerForm] = useState({ fullName: '', email: '', branchIds: [] });
   const [savingManager, setSavingManager] = useState(false);
+  const [editingManager, setEditingManager] = useState(null);
 
   useEffect(() => {
     ownerApi.getDashboard().then(r => setData(r.data)).catch(()=>{});
@@ -49,15 +50,48 @@ export default function OwnerDashboard() {
     ownerApi.getManagers().then(r => setManagers(r.data)).catch(()=>{});
   }, []);
 
+  const openEditManager = (mgr) => {
+    setEditingManager(mgr);
+    setManagerForm({
+      fullName: mgr.fullName || '',
+      email: mgr.email || '',
+      branchIds: mgr.branchId ? mgr.branchId.split(',') : [],
+    });
+    setShowManagerModal(true);
+  };
+
+  const openCreateManager = () => {
+    setEditingManager(null);
+    setManagerForm({ fullName: '', email: '', branchIds: [] });
+    setShowManagerModal(true);
+  };
+
+  const getManagerBranchNames = (m) => {
+    if (!m.branchId) return 'No branch assigned';
+    const ids = m.branchId.split(',');
+    return ids.map(id => branches.find(b => b.id === id)?.name || 'Unknown').filter(Boolean).join(', ');
+  };
+
   const saveManager = async (e) => {
     e.preventDefault();
+    if (managerForm.branchIds.length === 0) return;
     setSavingManager(true);
     try {
-      await ownerApi.createManager(managerForm);
+      const payload = {
+        fullName: managerForm.fullName,
+        email: managerForm.email,
+        branchId: managerForm.branchIds.join(','),
+      };
+      if (editingManager) {
+        await ownerApi.updateManager(editingManager.id, payload);
+      } else {
+        await ownerApi.createManager(payload);
+      }
       setShowManagerModal(false);
-      setManagerForm({ fullName: '', email: '', branchId: '' });
+      setManagerForm({ fullName: '', email: '', branchIds: [] });
+      setEditingManager(null);
       ownerApi.getManagers().then(r => setManagers(r.data));
-    } catch (err) { alert('Failed to create manager'); }
+    } catch (err) { alert(editingManager ? 'Failed to update manager' : 'Failed to create manager'); }
     finally { setSavingManager(false); }
   };
 
@@ -141,7 +175,7 @@ export default function OwnerDashboard() {
               <UserCheck className="w-5 h-5 text-slate-400" />
               <span>Managers ({managers.length})</span>
             </h3>
-            <button className="btn btn-primary flex items-center gap-1 px-2.5 py-1 text-xs" onClick={() => setShowManagerModal(true)}>
+            <button className="btn btn-primary flex items-center gap-1 px-2.5 py-1 text-xs" onClick={openCreateManager}>
               <Plus className="w-3.5 h-3.5" />
               <span>Add Manager</span>
             </button>
@@ -150,9 +184,22 @@ export default function OwnerDashboard() {
             <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-2 flex justify-between items-center">
               <div>
                 <div className="font-semibold text-sm text-slate-800">{m.fullName}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{m.email} • {branches.find(b => b.id === m.branchId)?.name || 'Unknown Branch'}</div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  {m.email} • <span className="font-semibold text-slate-500">{getManagerBranchNames(m)}</span>
+                </div>
               </div>
-              <span className="badge badge-info">Active</span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => openEditManager(m)}
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1 text-xs"
+                  title="Edit Manager"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </button>
+                <span className="badge badge-info">Active</span>
+              </div>
             </div>
           ))}
           {managers.length === 0 && <p className="text-slate-400 text-xs mt-2">No managers added yet.</p>}
@@ -164,7 +211,7 @@ export default function OwnerDashboard() {
           <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
             <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
-              <span>Create Manager</span>
+              <span>{editingManager ? 'Edit Manager' : 'Create Manager'}</span>
             </h3>
             <form onSubmit={saveManager}>
               <div className="form-group">
@@ -176,17 +223,37 @@ export default function OwnerDashboard() {
                 <input type="email" className="form-input" value={managerForm.email} onChange={e => setManagerForm(f => ({...f, email: e.target.value}))} required />
               </div>
               <div className="form-group">
-                <label className="form-label">Assign to Branch</label>
-                <select className="form-input" value={managerForm.branchId} onChange={e => setManagerForm(f => ({...f, branchId: e.target.value}))} required>
-                  <option value="">-- Select Branch --</option>
+                <label className="form-label">Assign to Branches *</label>
+                <div className="grid grid-cols-2 gap-2 mt-1 border border-slate-200 rounded-lg p-3 bg-slate-50/50 max-h-40 overflow-y-auto">
                   {branches.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
+                    <label key={b.id} className="flex items-center gap-2 cursor-pointer hover:bg-slate-100/50 p-1 rounded transition-colors text-xs font-semibold text-slate-700">
+                      <input 
+                        type="checkbox" 
+                        checked={managerForm.branchIds.includes(b.id)} 
+                        onChange={e => {
+                          const checked = e.target.checked;
+                          setManagerForm(f => {
+                            const updated = checked 
+                              ? [...f.branchIds, b.id] 
+                              : f.branchIds.filter(id => id !== b.id);
+                            return { ...f, branchIds: updated };
+                          });
+                        }}
+                        className="rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                      <span>{b.name}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
+                {managerForm.branchIds.length === 0 && (
+                  <p className="text-[10px] text-rose-500 font-semibold mt-1">Please select at least one branch.</p>
+                )}
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowManagerModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingManager}>{savingManager ? 'Creating...' : 'Create Manager'}</button>
+                <button type="submit" className="btn btn-primary" disabled={savingManager || managerForm.branchIds.length === 0}>
+                  {savingManager ? 'Saving...' : editingManager ? 'Save Changes' : 'Create Manager'}
+                </button>
               </div>
             </form>
           </div>

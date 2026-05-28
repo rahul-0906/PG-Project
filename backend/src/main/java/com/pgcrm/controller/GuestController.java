@@ -62,6 +62,14 @@ public class GuestController {
         return ResponseEntity.ok(dailyLogService.upsertLog(guest.getId(), LocalDate.parse(date), body));
     }
 
+    @GetMapping("/daily-log/month/{yearMonth}")
+    public ResponseEntity<List<DailyLog>> getMonthlyLogs(Authentication auth, @PathVariable String yearMonth) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        LocalDate start = LocalDate.parse(yearMonth + "-01");
+        LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+        return ResponseEntity.ok(dailyLogRepository.findByGuestIdAndLogDateBetween(guest.getId(), start, end));
+    }
+
     @GetMapping("/invoices")
     public ResponseEntity<List<Invoice>> getInvoices(Authentication auth) {
         Guest guest = guestService.getByUserId(auth.getName());

@@ -219,9 +219,10 @@ function Step3({ floors, onChange }) {
     onChange(floors.map(f => f._id === id ? updated : f));
 
   const addBlock = (floorId) => {
+    const name = prompt("Enter Block Name (e.g. Block A, Wing B):");
+    if (!name || !name.trim()) return;
     const floor = floors.find(f => f._id === floorId);
-    const letter = String.fromCharCode(65 + floor.blocks.length);
-    updateFloor(floorId, { ...floor, blocks: [...floor.blocks, makeBlock(`Block ${letter}`)] });
+    updateFloor(floorId, { ...floor, blocks: [...floor.blocks, makeBlock(name.trim())] });
   };
 
   const removeBlock = (floorId, blockId) => {

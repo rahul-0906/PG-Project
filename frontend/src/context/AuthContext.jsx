@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
       userId: data.userId,
       role: data.role,
       fullName: data.fullName,
+      branchId: data.branchId,
       mustChangePassword: data.mustChangePassword === 'true' || data.mustChangePassword === true,
       firstLogin: data.firstLogin === 'true' || data.firstLogin === true,
     };
