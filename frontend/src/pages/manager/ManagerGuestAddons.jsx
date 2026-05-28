@@ -527,7 +527,7 @@ export default function ManagerGuestAddons() {
 
                     return (
                       <tr key={row.guestId}>
-                        <td className="sticky left-0 bg-white font-extrabold text-slate-800 border-r border-slate-200 py-2 px-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.025)]">
+                        <td className="sticky left-0 bg-white z-10 font-extrabold text-slate-800 border-r border-slate-200 py-2 px-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.025)]">
                           {row.guestName}
                         </td>
                         <td className="text-slate-500 font-bold text-center border-r border-slate-200">{row.bedLabel}</td>
