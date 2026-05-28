@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
-import { Bell, PanelRight } from 'lucide-react';
+import { Bell } from 'lucide-react';
 
 const ROLE_LABELS = {
   PG_OWNER: 'Owner',
@@ -21,14 +21,26 @@ const ROLE_DOTS = {
   GUEST: 'bg-emerald-500',
 };
 
-export default function TopHeader({ showPanelToggle = false, isPanelOpen = false, onToggleRightPanel }) {
+export default function TopHeader() {
   const { user } = useAuth();
   const { config } = useSystemConfig();
   const brandName = config?.branding?.name || 'PG CRM';
 
   const badgeClass = ROLE_CLASSES[user?.role] || 'bg-slate-50 text-slate-700 border-slate-200';
   const dotClass = ROLE_DOTS[user?.role] || 'bg-slate-500';
-  const userInitial = user?.fullName?.[0] || user?.role?.[0] || 'U';
+  const userInitial = (() => {
+    let name = user?.fullName?.trim() || '';
+    if (name.toUpperCase().startsWith('PG ')) {
+      name = name.substring(3).trim();
+    } else if (name.toUpperCase() === 'PG') {
+      name = '';
+    }
+    if (name) {
+      return name.charAt(0).toUpperCase();
+    }
+    const label = ROLE_LABELS[user?.role] || 'User';
+    return label.charAt(0).toUpperCase();
+  })();
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-50 px-6 flex items-center justify-between">
@@ -39,27 +51,11 @@ export default function TopHeader({ showPanelToggle = false, isPanelOpen = false
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Role Badge */}
+        {/* User Badge */}
         <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-          {ROLE_LABELS[user?.role] || user?.role}
+          {user?.fullName || ROLE_LABELS[user?.role] || user?.role}
         </div>
-
-        {/* Dynamic Stats Panel Toggle */}
-        {showPanelToggle && (
-          <button 
-            onClick={onToggleRightPanel}
-            className={`p-2 rounded-lg border border-slate-200 transition-colors ${
-              isPanelOpen 
-                ? 'bg-slate-50 text-primary border-primary' 
-                : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50'
-            }`}
-            title="Toggle Analytics Panel"
-            aria-label="Toggle Analytics Panel"
-          >
-            <PanelRight className="w-4 h-4" />
-          </button>
-        )}
 
         {/* Notification Bell */}
         <button 

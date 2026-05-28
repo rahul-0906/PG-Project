@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
+import OwnerBuildingCreator from './pages/owner/OwnerBuildingCreator';
 import ManagerDashboard from './pages/manager/ManagerDashboard';
 import GuestDashboard from './pages/guest/GuestDashboard';
 import DailyLog from './pages/guest/DailyLog';
@@ -12,6 +13,8 @@ import ManagerGuests from './pages/manager/ManagerGuests';
 import ManagerEbBill from './pages/manager/ManagerEbBill';
 import ManagerMaintenance from './pages/manager/ManagerMaintenance';
 import ManagerGuestAddons from './pages/manager/ManagerGuestAddons';
+import ManagerPricing from './pages/manager/ManagerPricing';
+import ManagerInvoiceGenerator from './pages/manager/ManagerInvoiceGenerator';
 
 import Reports from './pages/Reports';
 import AuditLog from './pages/AuditLog';
@@ -61,6 +64,8 @@ export default function App() {
       {/* PG Owner */}
       <Route path="/owner/dashboard" element={
         <PrivateRoute roles={['PG_OWNER']}><OwnerDashboard /></PrivateRoute>} />
+      <Route path="/owner/buildings" element={
+        <PrivateRoute roles={['PG_OWNER']}><OwnerBuildingCreator /></PrivateRoute>} />
       <Route path="/owner/reports" element={
         <PrivateRoute roles={['PG_OWNER']}><Reports /></PrivateRoute>} />
       <Route path="/owner/audit" element={
@@ -77,6 +82,10 @@ export default function App() {
         <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerMaintenance /></PrivateRoute>} />
       <Route path="/manager/addons" element={
         <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerGuestAddons /></PrivateRoute>} />
+      <Route path="/manager/pricing" element={
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerPricing /></PrivateRoute>} />
+      <Route path="/manager/invoices" element={
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerInvoiceGenerator /></PrivateRoute>} />
       <Route path="/manager/reports" element={
         <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><Reports /></PrivateRoute>} />
       <Route path="/manager/audit" element={

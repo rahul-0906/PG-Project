@@ -455,36 +455,27 @@ public class DataSeeder implements CommandLineRunner {
             log.info("✅ Daily Logs (meal selections and laundry) seeded for all guests.");
 
             // 11. Seed Invoices
-            // g1: Jan(PAID), Feb(PAID), Mar(PAID), Apr(PAID), May(GENERATED)
+            // g1: Jan(PAID), Feb(PAID), Mar(PAID), Apr(PAID), May(PENDING - generated on June 1 or 2)
             createInvoiceForGuest(g1, 1, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g1, 2, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g1, 3, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g1, 4, 2026, InvoiceStatus.PAID);
-            createInvoiceForGuest(g1, 5, 2026, InvoiceStatus.GENERATED);
 
-            // g2: Feb(PAID), Mar(PAID), Apr(PAID), May(OVERDUE)
+            // g2: Feb(PAID), Mar(PAID), Apr(PAID), May(PENDING - generated on June 1 or 2)
             createInvoiceForGuest(g2, 2, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g2, 3, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g2, 4, 2026, InvoiceStatus.PAID);
-            createInvoiceForGuest(g2, 5, 2026, InvoiceStatus.OVERDUE);
 
-            // g3: Mar(PAID), Apr(PAID), May(PAID)
+            // g3: Mar(PAID), Apr(PAID), May(PENDING - generated on June 1 or 2)
             createInvoiceForGuest(g3, 3, 2026, InvoiceStatus.PAID);
             createInvoiceForGuest(g3, 4, 2026, InvoiceStatus.PAID);
-            createInvoiceForGuest(g3, 5, 2026, InvoiceStatus.PAID);
 
-            // g4: Apr(PAID), May(GENERATED)
+            // g4: Apr(PAID), May(PENDING - generated on June 1 or 2)
             createInvoiceForGuest(g4, 4, 2026, InvoiceStatus.PAID);
-            createInvoiceForGuest(g4, 5, 2026, InvoiceStatus.GENERATED);
 
-            // g5: May(PAID)
-            createInvoiceForGuest(g5, 5, 2026, InvoiceStatus.PAID);
+            // g5, g6, g7, g8: May(PENDING - generated on June 1 or 2)
 
-            // g6, g7, g8: May(GENERATED)
-            createInvoiceForGuest(g6, 5, 2026, InvoiceStatus.GENERATED);
-            createInvoiceForGuest(g7, 5, 2026, InvoiceStatus.GENERATED);
-            createInvoiceForGuest(g8, 5, 2026, InvoiceStatus.GENERATED);
-            log.info("✅ Monthly invoices seeded for all guests.");
+            log.info("✅ Monthly invoices seeded for all guests (May 2026 left pending).");
 
             // 12. Seed Maintenance Tickets
             maintenanceTicketRepository.save(MaintenanceTicket.builder()

@@ -47,6 +47,10 @@ export const ownerApi = {
   getManagers: () => api.get('/owner/managers'),
   createManager: (data) => api.post('/owner/managers', data),
   getConfig: () => api.get('/owner/config'),
+  // Building Creator
+  createBuilding: (data) => api.post('/owner/buildings', data),
+  getBuildingLayout: (id) => api.get(`/owner/buildings/${id}`),
+  updateBuilding: (id, data) => api.put(`/owner/buildings/${id}`, data),
 };
 
 export const managerApi = {
@@ -64,10 +68,19 @@ export const managerApi = {
   resolveTicket: (id) => api.put(`/manager/maintenance/${id}/resolve`),
   getVacancies: () => api.get('/manager/vacancies'),
   getVacantBeds: () => api.get('/inventory/vacant-beds'),
+  getAllBeds: () => api.get('/inventory/beds'),
   // Guest add-ons (egg/omelette/veg/WM) — managed by manager
   getGuestLog: (guestId, date) => api.get(`/manager/guest-log/${guestId}/${date}`),
   updateGuestLog: (guestId, date, data) => api.put(`/manager/guest-log/${guestId}/${date}`, data),
   getGuestsByDate: (date) => api.get(`/manager/guests-with-log/${date}`),
+  // Pricing Manager
+  getPricing: (buildingId) => api.get('/manager/pricing', { params: buildingId ? { buildingId } : {} }),
+  updateFoodPrice: (key, value, buildingId) => api.put(`/manager/pricing/${key}`, { value }, { params: buildingId ? { buildingId } : {} }),
+  updateRoomRent: (roomId, baseRent) => api.put(`/manager/pricing/rooms/${roomId}/rent`, { baseRent }),
+  // Invoice Generator
+  previewInvoices: (month, year) => api.get('/manager/invoices/preview', { params: { month, year } }),
+  generateInvoice: (guestId, month, year) => api.post('/manager/billing/generate', { guestId, month, year }),
+  generateAllInvoices: (month, year) => api.post('/manager/invoices/generate-all', { month, year }),
 };
 
 export const guestApi = {

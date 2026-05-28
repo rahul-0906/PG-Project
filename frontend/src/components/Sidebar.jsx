@@ -11,12 +11,16 @@ import {
   History, 
   CalendarDays, 
   FileText, 
-  LogOut 
+  LogOut,
+  Building2,
+  Tag,
+  Receipt
 } from 'lucide-react';
 
 const navMap = {
   PG_OWNER: [
     { to: '/owner/dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { to: '/owner/buildings', label: 'Buildings', icon: Building2 },
     { to: '/manager/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/owner/reports', label: 'Reports', icon: BarChart3 },
     { to: '/owner/audit', label: 'Audit Log', icon: History },
@@ -24,15 +28,17 @@ const navMap = {
   PG_MANAGER: [
     { to: '/manager/dashboard', label: 'Dashboard', icon: LayoutGrid },
     { to: '/manager/guests', label: 'Guests', icon: Users },
-    { to: '/manager/addons', label: 'Daily Add-ons', icon: ChefHat },
+    { to: '/manager/addons', label: 'Meal & Add-on Tracker', icon: ChefHat },
     { to: '/manager/eb-bill', label: 'EB Bill', icon: Zap },
+    { to: '/manager/invoices', label: 'Invoices', icon: Receipt },
+    { to: '/manager/pricing', label: 'Pricing', icon: Tag },
     { to: '/manager/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/manager/reports', label: 'Reports', icon: BarChart3 },
     { to: '/manager/audit', label: 'Audit Log', icon: History },
   ],
   GUEST: [
     { to: '/guest/dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { to: '/guest/daily-log', label: 'Daily Log', icon: CalendarDays },
+    { to: '/guest/daily-log', label: 'Meal Planner', icon: CalendarDays },
     { to: '/guest/invoices', label: 'Invoices', icon: FileText },
   ],
 };

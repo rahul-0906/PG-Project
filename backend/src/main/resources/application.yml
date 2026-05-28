@@ -2,22 +2,42 @@ spring:
   application:
     name: pg-crm
   config:
-    import: "classpath:tenant-config.yml"
+    import:
+      - "classpath:tenant-config.yml"
+      - "optional:file:./tenant-config.yml"
+      - "optional:file:../tenant-config.yml"
 
-  # ─── H2 (Active for development / MVP) ─────────────────────────
+  # ─── H2 (Commented out in favor of PostgreSQL) ─────────────────
+  # datasource:
+  #   url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+  #   driver-class-name: org.h2.Driver
+  #   username: sa
+  #   password: password
+  #
+  # h2:
+  #   console:
+  #     enabled: true
+  #     path: /h2-console
+  #
+  # jpa:
+  #   database-platform: org.hibernate.dialect.H2Dialect
+  #   hibernate:
+  #     ddl-auto: update
+  #   show-sql: false
+  #   open-in-view: true
+  #   properties:
+  #     hibernate:
+  #       format_sql: true
+
+  # ─── PostgreSQL (Active) ────────────────────────────────────────
   datasource:
-    url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: password
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+    url: jdbc:postgresql://localhost:5432/pgcrmdb
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: admin
 
   jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -25,17 +45,6 @@ spring:
     properties:
       hibernate:
         format_sql: true
-
-  # ─── PostgreSQL (Uncomment below + comment H2 block for production) ─
-  # datasource:
-  #   url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/pgcrmdb}
-  #   driver-class-name: org.postgresql.Driver
-  #   username: ${DB_USERNAME:postgres}
-  #   password: ${DB_PASSWORD:}
-  # jpa:
-  #   database-platform: org.hibernate.dialect.PostgreSQLDialect
-  #   hibernate:
-  #     ddl-auto: update
 
   # ─── Email / Gmail SMTP ─────────────────────────────────────────
   mail:
@@ -64,14 +73,14 @@ app:
     refresh-token-expiration: 604800000   # 7 days
   mail:
     from: ${MAIL_FROM:noreply@pgcrm.com}
-    from-name: "PG CRM"
+    from-name: ${pg.system.branding.name:PG CRM}
     enabled: ${MAIL_ENABLED:false}        # set true after configuring Gmail App Password
 
 # ─── Razorpay ────────────────────────────────────────────────────
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID:rzp_test_placeholder}
-  key-secret: ${RAZORPAY_KEY_SECRET:placeholder_secret}
-  enabled: ${RAZORPAY_ENABLED:false}     # set true after adding real keys
+  key-id: ${RAZORPAY_KEY_ID:rzp_test_SuLwO7L565iIkE}
+  key-secret: ${RAZORPAY_KEY_SECRET:crxqdRsIIaL2gbti1Hg9cZgG}
+  enabled: ${RAZORPAY_ENABLED:true}     # enabled with real keys
 
 # ─── Twilio WhatsApp ─────────────────────────────────────────────
 twilio:

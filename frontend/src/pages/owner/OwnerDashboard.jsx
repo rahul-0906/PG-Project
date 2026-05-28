@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { ownerApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { 
   LayoutGrid, 
   Bed, 
@@ -11,7 +13,9 @@ import {
   GitBranch, 
   UserCheck, 
   Plus, 
-  UserPlus 
+  UserPlus,
+  Pencil,
+  User as UserIcon
 } from 'lucide-react';
 
 function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400' }) {
@@ -27,9 +31,9 @@ function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400' }) {
 }
 
 export default function OwnerDashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [branches, setBranches] = useState([]);
-
   const [managers, setManagers] = useState([]);
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [managerForm, setManagerForm] = useState({ fullName: '', email: '', branchId: '' });
@@ -54,7 +58,34 @@ export default function OwnerDashboard() {
   };
 
   return (
-    <AppLayout showRightPanel={true}>
+    <AppLayout>
+      {/* Premium Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-700 rounded-2xl p-4 sm:p-5 shadow-md shadow-indigo-100/60 mb-6 text-white">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 translate-y-1/2 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
+              <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" />
+            </div>
+            <div>
+              <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Owner Portal</span>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
+                Welcome back, {user?.fullName || 'PG Owner'}
+              </h1>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Branches: {branches.length}
+                </span>
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Managers: {managers.length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -84,7 +115,17 @@ export default function OwnerDashboard() {
                 <div className="font-semibold text-sm text-slate-800">{b.name}</div>
                 <div className="text-xs text-slate-400 mt-0.5">{b.address}</div>
               </div>
-              <span className="badge badge-success">Active</span>
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/owner/buildings?edit=${b.id}`}
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1 text-xs"
+                  title="Edit Layout & Details"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                  <span>Edit Layout</span>
+                </Link>
+                <span className="badge badge-success">Active</span>
+              </div>
             </div>
           ))}
           {branches.length === 0 && <p className="text-slate-400 text-xs mt-2">No branches configured yet.</p>}

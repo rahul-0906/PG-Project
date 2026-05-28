@@ -9,4 +9,5 @@ import java.util.List;
 public interface RoomRepository extends JpaRepository<Room, String> {
     List<Room> findByBlockId(String blockId);
     List<Room> findByFloorId(String floorId);
+    List<Room> findByFloor_Building_Id(String buildingId);
 }

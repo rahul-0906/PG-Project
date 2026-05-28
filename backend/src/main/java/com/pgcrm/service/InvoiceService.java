@@ -5,6 +5,7 @@ import com.pgcrm.entity.enums.InvoiceLineType;
 import com.pgcrm.entity.enums.InvoiceStatus;
 import com.pgcrm.repository.*;
 import com.pgcrm.config.SystemConfigProperties;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,23 @@ public class InvoiceService {
     private final EbBillGuestRepository ebBillGuestRepository;
     private final SystemConfigProperties systemConfig;
     private final NotificationService notificationService;
+    private final PricingService pricingService;
+
+    /** DTO returned by previewInvoice() — no DB writes */
+    @Data
+    public static class InvoicePreview {
+        public String guestId;
+        public String guestName;
+        public String bedLabel;
+        public String roomNumber;
+        public String floor;
+        public BigDecimal rent;
+        public BigDecimal ebShare;
+        public BigDecimal food;
+        public BigDecimal laundry;
+        public BigDecimal total;
+        public boolean alreadyGenerated;
+    }
 
     @Transactional
     public Invoice generateInvoiceForGuest(Guest guest, int month, int year) {
@@ -73,10 +91,16 @@ public class InvoiceService {
                 .build());
         total = total.add(ebShare);
 
+        // ── Resolve per-building pricing ──────────────────────────
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+        PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+
         // ── 3. FOOD (skip if food included in rent) ───────────────
         BigDecimal foodTotal = BigDecimal.ZERO;
         if (!systemConfig.getRules().isFoodIncludedInRent()) {
-            foodTotal = calculateFoodTotal(guest, periodStart, periodEnd);
+            foodTotal = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
         }
         lineItems.add(InvoiceLineItem.builder()
                 .type(InvoiceLineType.FOOD)
@@ -88,7 +112,7 @@ public class InvoiceService {
         // ── 4. LAUNDRY ────────────────────────────────────────────
         BigDecimal laundryTotal = BigDecimal.ZERO;
         if (systemConfig.getRules().isHasWashingMachine()) {
-            laundryTotal = calculateLaundryTotal(guest, periodStart, periodEnd);
+            laundryTotal = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
         }
         lineItems.add(InvoiceLineItem.builder()
                 .type(InvoiceLineType.LAUNDRY)
@@ -143,25 +167,78 @@ public class InvoiceService {
                        .divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP);
     }
 
-    private BigDecimal calculateFoodTotal(Guest guest, LocalDate start, LocalDate end) {
+    private BigDecimal calculateFoodTotal(Guest guest, LocalDate start, LocalDate end, PricingService.EffectivePricing pricing) {
         List<DailyLog> logs = dailyLogRepository.findByGuestIdAndLogDateBetween(guest.getId(), start, end);
         BigDecimal total = BigDecimal.ZERO;
         for (DailyLog log : logs) {
-            if (log.isBreakfastOpted()) total = total.add(systemConfig.getPricing().getBreakfast());
-            if (log.isLunchOpted()) total = total.add(systemConfig.getPricing().getLunch());
-            if (log.isDinnerOpted()) total = total.add(systemConfig.getPricing().getDinner());
+            if (log.isBreakfastOpted()) total = total.add(pricing.breakfast());
+            if (log.isLunchOpted())     total = total.add(pricing.lunch());
+            if (log.isDinnerOpted())    total = total.add(pricing.dinner());
             if (log.getOmeletteCount() > 0)
-                total = total.add(systemConfig.getPricing().getOmelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
+                total = total.add(pricing.omelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
             if (log.getBoiledEggCount() > 0)
-                total = total.add(systemConfig.getPricing().getBoiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
+                total = total.add(pricing.boiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
         }
         return total;
     }
 
-    private BigDecimal calculateLaundryTotal(Guest guest, LocalDate start, LocalDate end) {
+    private BigDecimal calculateLaundryTotal(Guest guest, LocalDate start, LocalDate end, PricingService.EffectivePricing pricing) {
         List<DailyLog> logs = dailyLogRepository.findByGuestIdAndLogDateBetween(guest.getId(), start, end);
         int totalUses = logs.stream().mapToInt(DailyLog::getWashingMachineCount).sum();
-        return systemConfig.getPricing().getWashingMachine().multiply(BigDecimal.valueOf(totalUses));
+        return pricing.washingMachine().multiply(BigDecimal.valueOf(totalUses));
+    }
+
+    /**
+     * Computes an invoice preview for a guest without persisting anything.
+     */
+    public InvoicePreview previewInvoice(Guest guest, int month, int year) {
+        YearMonth ym = YearMonth.of(year, month);
+        LocalDate periodStart = ym.atDay(1);
+        LocalDate periodEnd   = ym.atEndOfMonth();
+
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+        PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+
+        BigDecimal rent = calculateProRatedRent(guest, ym);
+
+        BigDecimal ebShare = BigDecimal.ZERO;
+        if (guest.getBed() != null && guest.getBed().getRoom().getBlock() != null) {
+            String blockId = guest.getBed().getRoom().getBlock().getId();
+            List<EbBillGuest> ebShares = ebBillGuestRepository.findByEbBill_BlockIdAndGuestId(blockId, guest.getId());
+            ebShare = ebShares.stream()
+                    .filter(s -> isWithinPeriod(s.getEbBill().getBillingPeriodStart(), periodStart, periodEnd))
+                    .map(EbBillGuest::getShareAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+
+        BigDecimal food = BigDecimal.ZERO;
+        if (!systemConfig.getRules().isFoodIncludedInRent()) {
+            food = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
+        }
+
+        BigDecimal laundry = BigDecimal.ZERO;
+        if (systemConfig.getRules().isHasWashingMachine()) {
+            laundry = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
+        }
+
+        boolean alreadyGenerated = invoiceRepository.findByGuestIdAndMonthAndYear(guest.getId(), month, year).isPresent();
+
+        InvoicePreview preview = new InvoicePreview();
+        preview.guestId   = guest.getId();
+        preview.guestName = guest.getFullName();
+        preview.bedLabel  = guest.getBed() != null ? guest.getBed().getBedLabel() : "—";
+        preview.roomNumber = guest.getBed() != null ? guest.getBed().getRoom().getRoomNumber() : "—";
+        preview.floor      = (guest.getBed() != null && guest.getBed().getRoom().getFloor() != null)
+                             ? guest.getBed().getRoom().getFloor().getFloorLabel() : "—";
+        preview.rent      = rent;
+        preview.ebShare   = ebShare;
+        preview.food      = food;
+        preview.laundry   = laundry;
+        preview.total     = rent.add(ebShare).add(food).add(laundry);
+        preview.alreadyGenerated = alreadyGenerated;
+        return preview;
     }
 
     private boolean isWithinPeriod(LocalDate billStart, LocalDate periodStart, LocalDate periodEnd) {

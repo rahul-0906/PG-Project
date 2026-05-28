@@ -274,4 +274,73 @@ public class PgManagerController {
                 .orElseThrow(() -> new RuntimeException("Guest not found"));
         return ResponseEntity.ok(invoiceService.generateInvoiceForGuest(guest, month, year));
     }
+
+    // ── Invoice Generator Module ──────────────────────────────────
+
+    /**
+     * GET /api/manager/invoices/preview?month=5&year=2026
+     * Returns a computed (unsaved) invoice breakdown for every active guest.
+     */
+    @GetMapping("/invoices/preview")
+    public ResponseEntity<List<com.pgcrm.service.InvoiceService.InvoicePreview>> previewInvoices(
+            @RequestParam int month,
+            @RequestParam int year,
+            @RequestAttribute(required = false) String branchId) {
+
+        List<com.pgcrm.entity.Guest> guests = branchId != null
+                ? guestRepository.findActiveGuestsByBuildingId(branchId)
+                : guestRepository.findByActiveTrue();
+
+        List<com.pgcrm.service.InvoiceService.InvoicePreview> previews = guests.stream()
+                .map(g -> invoiceService.previewInvoice(g, month, year))
+                .toList();
+
+        return ResponseEntity.ok(previews);
+    }
+
+    /**
+     * POST /api/manager/invoices/generate-all
+     * Generates invoices for all guests who don't yet have one for this month/year.
+     * Skips guests who already have an invoice.
+     */
+    @PostMapping("/invoices/generate-all")
+    public ResponseEntity<Map<String, Object>> generateAllInvoices(
+            @RequestBody Map<String, Object> body,
+            @RequestAttribute(required = false) String branchId) {
+
+        int month = Integer.parseInt(body.get("month").toString());
+        int year  = Integer.parseInt(body.get("year").toString());
+
+        List<com.pgcrm.entity.Guest> guests = branchId != null
+                ? guestRepository.findActiveGuestsByBuildingId(branchId)
+                : guestRepository.findByActiveTrue();
+
+        int generated = 0, skipped = 0, failed = 0;
+        List<String> errors = new java.util.ArrayList<>();
+
+        for (com.pgcrm.entity.Guest guest : guests) {
+            try {
+                com.pgcrm.entity.Invoice inv = invoiceService.generateInvoiceForGuest(guest, month, year);
+                // generateInvoiceForGuest returns existing if already present — check by comparing generatedAt
+                if (inv.getGeneratedAt() != null &&
+                    inv.getGeneratedAt().isAfter(java.time.LocalDateTime.now().minusSeconds(5))) {
+                    generated++;
+                } else {
+                    skipped++;
+                }
+            } catch (Exception e) {
+                failed++;
+                errors.add(guest.getFullName() + ": " + e.getMessage());
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "generated", generated,
+                "skipped", skipped,
+                "failed", failed,
+                "errors", errors,
+                "total", guests.size()
+        ));
+    }
 }
+

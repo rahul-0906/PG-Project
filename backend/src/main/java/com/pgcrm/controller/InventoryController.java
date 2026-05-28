@@ -120,8 +120,19 @@ public class InventoryController {
     // ── Vacant Beds (for check-in) ────────────────────────────────
 
     @GetMapping("/vacant-beds")
-    public ResponseEntity<List<Bed>> getVacantBeds() {
+    public ResponseEntity<List<Bed>> getVacantBeds(@RequestAttribute(required = false) String branchId) {
+        if (branchId != null) {
+            return ResponseEntity.ok(bedRepository.findVacantByBuildingId(branchId));
+        }
         return ResponseEntity.ok(bedRepository.findVacant());
+    }
+
+    @GetMapping("/beds")
+    public ResponseEntity<List<Bed>> getAllBeds(@RequestAttribute(required = false) String branchId) {
+        if (branchId != null) {
+            return ResponseEntity.ok(bedRepository.findAllByBuildingId(branchId));
+        }
+        return ResponseEntity.ok(bedRepository.findAllWithRoomDetails());
     }
 
     @DeleteMapping("/beds/{bedId}")

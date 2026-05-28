@@ -82,7 +82,7 @@ export default function ManagerGuests() {
   useEffect(() => {
     if (showForm) {
       setLoadingBeds(true);
-      managerApi.getVacantBeds()
+      managerApi.getAllBeds()
         .then(r => {
           setVacantBeds(r.data || []);
         })
@@ -197,88 +197,123 @@ export default function ManagerGuests() {
             ) : vacantBeds.length === 0 ? (
               <div className="flex items-center gap-1.5 text-rose-500 text-sm">
                 <AlertTriangle className="w-4 h-4" />
+                <span>No beds configured in the building.</span>
+              </div>
+            ) : !vacantBeds.some(bed => bed.status === 'VACANT') ? (
+              <div className="flex items-center gap-1.5 text-rose-500 text-sm">
+                <AlertTriangle className="w-4 h-4" />
                 <span>No vacant beds available in the building.</span>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {/* Horizontal Floor Selection Tabs */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  {floors.map(f => (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setActiveFloorTab(f)}
-                      className="btn flex items-center gap-1"
-                      style={{
-                        padding: '0.4rem 1.1rem',
-                        fontSize: '0.8rem',
-                        background: currentFloor === f ? 'var(--accent)' : 'var(--bg-card)',
-                        color: currentFloor === f ? '#fff' : 'var(--text-secondary)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '8px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>{f}</span>
-                    </button>
-                  ))}
+                {/* Horizontal Floor Selection Tabs & Legend */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex gap-2 flex-wrap">
+                    {floors.map(f => {
+                      const isActive = currentFloor === f;
+                      return (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setActiveFloorTab(f)}
+                          className={`btn px-4 py-1.5 text-xs flex items-center gap-1.5 rounded-lg border transition-all ${
+                            isActive 
+                              ? 'bg-primary text-white font-medium border-primary' 
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          <span>{f}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Status Legend */}
+                  <div className="flex gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
+                      <span>Vacant (Selectable)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-slate-400 inline-block"></span>
+                      <span>Occupied</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span>
+                      <span>Notice Period (Leaving Soon)</span>
+                    </div>
+                  </div>
                 </div>
 
                 {currentFloor && groupedBeds[currentFloor] && (
-                  <div style={{ background: 'var(--bg-primary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-1 font-bold text-sm text-primary mb-3">
                       <MapPin className="w-4 h-4" />
                       <span>{currentFloor}</span>
                     </div>
                     
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div className="flex flex-col gap-4">
                       {Object.entries(groupedBeds[currentFloor]).map(([blockName, rooms]) => (
-                        <div key={blockName} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingLeft: '0.5rem', borderLeft: '2px solid var(--border)' }}>
-                          <div className="flex items-center gap-1 text-slate-500 font-semibold text-xs mb-1">
+                        <div key={blockName} className="flex flex-col gap-2 pl-3 border-l-2 border-slate-200">
+                          <div className="flex items-center gap-1 text-slate-400 font-bold text-xs uppercase tracking-wider mb-1">
                             <Layers className="w-3.5 h-3.5" />
                             <span>{blockName}</span>
                           </div>
                           
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                          <div className="flex flex-wrap gap-4 w-full">
                             {Object.entries(rooms).map(([roomNum, beds]) => (
-                              <div key={roomNum} style={{ 
-                                background: 'var(--bg-secondary)', 
-                                padding: '0.75rem 1rem', 
-                                borderRadius: '8px', 
-                                border: '1px solid var(--border)', 
-                                display: 'flex', 
-                                flexDirection: 'column', 
-                                gap: '0.5rem',
-                                minWidth: '220px'
-                              }}>
-                                <span className="flex items-center gap-1 font-bold text-xs text-slate-700">
-                                  <Home className="w-3.5 h-3.5 text-slate-400" />
-                                  <span>Room {roomNum}</span>
-                                </span>
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem' }}>
+                              <div key={roomNum} className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col gap-2 min-w-[220px] flex-grow md:flex-initial shadow-sm hover:border-slate-300 transition-colors">
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="flex items-center gap-1 font-bold text-xs text-slate-700">
+                                    <Home className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Room {roomNum}</span>
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 font-semibold" style={{ paddingLeft: '1.25rem' }}>
+                                    {beds[0]?.room?.sharingType ? `${beds[0].room.sharingType}-Sharing` : 'Unknown'}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 mt-1">
                                   {beds.map(bed => {
+                                    const occupant = guests.find(g => g.bed?.id === bed.id);
+                                    const isNoticePeriod = occupant && occupant.noticeDate;
+                                    const isOccupied = bed.status === 'OCCUPIED' || (occupant && !isNoticePeriod);
+                                    const isVacant = !isOccupied && !isNoticePeriod;
+
                                     const isSelected = form.bedId === bed.id;
+
+                                    let btnClasses = "px-2.5 py-1 rounded-md border text-[11px] transition-all font-bold ";
+                                    let isDisabled = false;
+
+                                    if (isVacant) {
+                                      if (isSelected) {
+                                        btnClasses += "bg-primary border-primary text-white shadow-sm cursor-pointer";
+                                      } else {
+                                        btnClasses += "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:shadow-sm cursor-pointer";
+                                      }
+                                    } else if (isNoticePeriod) {
+                                      btnClasses += "bg-yellow-50 border-yellow-200 text-yellow-700 cursor-not-allowed opacity-90";
+                                      isDisabled = true;
+                                    } else {
+                                      // Occupied
+                                      btnClasses += "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed opacity-75";
+                                      isDisabled = true;
+                                    }
+
                                     return (
                                       <button
                                         key={bed.id}
                                         type="button"
+                                        disabled={isDisabled}
                                         onClick={() => {
-                                          setForm(f => ({ ...f, bedId: bed.id }));
-                                          setSelectedBedInfo(bed);
+                                          if (isVacant) {
+                                            setForm(f => ({ ...f, bedId: bed.id }));
+                                            setSelectedBedInfo(bed);
+                                          }
                                         }}
-                                        style={{
-                                          padding: '0.2rem 0.5rem',
-                                          borderRadius: '4px',
-                                          border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
-                                          background: isSelected ? 'var(--accent)' : 'var(--bg-card)',
-                                          color: isSelected ? '#fff' : 'var(--text-primary)',
-                                          fontSize: '0.75rem',
-                                          fontWeight: 700,
-                                          cursor: 'pointer',
-                                          transition: 'all 0.15s'
-                                        }}
+                                        className={btnClasses}
+                                        title={isNoticePeriod ? 'Notice Period (Leaving Soon)' : isOccupied ? 'Occupied' : 'Vacant (Available)'}
                                       >
                                         {bed.bedLabel}
                                       </button>

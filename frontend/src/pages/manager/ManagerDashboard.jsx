@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   LayoutGrid, 
@@ -11,7 +12,8 @@ import {
   PieChart as ChartIcon, 
   Zap, 
   Users, 
-  ArrowRight 
+  ArrowRight,
+  User as UserIcon
 } from 'lucide-react';
 
 function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400' }) {
@@ -27,6 +29,7 @@ function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400' }) {
 }
 
 export default function ManagerDashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
 
   useEffect(() => { managerApi.getDashboard().then(r => setData(r.data)).catch(() => {}); }, []);
@@ -38,7 +41,34 @@ export default function ManagerDashboard() {
   const COLORS = ['#2563eb', '#10b981'];
 
   return (
-    <AppLayout showRightPanel={true}>
+    <AppLayout>
+      {/* Premium Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-700 rounded-2xl p-4 sm:p-5 shadow-md shadow-indigo-100/60 mb-6 text-white">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 translate-y-1/2 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
+              <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" />
+            </div>
+            <div>
+              <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Manager Portal</span>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
+                Welcome back, {user?.fullName || 'PG Manager'}
+              </h1>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Beds: {data?.occupiedBeds ?? 0} / {data?.totalBeds ?? 0} Occupied
+                </span>
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Pending Tickets: {data?.pendingMaintenanceTickets ?? 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">

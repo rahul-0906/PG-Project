@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { guestApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   User, 
@@ -9,20 +11,29 @@ import {
   FileText, 
   Bell, 
   ChefHat, 
-  Coffee, 
   CheckCircle2, 
   TrendingUp,
-  ShieldAlert
+  ShieldAlert,
+  ArrowRight,
+  Utensils,
+  CreditCard
 } from 'lucide-react';
 
-function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400', children }) {
+function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-100', iconColor = 'text-slate-500', children }) {
   return (
-    <div className="stat-card flex flex-col gap-1.5">
-      <div className="flex items-center justify-between w-full">
-        <span className="stat-label">{label}</span>
-        {Icon && <Icon className={`w-4 h-4 ${iconColor}`} />}
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between transition-all duration-200 hover:border-primary/40 hover:shadow-md min-h-[140px]">
+      <div>
+        <div className="flex items-center justify-between w-full mb-1">
+          <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+          {Icon && (
+            <div className={`p-1.5 rounded-lg ${iconBg} ${iconColor}`}>
+              <Icon className="w-3.5 h-3.5" />
+            </div>
+          )}
+        </div>
+        {value !== undefined && <div className="text-2xl font-black text-slate-900 tracking-tight">{value}</div>}
       </div>
-      {value !== undefined ? <div className="stat-value">{value}</div> : children}
+      {children}
     </div>
   );
 }
@@ -30,6 +41,8 @@ function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400', chil
 export default function GuestDashboard() {
   const [data, setData] = useState(null);
   const [invoices, setInvoices] = useState([]);
+  const navigate = useNavigate();
+  const { updateUser } = useAuth();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', whatsappNumber: '', vehicleRegistration: '' });
@@ -58,6 +71,7 @@ export default function GuestDashboard() {
     setSavingProfile(true);
     try {
       await guestApi.updateProfile(profileForm);
+      updateUser({ fullName: profileForm.fullName });
       setShowProfileModal(false);
       guestApi.getDashboard().then(r => setData(r.data)); // refresh name
     } catch (err) { alert('Failed to save profile'); }
@@ -73,19 +87,41 @@ export default function GuestDashboard() {
   }));
 
   return (
-    <AppLayout showRightPanel={true}>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title flex items-center gap-2">
-            <User className="w-6 h-6 text-primary" />
-            <span>Welcome back, {data?.guestName || '...'}</span>
-          </h1>
-          <p className="page-subtitle">Bed: {data?.bedLabel} • Checked in: {data?.checkInDate}</p>
+    <AppLayout>
+      {/* Premium Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-700 rounded-2xl p-4 sm:p-5 shadow-md shadow-indigo-100/60 mb-6 text-white">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-48 h-48 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute left-1/3 bottom-0 translate-y-1/2 w-36 h-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
+              <User className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" />
+            </div>
+            <div>
+              <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Guest Portal</span>
+              <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
+                Welcome back, {data?.guestName || '...'}
+              </h1>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Bed: {data?.bedLabel || '—'}
+                </span>
+                <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
+                  Checked In: {data?.checkInDate || '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <button 
+            className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 px-3.5 py-1.5 rounded-xl text-xxs font-bold transition-all duration-200 flex items-center gap-1.5 hover:-translate-y-0.5"
+            onClick={openProfile}
+          >
+            <Edit2 className="w-3 h-3" />
+            <span>Edit Profile</span>
+          </button>
         </div>
-        <button className="btn btn-ghost flex items-center gap-1.5 text-xs" onClick={openProfile}>
-          <Edit2 className="w-3.5 h-3.5" />
-          <span>Edit Profile</span>
-        </button>
       </div>
 
       {showProfileModal && createPortal(
@@ -124,44 +160,201 @@ export default function GuestDashboard() {
         document.body
       )}
 
-      <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-        <StatCard label="Total Invoices" value={data?.totalInvoices ?? '—'} icon={FileText} iconColor="text-blue-500" />
-        <StatCard label="Unread Notifications" value={data?.unreadNotifications ?? '—'} icon={Bell} iconColor="text-rose-500" />
-        <StatCard label="Food Plan" icon={ChefHat} iconColor="text-emerald-500">
+      {/* Grid: Stat Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatCard 
+          label="Total Invoices" 
+          value={data?.totalInvoices ?? '0'} 
+          icon={FileText} 
+          iconBg="bg-blue-50" 
+          iconColor="text-blue-500"
+        >
           <div className="flex flex-col gap-1.5 mt-1">
-            <span className={`badge w-max ${data?.foodIncludedInRent ? 'badge-success' : 'badge-info'}`}>
-              {data?.foodIncludedInRent ? 'Food Included' : 'Food À La Carte'}
-            </span>
-            {data?.allowMealCancellations && (
-              <span className="badge badge-accent w-max flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Cancellations Allowed</span>
+            <div className="text-[10px] text-slate-400 font-medium">Auto-generated monthly bills</div>
+            <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-50/50">
+              <span className="text-[10px] text-slate-400 font-medium">View bills</span>
+              <button 
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 transition-colors"
+                onClick={() => navigate('/guest/invoices')}
+              >
+                <span>My Invoices</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        </StatCard>
+
+        <StatCard 
+          label="Unread Notifications" 
+          value={data?.unreadNotifications ?? '0'} 
+          icon={Bell} 
+          iconBg="bg-rose-50" 
+          iconColor={data?.unreadNotifications > 0 ? "text-rose-500 animate-bounce" : "text-rose-400"}
+        >
+          <div className="flex flex-col gap-1.5 mt-1">
+            <div className="text-[10px] text-slate-400 font-medium">Important manager updates</div>
+            <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-50/50">
+              <span className="text-[10px] text-slate-400 font-medium">Status</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Up to date</span>
+            </div>
+          </div>
+        </StatCard>
+
+        <StatCard 
+          label="Food Plan" 
+          icon={ChefHat} 
+          iconBg="bg-emerald-50" 
+          iconColor="text-emerald-500"
+        >
+          <div className="flex flex-col gap-2 mt-1">
+            <div className="flex items-center gap-2">
+              <span className={`badge ${data?.foodIncludedInRent ? 'badge-success' : 'badge-info'}`}>
+                {data?.foodIncludedInRent ? 'Food Included' : 'Food À La Carte'}
               </span>
-            )}
+              {data?.allowMealCancellations && (
+                <span className="badge badge-accent flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Cancellations Allowed</span>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-50/50">
+              <span className="text-[10px] text-slate-400 font-medium">Manage preferences</span>
+              <button 
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 transition-colors"
+                onClick={() => navigate('/guest/daily-log')}
+              >
+                <span>Meal Planner</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
           </div>
         </StatCard>
       </div>
 
-      {chartData.length > 0 && (
-        <div className="card">
-          <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-slate-400" />
-            <span>Monthly Spending Trend</span>
-          </h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" />
-              <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 12 }} />
-              <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
-              <Bar dataKey="rent" fill="#2563eb" radius={[4,4,0,0]} name="Rent" />
-              <Bar dataKey="food" fill="#10b981" radius={[4,4,0,0]} name="Food" />
-              <Bar dataKey="eb" fill="#f59e0b" radius={[4,4,0,0]} name="EB" />
-              <Bar dataKey="wm" fill="#3b82f6" radius={[4,4,0,0]} name="Laundry" />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Grid: Actions & Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        {/* Quick Actions Panel */}
+        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-4">
+          <div>
+            <h3 className="text-slate-800 font-bold text-base">Quick Operations</h3>
+            <p className="text-slate-400 text-xs mt-0.5">Common tasks and pages you can access immediately.</p>
+          </div>
+          
+          <div className="flex flex-col gap-3 mt-2">
+            <button 
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
+              onClick={() => navigate('/guest/daily-log')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                  <Utensils className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800 text-sm">Meal Planner</div>
+                  <div className="text-slate-400 text-xxs mt-0.5">Opt in/out of meals</div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button 
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
+              onClick={() => navigate('/guest/invoices')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition-colors">
+                  <CreditCard className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800 text-sm">My Invoices</div>
+                  <div className="text-slate-400 text-xxs mt-0.5">View & clear invoices</div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+
+            <button 
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
+              onClick={openProfile}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-violet-50 text-violet-600 rounded-lg group-hover:bg-violet-100 transition-colors">
+                  <User className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="font-bold text-slate-800 text-sm">Edit Profile</div>
+                  <div className="text-slate-400 text-xxs mt-0.5">Change phone & vehicle details</div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </button>
+          </div>
         </div>
-      )}
+
+        {/* Chart Panel */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                <TrendingUp className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-slate-800 font-bold text-base">Monthly Spending Trend</h3>
+                <p className="text-slate-400 text-xs mt-0.5">Breakdown of rent, food, EB, and washing machine bills.</p>
+              </div>
+            </div>
+          </div>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barGap={3}>
+                <defs>
+                  <linearGradient id="rentGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#818cf8" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.9} />
+                  </linearGradient>
+                  <linearGradient id="foodGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#34d399" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#10b981" stopOpacity={0.9} />
+                  </linearGradient>
+                  <linearGradient id="ebGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fbbf24" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#d97706" stopOpacity={0.9} />
+                  </linearGradient>
+                  <linearGradient id="wmGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#60a5fa" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#2563eb" stopOpacity={0.9} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.08)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 500 }} axisLine={false} tickLine={false} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(148,163,184,0.03)' }}
+                  contentStyle={{ 
+                    background: '#ffffff', 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: '16px', 
+                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05)', 
+                    color: '#0f172a', 
+                    fontSize: '11px',
+                    padding: '10px 12px'
+                  }}
+                />
+                <Bar dataKey="rent" fill="url(#rentGradient)" radius={[3,3,0,0]} name="Rent" maxBarSize={12} />
+                <Bar dataKey="food" fill="url(#foodGradient)" radius={[3,3,0,0]} name="Food" maxBarSize={12} />
+                <Bar dataKey="eb" fill="url(#ebGradient)" radius={[3,3,0,0]} name="EB" maxBarSize={12} />
+                <Bar dataKey="wm" fill="url(#wmGradient)" radius={[3,3,0,0]} name="Laundry" maxBarSize={12} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[260px] text-slate-400 text-sm">
+              <TrendingUp className="w-8 h-8 text-slate-300 mb-2" />
+              <span>No invoice billing history available yet.</span>
+            </div>
+          )}
+        </div>
+      </div>
     </AppLayout>
   );
 }

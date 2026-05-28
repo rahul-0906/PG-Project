@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSystemConfig } from '../context/SystemConfigContext';
 
 export default function Login() {
   const { user, login } = useAuth();
+  const { config } = useSystemConfig();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
@@ -64,7 +66,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-app p-4">
       <div className="w-full max-w-[400px] bg-surface border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 fade-in-up">
         <div className="text-2xl font-extrabold text-slate-900 tracking-tight text-center mb-1">
-          🏠 PG CRM
+          🏠 {config?.branding?.name || 'PG CRM'}
         </div>
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-6">
           Single-Tenant PG &amp; Hostel Management

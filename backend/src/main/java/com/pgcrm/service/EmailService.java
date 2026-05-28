@@ -48,11 +48,11 @@ public class EmailService {
             ctx.setVariable("guestName", guest.getFullName());
             ctx.setVariable("email", guest.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
-            ctx.setVariable("pgName", "PG CRM");
+            ctx.setVariable("pgName", fromName);
             ctx.setVariable("loginUrl", "http://localhost:5173/login");
 
             String html = templateEngine.process("welcome-email", ctx);
-            sendHtmlMail(guest.getEmail(), "🏠 Welcome to PG CRM — Your Login Details", html);
+            sendHtmlMail(guest.getEmail(), "🏠 Welcome to " + fromName + " — Your Login Details", html);
             log.info("📧 Welcome email sent to {}", guest.getEmail());
         } catch (Exception e) {
             log.error("Failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage());

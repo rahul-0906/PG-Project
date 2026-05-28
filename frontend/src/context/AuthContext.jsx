@@ -17,6 +17,7 @@ export function AuthProvider({ children }) {
     const userData = {
       userId: data.userId,
       role: data.role,
+      fullName: data.fullName,
       mustChangePassword: data.mustChangePassword === 'true' || data.mustChangePassword === true,
       firstLogin: data.firstLogin === 'true' || data.firstLogin === true,
     };

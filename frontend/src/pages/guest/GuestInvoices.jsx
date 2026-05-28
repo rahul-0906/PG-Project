@@ -9,6 +9,7 @@ import {
   Check, 
   Loader2 
 } from 'lucide-react';
+import { useSystemConfig } from '../../context/SystemConfigContext';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const STATUS_COLORS = { GENERATED:'badge-info', PAID:'badge-success', OVERDUE:'badge-danger' };
@@ -25,6 +26,7 @@ function loadRazorpayScript() {
 }
 
 export default function GuestInvoices() {
+  const { config } = useSystemConfig();
   const [invoices, setInvoices] = useState([]);
   const [paying, setPaying] = useState(null);
 
@@ -62,7 +64,7 @@ export default function GuestInvoices() {
         key: order.keyId,
         amount: order.amount,
         currency: order.currency,
-        name: 'PG CRM',
+        name: config?.branding?.name || 'PG CRM',
         description: `Invoice — ${MONTHS[invoice.month-1]} ${invoice.year}`,
         order_id: order.orderId,
         prefill: { name: order.guestName, email: order.guestEmail },

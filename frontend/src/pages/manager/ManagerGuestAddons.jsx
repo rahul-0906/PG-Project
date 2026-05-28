@@ -152,9 +152,9 @@ export default function ManagerGuestAddons() {
         <div>
           <h1 className="page-title flex items-center gap-2">
             <ChefHat className="w-6 h-6 text-primary" />
-            <span>Daily Add-ons</span>
+            <span>Meal & Add-on Tracker</span>
           </h1>
-          <p className="page-subtitle">Record egg, omelette, washing machine &amp; veg preference per guest</p>
+          <p className="page-subtitle">Record meal options, egg, omelette, washing machine &amp; veg preference per guest</p>
         </div>
         <input type="date" value={date} onChange={e => setDate(e.target.value)}
           className="form-input" style={{ width:'auto', padding:'0.4rem 0.75rem' }} />
@@ -165,7 +165,7 @@ export default function ManagerGuestAddons() {
         {[
           { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), color: 'text-indigo-500' },
           { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), color: 'text-amber-500' },
-          { icon: Shirt, label:'WM Uses', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), color: 'text-blue-500' },
+          { icon: Shirt, label:'Washing Machine', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), color: 'text-blue-500' },
           { icon: Leaf, label:'Veg Guests', val: Object.values(logs).filter(l => l.isVeg).length, color: 'text-emerald-500' },
           { icon: Utensils, label:'Non-Veg', val: Object.values(logs).filter(l => !l.isVeg).length, color: 'text-rose-500' },
         ].map(s => {

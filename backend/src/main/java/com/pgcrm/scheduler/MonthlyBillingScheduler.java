@@ -3,8 +3,8 @@ package com.pgcrm.scheduler;
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.Invoice;
 import com.pgcrm.repository.GuestRepository;
-
 import com.pgcrm.service.InvoiceService;
+import com.pgcrm.service.PricingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +21,7 @@ public class MonthlyBillingScheduler {
 
     private final GuestRepository guestRepository;
     private final InvoiceService invoiceService;
+    private final PricingService pricingService;
 
     /**
      * Runs at midnight on the 1st of every month.
@@ -43,6 +44,16 @@ public class MonthlyBillingScheduler {
 
         for (Guest guest : allActiveGuests) {
             try {
+                String guestBuildingId = guest.getBed() != null && guest.getBed().getRoom() != null && guest.getBed().getRoom().getFloor() != null
+                        ? guest.getBed().getRoom().getFloor().getBuilding().getId()
+                        : null;
+
+                if (guestBuildingId != null && !pricingService.isBillingSchedulerEnabled(guestBuildingId)) {
+                    log.info("⏭ Skipping automatic monthly invoice generation for guest {} as billing scheduler is disabled for building {}",
+                            guest.getFullName(), guestBuildingId);
+                    continue;
+                }
+
                 Invoice invoice = invoiceService.generateInvoiceForGuest(guest, month, year);
                 log.info("✓ Invoice {} generated for guest {} | Total: ₹{}",
                         invoice.getId(), guest.getFullName(), invoice.getTotalAmount());

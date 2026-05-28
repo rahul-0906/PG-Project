@@ -18,8 +18,17 @@ public interface BedRepository extends JpaRepository<Bed, String> {
     @Query("SELECT COUNT(b) FROM Bed b")
     long countTotal();
 
-    @Query("SELECT b FROM Bed b WHERE b.status = 'VACANT' ORDER BY b.bedLabel")
+    @Query("SELECT b FROM Bed b LEFT JOIN FETCH b.room r LEFT JOIN FETCH r.floor f LEFT JOIN FETCH r.block WHERE b.status = 'VACANT' ORDER BY b.bedLabel")
     List<Bed> findVacant();
+
+    @Query("SELECT b FROM Bed b LEFT JOIN FETCH b.room r LEFT JOIN FETCH r.floor f LEFT JOIN FETCH r.block WHERE b.room.floor.building.id = :buildingId AND b.status = 'VACANT' ORDER BY b.bedLabel")
+    List<Bed> findVacantByBuildingId(String buildingId);
+
+    @Query("SELECT b FROM Bed b LEFT JOIN FETCH b.room r LEFT JOIN FETCH r.floor f LEFT JOIN FETCH r.block WHERE b.room.floor.building.id = :buildingId ORDER BY b.bedLabel")
+    List<Bed> findAllByBuildingId(String buildingId);
+
+    @Query("SELECT b FROM Bed b LEFT JOIN FETCH b.room r LEFT JOIN FETCH r.floor f LEFT JOIN FETCH r.block ORDER BY b.bedLabel")
+    List<Bed> findAllWithRoomDetails();
 
     @Query("SELECT COUNT(b) FROM Bed b WHERE b.room.floor.building.id = :buildingId AND b.status = 'VACANT'")
     long countVacantByBuildingId(String buildingId);

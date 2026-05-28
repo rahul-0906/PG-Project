@@ -202,4 +202,39 @@ body {
   .tab-btn.active {
     @apply bg-white text-slate-900 shadow-sm;
   }
+
+  /* Premium CSS Toggle Switch */
+  .toggle {
+    @apply relative inline-flex items-center cursor-pointer select-none;
+  }
+  .toggle input {
+    @apply sr-only;
+  }
+  .toggle-slider {
+    @apply w-10 h-6 bg-slate-200 rounded-full transition-colors duration-200 relative;
+  }
+  .toggle-slider::after {
+    content: '';
+    @apply absolute top-[2px] left-[2px] w-5 h-5 bg-white rounded-full transition-transform duration-200 shadow-sm;
+  }
+  .toggle input:checked ~ .toggle-slider {
+    @apply bg-primary;
+  }
+  .toggle input:checked ~ .toggle-slider::after {
+    @apply translate-x-4;
+  }
+  .toggle input:disabled ~ .toggle-slider {
+    @apply opacity-40 cursor-not-allowed;
+  }
+}
+
+/* Hide number input spinners globally */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
 }

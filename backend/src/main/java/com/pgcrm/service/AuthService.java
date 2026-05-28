@@ -45,6 +45,7 @@ public class AuthService {
                 "refreshToken",       refreshToken,
                 "role",               user.getRole().name(),
                 "userId",             user.getId(),
+                "fullName",           user.getFullName() != null ? user.getFullName() : "",
 
                 "firstLogin",         String.valueOf(user.isFirstLogin()),
                 "mustChangePassword", String.valueOf(user.isMustChangePassword())

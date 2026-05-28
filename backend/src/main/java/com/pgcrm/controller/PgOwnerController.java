@@ -2,6 +2,7 @@ package com.pgcrm.controller;
 
 import com.pgcrm.entity.*;
 import com.pgcrm.repository.*;
+import com.pgcrm.service.BuildingSetupService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,13 +15,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PgOwnerController {
 
-
     private final BuildingRepository buildingRepository;
     private final BedRepository bedRepository;
     private final GuestRepository guestRepository;
     private final InvoiceRepository invoiceRepository;
     private final UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final BuildingSetupService buildingSetupService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard() {
@@ -38,6 +39,36 @@ public class PgOwnerController {
     @GetMapping("/branches")
     public ResponseEntity<List<Building>> getBranches() {
         return ResponseEntity.ok(buildingRepository.findAll());
+    }
+
+    /** Creates a new building with floors, blocks, rooms, and beds in one transaction. */
+    @PostMapping("/buildings")
+    public ResponseEntity<?> createBuilding(@RequestBody BuildingSetupService.BuildingSetupRequest req) {
+        try {
+            BuildingSetupService.BuildingCreationResult result = buildingSetupService.createBuilding(req);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/buildings/{buildingId}")
+    public ResponseEntity<?> getBuildingLayout(@PathVariable String buildingId) {
+        try {
+            return ResponseEntity.ok(buildingSetupService.getBuildingLayout(buildingId));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/buildings/{buildingId}")
+    public ResponseEntity<?> updateBuilding(@PathVariable String buildingId, @RequestBody BuildingSetupService.BuildingEditRequest req) {
+        try {
+            BuildingSetupService.BuildingCreationResult result = buildingSetupService.updateBuilding(buildingId, req);
+            return ResponseEntity.ok(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/managers")

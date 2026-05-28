@@ -69,11 +69,11 @@ export default function ManagerEbBill() {
       <div className="card" style={{ maxWidth: 800 }}>
         <form onSubmit={submit}>
           <div className="grid-2">
-            <div className="form-group"><label className="form-label">Block ID</label><input className="form-input" value={form.blockId} onChange={e=>setForm(f=>({...f,blockId:e.target.value}))} placeholder="Enter Block ID" required /></div>
+            <div className="form-group"><label className="form-label">Block ID</label><input className="form-input" value={form.blockId} onChange={e=>setForm(f=>({...f,blockId:e.target.value}))} placeholder="Enter Block ID" autoComplete="off" name="eb-block-id" required /></div>
             {mode === 'EQUAL_SPLIT' ? (
-              <div className="form-group"><label className="form-label">Total EB Amount (₹)</label><input type="number" step="0.01" className="form-input" value={form.totalAmount} onChange={e=>setForm(f=>({...f,totalAmount:e.target.value}))} placeholder="e.g. 3600" required /></div>
+              <div className="form-group"><label className="form-label">Total EB Amount (₹)</label><input type="number" step="0.01" className="form-input" value={form.totalAmount} onChange={e=>setForm(f=>({...f,totalAmount:e.target.value}))} placeholder="e.g. 3600" autoComplete="off" name="eb-total-amount" required /></div>
             ) : (
-              <div className="form-group"><label className="form-label">Rate Per Unit (₹/kWh)</label><input type="number" step="0.01" className="form-input" value={form.ratePerUnit} onChange={e=>setForm(f=>({...f,ratePerUnit:e.target.value}))} placeholder="e.g. 8.50" required /></div>
+              <div className="form-group"><label className="form-label">Rate Per Unit (₹/kWh)</label><input type="number" step="0.01" className="form-input" value={form.ratePerUnit} onChange={e=>setForm(f=>({...f,ratePerUnit:e.target.value}))} placeholder="e.g. 8.50" autoComplete="off" name="eb-rate-per-unit" required /></div>
             )}
           </div>
           
