@@ -186,23 +186,23 @@ export default function DailyLog() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Section: Calendar */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="card shadow-sm border border-slate-200/80 p-5 bg-white rounded-2xl">
+          <div className="card shadow-sm border border-slate-200/80 p-4 bg-white rounded-2xl max-w-[500px] mx-auto lg:mx-0">
             {/* Calendar Control Header */}
             <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
-              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+              <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2">
                 <span>Monthly Calendar</span>
                 {loadingLogs && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
               </h3>
 
-              <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-0.5 rounded-lg">
                 <button 
                   type="button" 
                   onClick={handlePrevMonth} 
                   className="p-1 rounded hover:bg-white text-slate-600 transition-colors"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs font-bold text-slate-700 min-w-[120px] text-center select-none">
+                <span className="text-[11px] font-bold text-slate-700 min-w-[100px] text-center select-none">
                   {monthNames[month - 1]} {year}
                 </span>
                 <button 
@@ -210,15 +210,15 @@ export default function DailyLog() {
                   onClick={handleNextMonth} 
                   className="p-1 rounded hover:bg-white text-slate-600 transition-colors"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1">
               {dayNames.map(d => (
-                <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-1.5">
+                <div key={d} className="text-center text-[9px] font-bold text-slate-400 uppercase tracking-wider py-1">
                   {d}
                 </div>
               ))}
@@ -238,7 +238,7 @@ export default function DailyLog() {
                     key={dayNum}
                     type="button"
                     onClick={() => setSelectedDate(dayStr)}
-                    className={`aspect-square relative p-1 rounded-xl border flex flex-col justify-between items-center transition-all duration-200 ${
+                    className={`aspect-square p-1 rounded-lg border flex flex-col justify-between items-center transition-all duration-200 ${
                       isSelected 
                         ? 'bg-indigo-50/70 border-primary text-primary font-bold shadow-sm ring-1 ring-primary' 
                         : isToday
@@ -246,23 +246,21 @@ export default function DailyLog() {
                           : 'bg-white border-slate-100 text-slate-700 hover:border-slate-300'
                     }`}
                   >
-                    <span className="text-[11px]">{dayNum}</span>
+                    <span className="text-[10px] font-semibold">{dayNum}</span>
                     
-                    {/* B/L/D Dot Indicators */}
-                    <div className="flex gap-0.5 justify-center mt-auto pb-1">
-                      {dayLog?.breakfastOpted && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Breakfast" />}
-                      {dayLog?.lunchOpted && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Lunch" />}
-                      {dayLog?.dinnerOpted && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Dinner" />}
+                    {/* Add-on Indicators in middle */}
+                    <div className="flex gap-0.5 justify-center h-3 items-center">
+                      {dayLog?.omeletteCount > 0 && <span className="text-[8px] leading-none" title={`Omelettes: ${dayLog.omeletteCount}`}>🍳</span>}
+                      {dayLog?.boiledEggCount > 0 && <span className="text-[8px] leading-none" title={`Boiled Eggs: ${dayLog.boiledEggCount}`}>🥚</span>}
+                      {dayLog?.washingMachineCount > 0 && <span className="text-[8px] leading-none" title={`Washing Machine: ${dayLog.washingMachineCount}`}>🧺</span>}
                     </div>
 
-                    {/* Add-on Indicators */}
-                    {hasAddons && (
-                      <div className="absolute top-1 right-1 flex gap-0.5">
-                        {dayLog.omeletteCount > 0 && <span className="text-[9px] leading-none" title={`Omelettes: ${dayLog.omeletteCount}`}>🍳</span>}
-                        {dayLog.boiledEggCount > 0 && <span className="text-[9px] leading-none" title={`Boiled Eggs: ${dayLog.boiledEggCount}`}>🥚</span>}
-                        {dayLog.washingMachineCount > 0 && <span className="text-[9px] leading-none" title={`Washing Machine: ${dayLog.washingMachineCount}`}>🧺</span>}
-                      </div>
-                    )}
+                    {/* B/L/D Dot Indicators at bottom */}
+                    <div className="flex gap-0.5 justify-center pb-0.5">
+                      {dayLog?.breakfastOpted && <span className="w-1 h-1 rounded-full bg-amber-500" title="Breakfast" />}
+                      {dayLog?.lunchOpted && <span className="w-1 h-1 rounded-full bg-emerald-500" title="Lunch" />}
+                      {dayLog?.dinnerOpted && <span className="w-1 h-1 rounded-full bg-blue-500" title="Dinner" />}
+                    </div>
                   </button>
                 );
               })}

@@ -29,6 +29,7 @@ public class PgManagerController {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final BuildingRepository buildingRepository;
+    private final DailyLogService dailyLogService;
 
     @GetMapping("/assigned-buildings")
     public ResponseEntity<List<Building>> getAssignedBuildings(Authentication auth) {
@@ -212,16 +213,19 @@ public class PgManagerController {
         java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
         for (Guest g : guestList) {
             DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(g.getId(), logDate).orElse(null);
+            if (log == null) {
+                log = dailyLogService.createDefaultLog(g, logDate);
+            }
             java.util.Map<String, Object> item = new java.util.LinkedHashMap<>();
             item.put("guestId",             g.getId());
             item.put("guestName",           g.getFullName());
-            item.put("isVeg",               log != null ? log.isVeg() : true);
-            item.put("breakfastOpted",      log != null ? log.isBreakfastOpted() : false);
-            item.put("lunchOpted",          log != null ? log.isLunchOpted() : false);
-            item.put("dinnerOpted",         log != null ? log.isDinnerOpted() : false);
-            item.put("omeletteCount",        log != null ? log.getOmeletteCount() : 0);
-            item.put("boiledEggCount",       log != null ? log.getBoiledEggCount() : 0);
-            item.put("washingMachineCount",  log != null ? log.getWashingMachineCount() : 0);
+            item.put("isVeg",               log.isVeg());
+            item.put("breakfastOpted",      log.isBreakfastOpted());
+            item.put("lunchOpted",          log.isLunchOpted());
+            item.put("dinnerOpted",         log.isDinnerOpted());
+            item.put("omeletteCount",        log.getOmeletteCount());
+            item.put("boiledEggCount",       log.getBoiledEggCount());
+            item.put("washingMachineCount",  log.getWashingMachineCount());
             result.add(item);
         }
         return ResponseEntity.ok(result);
@@ -398,17 +402,18 @@ public class PgManagerController {
 
             for (java.time.LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
                 DailyLog log = guestLogs.get(date);
-                if (log != null) {
-                    daysMap.put(date.toString(), java.util.Map.ofEntries(
-                        java.util.Map.entry("breakfast", log.isBreakfastOpted()),
-                        java.util.Map.entry("lunch", log.isLunchOpted()),
-                        java.util.Map.entry("dinner", log.isDinnerOpted()),
-                        java.util.Map.entry("isVeg", log.isVeg()),
-                        java.util.Map.entry("omelettes", log.getOmeletteCount()),
-                        java.util.Map.entry("boiledEggs", log.getBoiledEggCount()),
-                        java.util.Map.entry("laundry", log.getWashingMachineCount())
-                    ));
+                if (log == null) {
+                    log = dailyLogService.createDefaultLog(g, date);
                 }
+                daysMap.put(date.toString(), java.util.Map.ofEntries(
+                    java.util.Map.entry("breakfast", log.isBreakfastOpted()),
+                    java.util.Map.entry("lunch", log.isLunchOpted()),
+                    java.util.Map.entry("dinner", log.isDinnerOpted()),
+                    java.util.Map.entry("isVeg", log.isVeg()),
+                    java.util.Map.entry("omelettes", log.getOmeletteCount()),
+                    java.util.Map.entry("boiledEggs", log.getBoiledEggCount()),
+                    java.util.Map.entry("laundry", log.getWashingMachineCount())
+                ));
             }
             item.put("days", daysMap);
             result.add(item);

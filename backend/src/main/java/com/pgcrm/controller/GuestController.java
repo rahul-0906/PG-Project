@@ -67,7 +67,7 @@ public class GuestController {
         Guest guest = guestService.getByUserId(auth.getName());
         LocalDate start = LocalDate.parse(yearMonth + "-01");
         LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
-        return ResponseEntity.ok(dailyLogRepository.findByGuestIdAndLogDateBetween(guest.getId(), start, end));
+        return ResponseEntity.ok(dailyLogService.getMonthlyLogs(guest.getId(), start, end));
     }
 
     @GetMapping("/invoices")

@@ -61,8 +61,56 @@ public class DailyLogService {
         }
     }
 
+    public DailyLog createDefaultLog(Guest guest, LocalDate date) {
+        boolean defBreakfast = false;
+        boolean defLunch = false;
+        boolean defDinner = false;
+        boolean defVeg = true;
+        
+        if (guest != null && guest.getCheckInDate() != null) {
+            DailyLog checkInLog = dailyLogRepository.findByGuestIdAndLogDate(guest.getId(), guest.getCheckInDate()).orElse(null);
+            if (checkInLog != null) {
+                defBreakfast = checkInLog.isBreakfastOpted();
+                defLunch = checkInLog.isLunchOpted();
+                defDinner = checkInLog.isDinnerOpted();
+                defVeg = checkInLog.isVeg();
+            }
+        }
+        
+        return DailyLog.builder()
+                .guest(guest)
+                .logDate(date)
+                .breakfastOpted(defBreakfast)
+                .lunchOpted(defLunch)
+                .dinnerOpted(defDinner)
+                .isVeg(defVeg)
+                .build();
+    }
+
     public DailyLog getLog(String guestId, LocalDate logDate) {
         return dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
-                .orElse(DailyLog.builder().logDate(logDate).build());
+                .orElseGet(() -> {
+                    Guest guest = guestRepository.findById(guestId).orElse(null);
+                    return createDefaultLog(guest, logDate);
+                });
+    }
+
+    public java.util.List<DailyLog> getMonthlyLogs(String guestId, LocalDate start, LocalDate end) {
+        java.util.List<DailyLog> existing = dailyLogRepository.findByGuestIdAndLogDateBetween(guestId, start, end);
+        java.util.Map<LocalDate, DailyLog> map = new java.util.HashMap<>();
+        for (DailyLog log : existing) {
+            map.put(log.getLogDate(), log);
+        }
+        
+        Guest guest = guestRepository.findById(guestId).orElse(null);
+        java.util.List<DailyLog> result = new java.util.ArrayList<>();
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            DailyLog log = map.get(date);
+            if (log == null) {
+                log = createDefaultLog(guest, date);
+            }
+            result.add(log);
+        }
+        return result;
     }
 }
