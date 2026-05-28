@@ -580,7 +580,7 @@ export default function ManagerGuestAddons() {
                                   </div>
                                 </div>
                                 <div className="overflow-x-auto pb-1">
-                                  <div className="flex gap-2 min-w-max p-1">
+                                  <div className="flex gap-2 min-w-max px-12 pt-14 pb-3">
                                     {Array.from({ length: daysInMonth }, (_, i) => {
                                       const dayNum = i + 1;
                                       const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;

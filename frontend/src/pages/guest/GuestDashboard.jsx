@@ -51,6 +51,7 @@ export default function GuestDashboard() {
 
   const { config } = useSystemConfig();
   const [addons, setAddons] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     guestApi.getDashboard().then(r => setData(r.data)).catch(() => {});
@@ -90,6 +91,20 @@ export default function GuestDashboard() {
     eb: inv.lineItems?.find(l => l.type === 'EB')?.amount || 0,
     wm: inv.lineItems?.find(l => l.type === 'LAUNDRY')?.amount || 0,
   }));
+
+  const availableMonths = Array.from(new Set([
+    new Date().toISOString().slice(0, 7),
+    ...addons.map(a => a.logDate ? a.logDate.slice(0, 7) : '')
+  ])).filter(Boolean).sort((a, b) => b.localeCompare(a));
+
+  const formatMonthName = (monthKey) => {
+    if (!monthKey) return '';
+    const [year, month] = monthKey.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const filteredAddons = addons.filter(a => a.logDate && a.logDate.startsWith(selectedMonth));
 
   return (
     <AppLayout>
@@ -363,7 +378,7 @@ export default function GuestDashboard() {
 
       {/* Add-on & Service Log Card */}
       <div className="card mb-8">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
               <ChefHat className="w-4 h-4" />
@@ -373,12 +388,26 @@ export default function GuestDashboard() {
               <p className="text-slate-400 text-xs mt-0.5">Logs of opted Omelettes, Boiled Eggs, and Washing Machine usage.</p>
             </div>
           </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Month:</span>
+            <select 
+              value={selectedMonth} 
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="form-input"
+              style={{ width: 'auto', padding: '0.35rem 1.5rem 0.35rem 0.65rem', fontSize: '0.8rem' }}
+            >
+              {availableMonths.map(m => (
+                <option key={m} value={m}>{formatMonthName(m)}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        {addons.length === 0 ? (
+        {filteredAddons.length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center justify-center">
             <ChefHat className="w-8 h-8 text-slate-300 mb-2" />
-            <span>No add-ons or washing machine services logged yet.</span>
+            <span>No add-ons or washing machine services logged for this month.</span>
           </div>
         ) : (
           <div className="table-wrap">
@@ -393,7 +422,7 @@ export default function GuestDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {addons.map(a => {
+                {filteredAddons.map(a => {
                   const oPrice = config?.pricing?.omelette ?? 18;
                   const ePrice = config?.pricing?.boiledEgg ?? 18;
                   const wPrice = config?.pricing?.washingMachine ?? 50;
