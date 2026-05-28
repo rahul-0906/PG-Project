@@ -36,10 +36,8 @@ public class DailyLogService {
             if (systemConfig.getRules().isDinnerEnabled()) log.setDinnerOpted(incoming.isDinnerOpted());
         }
 
-        log.setVeg(incoming.isVeg());
-        log.setOmeletteCount(incoming.getOmeletteCount());
-        log.setBoiledEggCount(incoming.getBoiledEggCount());
-        log.setWashingMachineCount(incoming.getWashingMachineCount());
+        // We do NOT modify isVeg, omeletteCount, boiledEggCount, washingMachineCount here
+        // as they are managed exclusively by the PG Manager via managerApi.updateGuestLog.
 
         return dailyLogRepository.save(log);
     }

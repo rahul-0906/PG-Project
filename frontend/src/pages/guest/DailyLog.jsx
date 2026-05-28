@@ -234,15 +234,45 @@ export default function DailyLog() {
 
       {/* Info card about add-ons */}
       <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="p-2.5 bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-100">
-            <User className="w-5 h-5" />
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-4">
+            <div className="p-2.5 bg-indigo-500 text-white rounded-xl shadow-md shadow-indigo-100 flex-shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="font-bold text-slate-800 text-sm">Add-ons &amp; Diet Selection (Managed by PG Manager)</h4>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl">
+                Diet preference, omelette, boiled egg, and washing machine usage are recorded daily by your manager and billed under your monthly invoices.
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-slate-800 text-sm">Add-ons Managed by Your PG Manager</h4>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed max-w-2xl">
-              Egg, omelette, washing machine usage, and veg/non-veg preference are recorded directly by your PG Manager on a daily basis. Contact your manager if any updates or corrections are needed.
-            </p>
+          
+          {/* Add-ons Log Grid for selected date */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white/80 border border-indigo-100/30 p-3 rounded-xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Diet Type</span>
+              <span className={`text-xs font-bold mt-1.5 ${log.isVeg ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {log.isVeg ? '🟢 Veg' : '🔴 Non-Veg'}
+              </span>
+            </div>
+            <div className="bg-white/80 border border-indigo-100/30 p-3 rounded-xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Omelettes</span>
+              <span className="text-xs font-black text-slate-700 mt-1.5">
+                {log.omeletteCount || 0} pcs
+              </span>
+            </div>
+            <div className="bg-white/80 border border-indigo-100/30 p-3 rounded-xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Boiled Eggs</span>
+              <span className="text-xs font-black text-slate-700 mt-1.5">
+                {log.boiledEggCount || 0} pcs
+              </span>
+            </div>
+            <div className="bg-white/80 border border-indigo-100/30 p-3 rounded-xl flex flex-col justify-between">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Washing Machine</span>
+              <span className="text-xs font-black text-slate-700 mt-1.5">
+                {log.washingMachineCount || 0} use
+              </span>
+            </div>
           </div>
         </div>
       </div>
