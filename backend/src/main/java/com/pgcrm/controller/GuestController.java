@@ -26,6 +26,7 @@ public class GuestController {
     private final NotificationRepository notificationRepository;
     private final SystemConfigProperties systemConfig;
     private final InvoicePdfService invoicePdfService;
+    private final DailyLogRepository dailyLogRepository;
 
     @GetMapping("/profile")
     public ResponseEntity<Guest> getProfile(Authentication auth) {
@@ -136,5 +137,11 @@ public class GuestController {
             Map.entry("dinnerPrice",            systemConfig.getPricing().getDinner()),
             Map.entry("hasWashingMachine",      systemConfig.getRules().isHasWashingMachine())
         ));
+    }
+
+    @GetMapping("/addons")
+    public ResponseEntity<List<DailyLog>> getGuestAddons(Authentication auth) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        return ResponseEntity.ok(dailyLogRepository.findAddonsByGuestId(guest.getId()));
     }
 }

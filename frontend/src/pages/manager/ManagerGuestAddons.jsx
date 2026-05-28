@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi } from '../../api';
+import { useSystemConfig } from '../../context/SystemConfigContext';
 import { 
   ChefHat, 
   Egg, 
@@ -14,84 +15,85 @@ import {
   Coffee,
   Sun,
   Moon,
-  Plus
+  Plus,
+  Calendar,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const TODAY = new Date().toISOString().slice(0, 10);
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June', 
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
 
-function AddOnCounter({ label, icon: Icon, value, onChange, unit = '', iconColor = 'text-slate-400' }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '0.65rem 0', borderBottom: '1px solid var(--border)'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        {Icon && <Icon className={`w-4 h-4 ${iconColor} mr-2`} />}
-        <span style={{ color: '#1e293b', fontWeight: 600, fontSize: '0.85rem' }}>{label}</span>
-        {unit && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginLeft: '0.35rem' }}>{unit}</span>}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <button onClick={() => onChange(Math.max(0, value - 1))}
-          style={{ width: 28, height: 28, border: '1px solid var(--border)', borderRadius: 6,
-            background: '#f8fafc', color: '#475569', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
-          −
-        </button>
-        <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 800, color: 'var(--color-primary)', fontSize: '0.95rem' }}>{value}</span>
-        <button onClick={() => onChange(value + 1)}
-          style={{ width: 28, height: 28, border: 'none', borderRadius: 6,
-            background: 'var(--color-primary)', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}>
-          +
-        </button>
-      </div>
+function DailyRosterCell({ log }) {
+  if (!log) return (
+    <div className="flex items-center justify-center gap-0.5 text-slate-200">
+      <span>•</span><span>•</span><span>•</span>
     </div>
   );
-}
 
-function VegToggle({ isVeg, onChange }) {
-  const Icon = isVeg ? Leaf : Utensils;
-  const iconColor = isVeg ? 'text-emerald-500' : 'text-rose-500';
+  const bOpt = log.breakfast;
+  const lOpt = log.lunch;
+  const dOpt = log.dinner;
+  const hasAddons = (log.omelettes || 0) > 0 || (log.boiledEggs || 0) > 0 || (log.laundry || 0) > 0;
+
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.25rem 0' }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <Icon className={`w-4 h-4 ${iconColor} mr-2`} />
-        <span style={{ color: '#1e293b', fontWeight: 700, fontSize: '0.85rem' }}>
-          {isVeg ? 'Veg' : 'Non-Veg'}
-        </span>
+    <div className="flex flex-col items-center justify-center gap-0.5 relative group py-1">
+      <div className="flex items-center justify-center gap-1">
+        <span className={bOpt ? "text-amber-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Breakfast">●</span>
+        <span className={lOpt ? "text-emerald-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Lunch">●</span>
+        <span className={dOpt ? "text-blue-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Dinner">●</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
-        <span style={{ color: isVeg ? '#10b981' : 'var(--text-muted)', fontWeight: 600 }}>Veg</span>
-        <label className="toggle">
-          <input type="checkbox" checked={!isVeg} onChange={() => onChange(!isVeg)} />
-          <span className="toggle-slider" />
-        </label>
-        <span style={{ color: !isVeg ? '#ef4444' : 'var(--text-muted)', fontWeight: 600 }}>Non-Veg</span>
+      {hasAddons && (
+        <span className="absolute bottom-0 text-[7px] font-bold text-indigo-500 leading-none scale-75">*</span>
+      )}
+      
+      {/* Tooltip on hover */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-slate-900 text-white text-[9px] rounded px-2 py-1.5 z-30 whitespace-nowrap shadow-md pointer-events-none">
+        <div>B: {bOpt ? 'Yes' : 'No'} | L: {lOpt ? 'Yes' : 'No'} | D: {dOpt ? 'Yes' : 'No'}</div>
+        {hasAddons && (
+          <div className="mt-0.5 border-t border-slate-700 pt-0.5 font-semibold text-indigo-300">
+            {log.omelettes > 0 && `Omelettes: ${log.omelettes} `}
+            {log.boiledEggs > 0 && `Boiled Eggs: ${log.boiledEggs} `}
+            {log.laundry > 0 && `Washing Machine: ${log.laundry} `}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default function ManagerGuestAddons() {
+  const { config } = useSystemConfig();
+  const [activeTab, setActiveTab] = useState('daily'); // 'daily' or 'monthly'
   const [date, setDate] = useState(TODAY);
+  
+  // Roster Month/Year Selector
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const [month, setMonth] = useState(currentMonth);
+  const [year, setYear] = useState(currentYear);
+
   const [guests, setGuests] = useState([]);
-  const [logs, setLogs] = useState({});        // { guestId: { omeletteCount, boiledEggCount, washingMachineCount, isVeg, breakfastOpted, lunchOpted, dinnerOpted } }
+  const [logs, setLogs] = useState({}); // { guestId: { omeletteCount, boiledEggCount, washingMachineCount, isVeg, breakfastOpted, lunchOpted, dinnerOpted } }
+  const [monthlyData, setMonthlyData] = useState([]);
   const [saving, setSaving] = useState({});
   const [saved, setSaved] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGuestId, setSelectedGuestId] = useState('');
 
+  // Daily logs fetch
   useEffect(() => {
+    if (activeTab !== 'daily') return;
     setLoading(true);
     Promise.all([
       managerApi.getGuests(),
       managerApi.getGuestsByDate(date),
     ]).then(([gRes, logRes]) => {
-      const activeGuests = gRes.data || [];
-      setGuests(activeGuests);
-      
-      // Build logs map from response
+      setGuests(gRes.data || []);
       const logMap = {};
       (logRes.data || []).forEach(item => {
         logMap[item.guestId] = {
@@ -105,17 +107,21 @@ export default function ManagerGuestAddons() {
         };
       });
       setLogs(logMap);
-      
-      // Maintain selected guest if still active, otherwise clear selection
-      if (selectedGuestId) {
-        const stillActive = activeGuests.some(g => g.id === selectedGuestId);
-        if (!stillActive) {
-          setSelectedGuestId('');
-        }
-      }
     }).catch(console.error)
     .finally(() => setLoading(false));
-  }, [date]);
+  }, [date, activeTab]);
+
+  // Monthly logs fetch
+  useEffect(() => {
+    if (activeTab !== 'monthly') return;
+    setLoadingMonthly(true);
+    managerApi.getMonthlyMeals(month, year)
+      .then(res => {
+        setMonthlyData(res.data || []);
+      })
+      .catch(console.error)
+      .finally(() => setLoadingMonthly(false));
+  }, [month, year, activeTab]);
 
   const getLog = (guestId) => logs[guestId] || { 
     omeletteCount: 0, 
@@ -137,14 +143,55 @@ export default function ManagerGuestAddons() {
       await managerApi.updateGuestLog(guestId, date, getLog(guestId));
       setSaved(s => ({ ...s, [guestId]: true }));
       setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 2000);
+      
+      // Update local logs summary in case counts changed
+      managerApi.getGuestsByDate(date).then(logRes => {
+        const logMap = {};
+        (logRes.data || []).forEach(item => {
+          logMap[item.guestId] = {
+            omeletteCount:       item.omeletteCount       ?? 0,
+            boiledEggCount:      item.boiledEggCount      ?? 0,
+            washingMachineCount: item.washingMachineCount ?? 0,
+            isVeg:               item.isVeg               ?? true,
+            breakfastOpted:      item.breakfastOpted      ?? false,
+            lunchOpted:          item.lunchOpted          ?? false,
+            dinnerOpted:         item.dinnerOpted         ?? false,
+          };
+        });
+        setLogs(logMap);
+      }).catch(console.error);
     } catch (err) { alert('Save failed: ' + (err.response?.data?.error || err.message)); }
     finally { setSaving(s => ({ ...s, [guestId]: false })); }
   };
 
-  const selectedGuest = guests.find(g => g.id === selectedGuestId);
-  const filteredGuestsForSearch = guests.filter(g => 
+  const filteredGuests = guests.filter(g => 
     g.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredMonthly = monthlyData.filter(g =>
+    g.guestName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Month navigation helpers
+  const handlePrevMonth = () => {
+    if (month === 1) {
+      setMonth(12);
+      setYear(y => y - 1);
+    } else {
+      setMonth(m => m - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (month === 12) {
+      setMonth(1);
+      setYear(y => y + 1);
+    } else {
+      setMonth(m => m + 1);
+    }
+  };
+
+  const daysInMonth = new Date(year, month, 0).getDate();
 
   return (
     <AppLayout>
@@ -152,184 +199,358 @@ export default function ManagerGuestAddons() {
         <div>
           <h1 className="page-title flex items-center gap-2">
             <ChefHat className="w-6 h-6 text-primary" />
-            <span>Meal & Add-on Tracker</span>
+            <span>Meal &amp; Add-on Tracker</span>
           </h1>
-          <p className="page-subtitle">Record meal options, egg, omelette, washing machine &amp; veg preference per guest</p>
+          <p className="page-subtitle">Record and view meal opt-ins, eggs, omelettes, and washing machine services</p>
         </div>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)}
-          className="form-input" style={{ width:'auto', padding:'0.4rem 0.75rem' }} />
-      </div>
 
-      {/* Summary Bar */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))', gap:'0.75rem', marginBottom:'1.5rem' }}>
-        {[
-          { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), color: 'text-indigo-500' },
-          { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), color: 'text-amber-500' },
-          { icon: Shirt, label:'Washing Machine', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), color: 'text-blue-500' },
-          { icon: Leaf, label:'Veg Guests', val: Object.values(logs).filter(l => l.isVeg).length, color: 'text-emerald-500' },
-          { icon: Utensils, label:'Non-Veg', val: Object.values(logs).filter(l => !l.isVeg).length, color: 'text-rose-500' },
-        ].map(s => {
-          const Icon = s.icon;
-          return (
-            <div key={s.label} className="stat-card flex flex-col items-center justify-center p-3 text-center">
-              <Icon className={`w-5 h-5 ${s.color} mb-1`} />
-              <div className="text-xl font-extrabold text-slate-800">{s.val}</div>
-              <div className="text-slate-400 text-xxs font-medium uppercase tracking-wider mt-0.5">{s.label}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Search Panel */}
-      <div className="card" style={{ marginBottom: '1.5rem', maxWidth: '600px' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
-            <label className="form-label flex items-center gap-1.5">
-              <Search className="w-4 h-4 text-slate-400" />
-              <span>Find Guest (Search by Name)</span>
-            </label>
-            <input 
-              type="text" 
-              placeholder="Type guest name..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="form-input"
-            />
-          </div>
-          <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
-            <label className="form-label flex items-center gap-1.5">
-              <User className="w-4 h-4 text-slate-400" />
-              <span>Select Guest</span>
-            </label>
-            <select 
-              value={selectedGuestId} 
-              onChange={e => setSelectedGuestId(e.target.value)}
-              className="form-input"
+        <div className="flex items-center gap-3">
+          <div className="tabs-container" style={{ margin: 0 }}>
+            <button 
+              onClick={() => setActiveTab('daily')} 
+              className={`tab-btn ${activeTab === 'daily' ? 'active' : ''}`}
             >
-              <option value="">-- Choose Guest --</option>
-              {filteredGuestsForSearch.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.fullName} ({g.bed?.bedLabel ?? 'No Bed'})
-                </option>
-              ))}
-            </select>
+              Daily Tracker
+            </button>
+            <button 
+              onClick={() => setActiveTab('monthly')} 
+              className={`tab-btn ${activeTab === 'monthly' ? 'active' : ''}`}
+            >
+              Monthly Roster
+            </button>
           </div>
+
+          {activeTab === 'daily' && (
+            <input 
+              type="date" 
+              value={date} 
+              onChange={e => setDate(e.target.value)}
+              className="form-input" 
+              style={{ width: 'auto', padding: '0.4rem 0.75rem' }} 
+            />
+          )}
         </div>
       </div>
 
-      {loading ? (
-        <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-400 mb-2" />
-          <span>Loading guest list...</span>
-        </div>
-      ) : guests.length === 0 ? (
-        <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
-          No active guests found.
-        </div>
-      ) : selectedGuest ? (
-        <div style={{ display:'flex', justifyContent:'center' }}>
-          {(() => {
-            const guest = selectedGuest;
-            const log = getLog(guest.id);
-            const isSaving = saving[guest.id];
-            const isSaved  = saved[guest.id];
+      {/* Stats Summary Panel (Compact & Horizontal) */}
+      {activeTab === 'daily' && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+          {[
+            { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), bg: 'bg-indigo-50', color: 'text-indigo-600' },
+            { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), bg: 'bg-amber-50', color: 'text-amber-600' },
+            { icon: Shirt, label:'Washing Machine', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), bg: 'bg-blue-50', color: 'text-blue-600' },
+            { icon: Leaf, label:'Veg Guests', val: Object.values(logs).filter(l => l.isVeg).length, bg: 'bg-emerald-50', color: 'text-emerald-600' },
+            { icon: Utensils, label:'Non-Veg', val: Object.values(logs).filter(l => !l.isVeg).length, bg: 'bg-rose-50', color: 'text-rose-600' },
+          ].map(s => {
+            const Icon = s.icon;
             return (
-              <div key={guest.id} className="card" style={{ padding:'1.5rem', width: '100%', maxWidth: '750px' }}>
-                {/* Guest header */}
-                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1.25rem', paddingBottom:'1rem', borderBottom:'2px solid var(--border)' }}>
-                  <div style={{ width:48, height:48, borderRadius:'50%', background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                    display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontWeight:800, fontSize:'1.2rem', flexShrink:0 }}>
-                    {guest.fullName?.charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontWeight:800, color:'var(--text-primary)', fontSize:'1.05rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{guest.fullName}</div>
-                    <div style={{ fontSize:'0.8rem', color:'var(--text-muted)' }}>Bed: {guest.bed?.bedLabel ?? '—'}</div>
-                  </div>
-                  <button id={`btn-save-addon-${guest.id?.slice(0,8)}`}
-                    onClick={() => saveGuest(guest.id)} disabled={isSaving}
-                    className="btn btn-primary flex items-center gap-1.5" style={{ fontSize:'0.85rem', padding:'0.4rem 1.1rem', flexShrink:0 }}>
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </>
-                    ) : isSaved ? (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Saved</span>
-                      </>
-                    ) : (
-                      <>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Save Changes</span>
-                      </>
-                    )}
-                  </button>
+              <div key={s.label} className="bg-white rounded-xl border border-slate-200/80 p-3 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200">
+                <div className={`p-2 rounded-lg ${s.bg}`}>
+                  <Icon className={`w-4 h-4 ${s.color}`} />
                 </div>
-
-                {/* Standalone Veg Toggle Bar */}
-                <div style={{ marginBottom: '1.25rem', background: '#f8fafc', padding: '0.75rem 1.25rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                  <VegToggle isVeg={log.isVeg} onChange={v => updateField(guest.id, 'isVeg', v)} />
-                </div>
-
-                {/* 2-Column Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-                  {/* Left Column: Meal Options Panel */}
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Utensils className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Meal Options ({log.isVeg ? 'Veg' : 'Non-Veg'})</span>
-                    </div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                      {[
-                        { key: 'breakfastOpted', label: 'Breakfast', icon: Coffee },
-                        { key: 'lunchOpted',     label: 'Lunch',     icon: Sun },
-                        { key: 'dinnerOpted',    label: 'Dinner',    icon: Moon }
-                      ].map(m => {
-                        const MealIcon = m.icon;
-                        return (
-                          <div key={m.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                            <span style={{ fontSize:'0.85rem', fontWeight: 600, color:'var(--text-secondary)', display: 'flex', alignItems: 'center' }}>
-                              <MealIcon className="w-3.5 h-3.5 text-slate-400 mr-2" />
-                              <span>{m.label} ({log.isVeg ? 'Veg' : 'Non-Veg'})</span>
-                            </span>
-                            <label className="toggle">
-                              <input 
-                                type="checkbox" 
-                                checked={!!log[m.key]} 
-                                onChange={e => updateField(guest.id, m.key, e.target.checked)} 
-                              />
-                              <span className="toggle-slider" />
-                            </label>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Right Column: Daily Add-ons Panel */}
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Plus className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Daily Add-ons &amp; Services</span>
-                    </div>
-                    <AddOnCounter label="Omelette" icon={ChefHat} iconColor="text-indigo-500" value={log.omeletteCount}
-                      unit="₹18 each" onChange={v => updateField(guest.id, 'omeletteCount', v)} />
-                    <AddOnCounter label="Boiled Egg" icon={Egg} iconColor="text-amber-500" value={log.boiledEggCount}
-                      unit="₹18 each" onChange={v => updateField(guest.id, 'boiledEggCount', v)} />
-                    <AddOnCounter label="Washing Machine" icon={Shirt} iconColor="text-blue-500" value={log.washingMachineCount}
-                      unit="₹50/use" onChange={v => updateField(guest.id, 'washingMachineCount', v)} />
-                  </div>
+                <div>
+                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</div>
+                  <div className="text-base font-black text-slate-800 mt-0.5">{s.val}</div>
                 </div>
               </div>
             );
-          })()}
+          })}
         </div>
+      )}
+
+      {/* Tabs Views */}
+      {activeTab === 'daily' ? (
+        <>
+          {/* Guest Search bar */}
+          <div className="card mb-6" style={{ padding: '1rem' }}>
+            <div className="flex items-center gap-2 max-w-md">
+              <Search className="w-4 h-4 text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Search guest by name..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="form-input"
+              />
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="card text-center py-12 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" />
+              <span>Loading daily logs...</span>
+            </div>
+          ) : guests.length === 0 ? (
+            <div className="card text-center py-12 text-slate-400">
+              No active guests found. Check in guests to manage logs.
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th className="min-w-[160px]">Guest Name</th>
+                    <th>Diet Preference</th>
+                    <th className="text-center">Breakfast</th>
+                    <th className="text-center">Lunch</th>
+                    <th className="text-center">Dinner</th>
+                    <th>Omelette (₹{config?.pricing?.omelette ?? 18})</th>
+                    <th>Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                    <th>Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
+                    <th className="text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGuests.map(g => {
+                    const log = getLog(g.id);
+                    const isSaving = saving[g.id];
+                    const isSaved = saved[g.id];
+
+                    return (
+                      <tr key={g.id}>
+                        <td className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-extrabold text-xs">
+                              {g.fullName?.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-800 text-xs leading-none">{g.fullName}</div>
+                              <div className="text-[10px] text-slate-400 font-semibold mt-1">Bed: {g.bed?.bedLabel ?? '—'}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            value={log.isVeg ? 'veg' : 'non-veg'}
+                            onChange={e => updateField(g.id, 'isVeg', e.target.value === 'veg')}
+                            className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-xxs font-bold uppercase tracking-wider text-slate-700 focus:outline-none"
+                          >
+                            <option value="veg">Veg</option>
+                            <option value="non-veg">Non-Veg</option>
+                          </select>
+                        </td>
+                        <td className="text-center">
+                          <label className="toggle scale-75">
+                            <input
+                              type="checkbox"
+                              checked={!!log.breakfastOpted}
+                              onChange={e => updateField(g.id, 'breakfastOpted', e.target.checked)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </td>
+                        <td className="text-center">
+                          <label className="toggle scale-75">
+                            <input
+                              type="checkbox"
+                              checked={!!log.lunchOpted}
+                              onChange={e => updateField(g.id, 'lunchOpted', e.target.checked)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </td>
+                        <td className="text-center">
+                          <label className="toggle scale-75">
+                            <input
+                              type="checkbox"
+                              checked={!!log.dinnerOpted}
+                              onChange={e => updateField(g.id, 'dinnerOpted', e.target.checked)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1 scale-90 origin-left">
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'omeletteCount', Math.max(0, log.omeletteCount - 1))}
+                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.omeletteCount}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'omeletteCount', log.omeletteCount + 1)}
+                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1 scale-90 origin-left">
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'boiledEggCount', Math.max(0, log.boiledEggCount - 1))}
+                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.boiledEggCount}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
+                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-1 scale-90 origin-left">
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'washingMachineCount', Math.max(0, log.washingMachineCount - 1))}
+                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.washingMachineCount}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateField(g.id, 'washingMachineCount', log.washingMachineCount + 1)}
+                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
+                        <td className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => saveGuest(g.id)}
+                            disabled={isSaving}
+                            className={`btn text-xxs py-1 px-2.5 min-w-[65px] ${isSaved ? 'btn-success' : 'btn-primary'}`}
+                          >
+                            {isSaving ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : isSaved ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                <span>Saved</span>
+                              </>
+                            ) : (
+                              <span>Save</span>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       ) : (
-        <div className="card" style={{ textAlign:'center', padding:'3rem', color:'var(--text-muted)' }}>
-          <Search className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-          <span>Please search or select a guest from the panel above.</span>
-        </div>
+        <>
+          {/* Monthly Roster Header controls */}
+          <div className="card mb-6" style={{ padding: '1rem' }}>
+            <div className="flex flex-wrap gap-4 items-center justify-between">
+              {/* Search Bar */}
+              <div className="flex items-center gap-2 max-w-xs flex-1">
+                <Search className="w-4 h-4 text-slate-400" />
+                <input 
+                  type="text" 
+                  placeholder="Filter by name..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ padding: '0.35rem 0.65rem' }}
+                />
+              </div>
+
+              {/* Month Selector */}
+              <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                <button onClick={handlePrevMonth} className="p-1 rounded hover:bg-white text-slate-600 transition-colors">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-bold text-slate-700 min-w-[120px] text-center">
+                  {MONTHS[month - 1]} {year}
+                </span>
+                <button onClick={handleNextMonth} className="p-1 rounded hover:bg-white text-slate-600 transition-colors">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Roster Legend */}
+              <div className="flex gap-4 items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="flex items-center gap-1">
+                  <span className="text-amber-500">●</span> Breakfast
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-emerald-500">●</span> Lunch
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-blue-500">●</span> Dinner
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-indigo-500 font-extrabold">*</span> Add-ons Opted
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {loadingMonthly ? (
+            <div className="card text-center py-12 text-slate-400">
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" />
+              <span>Loading monthly roster...</span>
+            </div>
+          ) : monthlyData.length === 0 ? (
+            <div className="card text-center py-12 text-slate-400">
+              No roster records found.
+            </div>
+          ) : (
+            <div className="table-wrap">
+              <table className="min-w-full text-xxs">
+                <thead>
+                  <tr className="bg-slate-50">
+                    <th className="sticky left-0 bg-slate-50 z-20 min-w-[140px] border-r border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.01)] py-2">Guest Name</th>
+                    <th className="min-w-[50px] border-r border-slate-200 text-center py-2">Bed</th>
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                      <th key={day} className="text-center w-8 min-w-[30px] p-0 font-bold border-r border-slate-100 py-2">{day}</th>
+                    ))}
+                    <th className="text-center font-bold text-indigo-600 bg-indigo-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Breakfast count">B</th>
+                    <th className="text-center font-bold text-emerald-600 bg-emerald-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Lunch count">L</th>
+                    <th className="text-center font-bold text-blue-600 bg-blue-50/30 min-w-[45px] border-l border-slate-200 py-2" title="Dinner count">D</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMonthly.map(row => {
+                    let bCount = 0, lCount = 0, dCount = 0;
+                    Object.values(row.days || {}).forEach(dayLog => {
+                      if (dayLog.breakfast) bCount++;
+                      if (dayLog.lunch) lCount++;
+                      if (dayLog.dinner) dCount++;
+                    });
+
+                    return (
+                      <tr key={row.guestId}>
+                        <td className="sticky left-0 bg-white font-extrabold text-slate-800 border-r border-slate-200 py-2 px-2.5 shadow-[2px_0_5px_rgba(0,0,0,0.025)]">
+                          {row.guestName}
+                        </td>
+                        <td className="text-slate-500 font-bold text-center border-r border-slate-200">{row.bedLabel}</td>
+                        {Array.from({ length: daysInMonth }, (_, i) => {
+                          const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(i + 1).padStart(2, '0')}`;
+                          const dayLog = row.days?.[dayStr];
+                          return (
+                            <td key={i} className="text-center border-r border-slate-100 p-0">
+                              <DailyRosterCell log={dayLog} />
+                            </td>
+                          );
+                        })}
+                        <td className="text-center font-bold text-indigo-600 bg-indigo-50/10 border-l border-slate-200">{bCount}</td>
+                        <td className="text-center font-bold text-emerald-600 bg-emerald-50/10 border-l border-slate-200">{lCount}</td>
+                        <td className="text-center font-bold text-blue-600 bg-blue-50/10 border-l border-slate-200">{dCount}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </AppLayout>
   );

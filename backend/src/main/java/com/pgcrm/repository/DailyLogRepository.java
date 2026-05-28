@@ -45,5 +45,8 @@ public interface DailyLogRepository extends JpaRepository<DailyLog, String> {
     Object[] getFoodCountByDate(LocalDate date);
 
     List<DailyLog> findByLogDateBetween(LocalDate start, LocalDate end);
+
+    @Query("SELECT d FROM DailyLog d WHERE d.guest.id = :guestId AND (d.omeletteCount > 0 OR d.boiledEggCount > 0 OR d.washingMachineCount > 0) ORDER BY d.logDate DESC")
+    List<DailyLog> findAddonsByGuestId(String guestId);
 }
 

@@ -16,14 +16,18 @@ import {
   User as UserIcon
 } from 'lucide-react';
 
-function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-400' }) {
+function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
   return (
-    <div className="stat-card flex flex-col gap-1.5">
-      <div className="flex items-center justify-between w-full">
-        <span className="stat-label">{label}</span>
-        {Icon && <Icon className={`w-4 h-4 ${iconColor}`} />}
+    <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
+      {Icon && (
+        <div className={`p-2 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
+          <Icon className="w-4 h-4" />
+        </div>
+      )}
+      <div>
+        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</div>
+        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">{value}</div>
       </div>
-      <div className="stat-value">{value}</div>
     </div>
   );
 }
@@ -80,10 +84,10 @@ export default function ManagerDashboard() {
       </div>
 
       <div className="grid-4" style={{ marginBottom: '1.5rem' }}>
-        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconColor="text-blue-500" />
-        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconColor="text-emerald-500" />
-        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconColor="text-slate-400" />
-        <StatCard label="Open Tickets" value={data?.pendingMaintenanceTickets ?? '—'} icon={Wrench} iconColor="text-rose-500" />
+        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconBg="bg-blue-50" iconColor="text-blue-500" />
+        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-500" />
+        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconBg="bg-slate-50" iconColor="text-slate-400" />
+        <StatCard label="Open Tickets" value={data?.pendingMaintenanceTickets ?? '—'} icon={Wrench} iconBg="bg-rose-50" iconColor="text-rose-500" />
       </div>
 
       <div className="grid-2">

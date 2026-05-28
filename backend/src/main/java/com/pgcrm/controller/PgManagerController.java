@@ -342,5 +342,64 @@ public class PgManagerController {
                 "total", guests.size()
         ));
     }
+
+    /**
+     * GET /api/manager/monthly-meals?month=5&year=2026
+     * Returns a daily breakdown of meal opt-ins and add-on counts for all active guests in a month.
+     */
+    @GetMapping("/monthly-meals")
+    public ResponseEntity<java.util.List<Map<String, Object>>> getMonthlyMeals(
+            @RequestParam int month,
+            @RequestParam int year,
+            @RequestAttribute(required = false) String branchId) {
+
+        java.time.LocalDate start = java.time.LocalDate.of(year, month, 1);
+        java.time.LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+
+        java.util.List<Guest> guests = branchId != null
+                ? guestRepository.findActiveGuestsByBuildingId(branchId)
+                : guestRepository.findByActiveTrue();
+
+        java.util.List<DailyLog> logs = dailyLogRepository.findByLogDateBetween(start, end);
+
+        // Group logs by guest ID and logDate
+        java.util.Map<String, java.util.Map<java.time.LocalDate, DailyLog>> logsMap = new java.util.HashMap<>();
+        for (DailyLog log : logs) {
+            if (log.getGuest() != null) {
+                logsMap.computeIfAbsent(log.getGuest().getId(), k -> new java.util.HashMap<>())
+                       .put(log.getLogDate(), log);
+            }
+        }
+
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Guest g : guests) {
+            Map<String, Object> item = new java.util.LinkedHashMap<>();
+            item.put("guestId", g.getId());
+            item.put("guestName", g.getFullName());
+            item.put("bedLabel", g.getBed() != null ? g.getBed().getBedLabel() : "—");
+
+            java.util.Map<String, Object> daysMap = new java.util.LinkedHashMap<>();
+            java.util.Map<java.time.LocalDate, DailyLog> guestLogs = logsMap.getOrDefault(g.getId(), java.util.Map.of());
+
+            for (java.time.LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+                DailyLog log = guestLogs.get(date);
+                if (log != null) {
+                    daysMap.put(date.toString(), java.util.Map.ofEntries(
+                        java.util.Map.entry("breakfast", log.isBreakfastOpted()),
+                        java.util.Map.entry("lunch", log.isLunchOpted()),
+                        java.util.Map.entry("dinner", log.isDinnerOpted()),
+                        java.util.Map.entry("isVeg", log.isVeg()),
+                        java.util.Map.entry("omelettes", log.getOmeletteCount()),
+                        java.util.Map.entry("boiledEggs", log.getBoiledEggCount()),
+                        java.util.Map.entry("laundry", log.getWashingMachineCount())
+                    ));
+                }
+            }
+            item.put("days", daysMap);
+            result.add(item);
+        }
+
+        return ResponseEntity.ok(result);
+    }
 }
 

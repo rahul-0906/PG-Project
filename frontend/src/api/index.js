@@ -81,6 +81,7 @@ export const managerApi = {
   previewInvoices: (month, year) => api.get('/manager/invoices/preview', { params: { month, year } }),
   generateInvoice: (guestId, month, year) => api.post('/manager/billing/generate', { guestId, month, year }),
   generateAllInvoices: (month, year) => api.post('/manager/invoices/generate-all', { month, year }),
+  getMonthlyMeals: (month, year) => api.get('/manager/monthly-meals', { params: { month, year } }),
 };
 
 export const guestApi = {
@@ -94,6 +95,7 @@ export const guestApi = {
   getNotifications: () => api.get('/guest/notifications'),
   markRead: (id) => api.put(`/guest/notifications/${id}/read`),
   getConfig: () => api.get('/guest/tenant-config'),
+  getAddons: () => api.get('/guest/addons'),
 };
 
 export default api;

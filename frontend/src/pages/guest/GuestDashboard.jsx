@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { guestApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useSystemConfig } from '../../context/SystemConfigContext';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   User, 
@@ -48,9 +49,13 @@ export default function GuestDashboard() {
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', whatsappNumber: '', vehicleRegistration: '' });
   const [savingProfile, setSavingProfile] = useState(false);
 
+  const { config } = useSystemConfig();
+  const [addons, setAddons] = useState([]);
+
   useEffect(() => {
     guestApi.getDashboard().then(r => setData(r.data)).catch(() => {});
     guestApi.getInvoices().then(r => setInvoices(r.data)).catch(() => {});
+    guestApi.getAddons().then(r => setAddons(r.data)).catch(() => {});
   }, []);
 
   const openProfile = async () => {
@@ -354,6 +359,74 @@ export default function GuestDashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Add-on & Service Log Card */}
+      <div className="card mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+              <ChefHat className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-slate-800 font-bold text-base">Add-on &amp; Service Log</h3>
+              <p className="text-slate-400 text-xs mt-0.5">Logs of opted Omelettes, Boiled Eggs, and Washing Machine usage.</p>
+            </div>
+          </div>
+        </div>
+
+        {addons.length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center justify-center">
+            <ChefHat className="w-8 h-8 text-slate-300 mb-2" />
+            <span>No add-ons or washing machine services logged yet.</span>
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Omelette (₹{config?.pricing?.omelette ?? 18})</th>
+                  <th>Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                  <th>Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
+                  <th className="text-right">Total Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                {addons.map(a => {
+                  const oPrice = config?.pricing?.omelette ?? 18;
+                  const ePrice = config?.pricing?.boiledEgg ?? 18;
+                  const wPrice = config?.pricing?.washingMachine ?? 50;
+                  const oCost = (a.omeletteCount || 0) * oPrice;
+                  const eCost = (a.boiledEggCount || 0) * ePrice;
+                  const wCost = (a.washingMachineCount || 0) * wPrice;
+                  const dayTotal = oCost + eCost + wCost;
+                  return (
+                    <tr key={a.id}>
+                      <td className="font-semibold">{a.logDate}</td>
+                      <td>
+                        {a.omeletteCount > 0 ? (
+                          <span className="font-bold text-slate-700">{a.omeletteCount} pcs</span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        {a.boiledEggCount > 0 ? (
+                          <span className="font-bold text-slate-700">{a.boiledEggCount} pcs</span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        {a.washingMachineCount > 0 ? (
+                          <span className="font-bold text-slate-700">{a.washingMachineCount} use</span>
+                        ) : '—'}
+                      </td>
+                      <td className="text-right font-extrabold text-indigo-600">₹{dayTotal}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
