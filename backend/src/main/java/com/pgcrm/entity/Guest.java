@@ -74,6 +74,22 @@ public class Guest {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "breakfast_preference")
+    @Builder.Default
+    private boolean breakfastPreference = false;
+
+    @Column(name = "lunch_preference")
+    @Builder.Default
+    private boolean lunchPreference = false;
+
+    @Column(name = "dinner_preference")
+    @Builder.Default
+    private boolean dinnerPreference = false;
+
+    @Column(name = "is_veg_preference")
+    @Builder.Default
+    private boolean vegPreference = true;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

@@ -30,9 +30,9 @@ export default function ManagerGuests() {
     advanceDeposit:'', 
     checkInDate: new Date().toISOString().slice(0,10),
     isVeg: true,
-    breakfastOpted: false,
-    lunchOpted: false,
-    dinnerOpted: false
+    breakfastOpted: true,
+    lunchOpted: true,
+    dinnerOpted: true
   });
   const [saving, setSaving] = useState(false);
   const [vacantBeds, setVacantBeds] = useState([]);
@@ -103,9 +103,9 @@ export default function ManagerGuests() {
       advanceDeposit:'', 
       checkInDate: new Date().toISOString().slice(0,10),
       isVeg: true,
-      breakfastOpted: false,
-      lunchOpted: false,
-      dinnerOpted: false
+      breakfastOpted: true,
+      lunchOpted: true,
+      dinnerOpted: true
     });
     setSelectedBedInfo(null);
   };

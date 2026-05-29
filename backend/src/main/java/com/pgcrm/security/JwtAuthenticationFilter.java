@@ -49,12 +49,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     String selectedBranchId = request.getHeader("X-Selected-Branch-Id");
                     String activeBranchId = null;
-                    if (branchId != null) {
-                        String[] allowedBranches = branchId.split(",");
-                        if (selectedBranchId != null && java.util.Arrays.asList(allowedBranches).contains(selectedBranchId)) {
+
+                    if (role.equals("PG_OWNER")) {
+                        if (selectedBranchId != null) {
                             activeBranchId = selectedBranchId;
-                        } else {
-                            activeBranchId = allowedBranches[0];
+                        }
+                    } else if (role.equals("PG_MANAGER")) {
+                        User dbUser = userRepository.findById(userId).orElse(null);
+                        if (dbUser != null) {
+                            String userBranchId = dbUser.getBranchId();
+                            if (userBranchId != null && !userBranchId.isBlank()) {
+                                String[] allowedBranches = userBranchId.split(",");
+                                if (selectedBranchId != null && java.util.Arrays.asList(allowedBranches).contains(selectedBranchId)) {
+                                    activeBranchId = selectedBranchId;
+                                } else {
+                                    activeBranchId = allowedBranches[0];
+                                }
+                            }
                         }
                     }
 

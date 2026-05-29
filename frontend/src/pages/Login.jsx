@@ -65,12 +65,19 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-app p-4">
       <div className="w-full max-w-[400px] bg-surface border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 fade-in-up">
-        <div className="text-2xl font-extrabold text-slate-900 tracking-tight text-center mb-1">
-          🏠 {config?.branding?.name || 'PG CRM'}
+        <div className="flex flex-col items-center justify-center mb-6">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-md shadow-indigo-100 mb-3">
+            <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 2H5C3.89543 2 3 2.89543 3 4V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V4C21 2.89543 20.1046 2 19 2ZM11 6H13V8H11V6ZM11 10H13V12H11V10ZM11 14H13V16H11V14ZM7 6H9V8H7V6ZM7 10H9V12H7V10ZM7 14H9V16H7V14ZM17 18H7V17H17V18ZM17 14H15V16H17V14ZM17 10H15V12H17V10ZM17 6H15V8H17V6Z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+            {config?.branding?.name || 'PG CRM'}
+          </h2>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mt-1">
+            Single-Tenant PG &amp; Hostel Management
+          </p>
         </div>
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mb-6">
-          Single-Tenant PG &amp; Hostel Management
-        </p>
 
         <form onSubmit={handle} className="space-y-4">
           <div className="form-group">

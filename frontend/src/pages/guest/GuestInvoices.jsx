@@ -103,91 +103,100 @@ export default function GuestInvoices() {
         </div>
       </div>
 
-      <div className="card" style={{ padding: 0, overflow:'hidden' }}>
-        {/* Header */}
-        <div style={{ display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr 1.2fr',
-          padding:'0.75rem 1rem', background:'var(--bg-main)', borderBottom:'1px solid var(--border)',
-          fontSize:'0.75rem', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase' }}>
-          <span>Period</span><span>Rent</span><span>EB</span><span>Food</span><span>Laundry</span><span>Total</span><span>Action</span>
+      <div className="card shadow-sm border border-slate-200 bg-white rounded-2xl overflow-hidden p-0">
+        <div className="table-wrap">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Period</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Rent</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">EB</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Food</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Laundry</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total</th>
+                <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {invoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="py-3.5 px-4">
+                    <div className="font-bold text-slate-800 text-sm">
+                      {MONTHS[inv.month-1]} {inv.year}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`badge ${STATUS_COLORS[inv.status] || 'badge-info'}`}>{inv.status}</span>
+                      {inv.dueDate && inv.status !== 'PAID' && (
+                        <span className="text-[10px] text-slate-400 font-medium">Due: {inv.dueDate}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-700 text-sm font-medium">
+                    ₹{Number(getAmt(inv,'RENT')).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-700 text-sm font-medium">
+                    ₹{Number(getAmt(inv,'EB')).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-700 text-sm font-medium">
+                    ₹{Number(getAmt(inv,'FOOD')).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-700 text-sm font-medium">
+                    ₹{Number(getAmt(inv,'LAUNDRY')).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-900 text-sm font-semibold">
+                    ₹{Number(inv.totalAmount).toLocaleString('en-IN')}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center gap-2">
+                      {inv.status !== 'PAID' ? (
+                        <button id={`btn-pay-${inv.id?.slice(0,8)}`}
+                          onClick={() => handlePayNow(inv)}
+                          disabled={paying === inv.id}
+                          className="btn btn-primary py-1 px-3 text-xs flex items-center gap-1 shadow-sm"
+                        >
+                          {paying === inv.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <span>Paying...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="w-3 h-3" />
+                              <span>Pay Now</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Paid</span>
+                        </span>
+                      )}
+                      <button 
+                        className="btn btn-secondary py-1 px-3 text-xs flex items-center gap-1"
+                        onClick={async () => {
+                          try {
+                            const res = await guestApi.downloadInvoicePdf(inv.id);
+                            const url = window.URL.createObjectURL(new Blob([res.data]));
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.setAttribute('download', `Invoice-${inv.id.slice(0,8)}.pdf`);
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                          } catch (err) { alert('Failed to download PDF'); }
+                        }}
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-
-        {invoices.length === 0 && (
-          <div style={{ padding:'3rem', textAlign:'center', color:'var(--text-muted)' }} className="flex flex-col items-center justify-center">
-            <FileText className="w-12 h-12 text-slate-300 mb-2" />
-            <span>No invoices yet. They are generated monthly by the billing scheduler.</span>
-          </div>
-        )}
-
-        {invoices.map((inv, i) => (
-          <div key={inv.id} style={{
-            display:'grid', gridTemplateColumns:'1.5fr 1fr 1fr 1fr 1fr 1fr 1.2fr',
-            padding:'1rem', alignItems:'center', borderBottom:'1px solid var(--border)',
-            background: i % 2 === 0 ? 'transparent' : 'rgba(99,102,241,0.02)'
-          }}>
-            <div>
-              <div style={{ fontWeight:700, color:'var(--text-primary)' }}>
-                {MONTHS[inv.month-1]} {inv.year}
-              </div>
-              <div style={{ display:'flex', gap:'0.5rem', marginTop:'0.25rem', flexWrap:'wrap' }}>
-                <span className={`badge ${STATUS_COLORS[inv.status] || 'badge-info'}`}>{inv.status}</span>
-                {inv.dueDate && inv.status !== 'PAID' && (
-                  <span style={{ fontSize:'0.7rem', color:'var(--text-muted)' }}>Due: {inv.dueDate}</span>
-                )}
-              </div>
-            </div>
-            <span style={{ color:'var(--text-secondary)' }}>₹{Number(getAmt(inv,'RENT')).toLocaleString('en-IN')}</span>
-            <span style={{ color:'var(--text-secondary)' }}>₹{Number(getAmt(inv,'EB')).toLocaleString('en-IN')}</span>
-            <span style={{ color:'var(--text-secondary)' }}>₹{Number(getAmt(inv,'FOOD')).toLocaleString('en-IN')}</span>
-            <span style={{ color:'var(--text-secondary)' }}>₹{Number(getAmt(inv,'LAUNDRY')).toLocaleString('en-IN')}</span>
-            <span style={{ fontWeight:800, color:'var(--accent)', fontSize:'1.05rem' }}>
-              ₹{Number(inv.totalAmount).toLocaleString('en-IN')}
-            </span>
-            <div>
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                {inv.status !== 'PAID' ? (
-                  <button id={`btn-pay-${inv.id?.slice(0,8)}`}
-                    onClick={() => handlePayNow(inv)}
-                    disabled={paying === inv.id}
-                    className="btn btn-primary flex items-center gap-1"
-                    style={{ fontSize:'0.78rem', padding:'0.4rem 0.85rem' }}>
-                    {paying === inv.id ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Paying...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>Pay Now</span>
-                      </>
-                    )}
-                  </button>
-                ) : (
-                  <span style={{ color:'#10b981' }} className="flex items-center gap-1 text-sm font-semibold py-1.5">
-                    <Check className="w-4 h-4" />
-                    <span>Paid</span>
-                  </span>
-                )}
-                <button className="btn btn-secondary flex items-center gap-1" onClick={async () => {
-                    try {
-                      const res = await guestApi.downloadInvoicePdf(inv.id);
-                      const url = window.URL.createObjectURL(new Blob([res.data]));
-                      const link = document.createElement('a');
-                      link.href = url;
-                      link.setAttribute('download', `Invoice-${inv.id.slice(0,8)}.pdf`);
-                      document.body.appendChild(link);
-                      link.click();
-                      link.remove();
-                    } catch (err) { alert('Failed to download PDF'); }
-                  }}
-                  style={{ fontSize:'0.78rem', padding:'0.4rem 0.85rem' }}>
-                  <Download className="w-3.5 h-3.5" />
-                  <span>PDF</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </AppLayout>
   );

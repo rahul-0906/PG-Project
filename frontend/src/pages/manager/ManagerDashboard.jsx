@@ -59,7 +59,7 @@ export default function ManagerDashboard() {
             <div>
               <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Manager Portal</span>
               <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
-                Welcome back, {user?.fullName || 'PG Manager'}
+                Welcome back, PG Manager for {data?.buildingName || '...'}
               </h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">

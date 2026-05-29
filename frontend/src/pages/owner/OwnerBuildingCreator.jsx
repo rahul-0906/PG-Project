@@ -218,11 +218,20 @@ function Step3({ floors, onChange }) {
   const updateFloor = (id, updated) =>
     onChange(floors.map(f => f._id === id ? updated : f));
 
+  const [blockModalFloorId, setBlockModalFloorId] = useState(null);
+  const [newBlockName, setNewBlockName] = useState('');
+
   const addBlock = (floorId) => {
-    const name = prompt("Enter Block Name (e.g. Block A, Wing B):");
-    if (!name || !name.trim()) return;
-    const floor = floors.find(f => f._id === floorId);
-    updateFloor(floorId, { ...floor, blocks: [...floor.blocks, makeBlock(name.trim())] });
+    setBlockModalFloorId(floorId);
+    setNewBlockName('');
+  };
+
+  const confirmAddBlock = () => {
+    if (!newBlockName.trim()) return;
+    const floor = floors.find(f => f._id === blockModalFloorId);
+    updateFloor(blockModalFloorId, { ...floor, blocks: [...floor.blocks, makeBlock(newBlockName.trim())] });
+    setBlockModalFloorId(null);
+    setNewBlockName('');
   };
 
   const removeBlock = (floorId, blockId) => {
@@ -345,6 +354,48 @@ function Step3({ floors, onChange }) {
           </div>
         </div>
       ))}
+
+      {blockModalFloorId && (
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-[2px] flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-5 shadow-xl border border-slate-100 w-full max-w-sm mx-4 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-sm font-bold text-slate-800 mb-1">Enter Block Name</h3>
+            <p className="text-xs text-slate-500 mb-4">(e.g. Block A, Wing B)</p>
+            <input
+              type="text"
+              className="form-input w-full mb-4 font-semibold text-xs py-2"
+              placeholder="e.g. Block A"
+              value={newBlockName}
+              onChange={e => setNewBlockName(e.target.value)}
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  confirmAddBlock();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                className="btn btn-ghost py-1 px-3"
+                onClick={() => {
+                  setBlockModalFloorId(null);
+                  setNewBlockName('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary py-1 px-3"
+                onClick={confirmAddBlock}
+                disabled={!newBlockName.trim()}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

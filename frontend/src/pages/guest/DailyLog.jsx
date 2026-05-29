@@ -38,8 +38,14 @@ function isLocked(mealKey, date) {
 }
 
 export default function DailyLog() {
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7));
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   
   const [log, setLog] = useState({
     breakfastOpted: false, lunchOpted: false, dinnerOpted: false,
@@ -144,15 +150,25 @@ export default function DailyLog() {
   const allSlots = [...blanks, ...days];
 
   const handlePrevMonth = () => {
-    const prevDate = new Date(year, month - 2, 1);
-    const newMonthStr = prevDate.toISOString().slice(0, 7);
+    let newYear = year;
+    let newMonth = month - 1;
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear = year - 1;
+    }
+    const newMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
     setSelectedMonth(newMonthStr);
     setSelectedDate(`${newMonthStr}-01`);
   };
 
   const handleNextMonth = () => {
-    const nextDate = new Date(year, month, 1);
-    const newMonthStr = nextDate.toISOString().slice(0, 7);
+    let newYear = year;
+    let newMonth = month + 1;
+    if (newMonth > 12) {
+      newMonth = 1;
+      newYear = year + 1;
+    }
+    const newMonthStr = `${newYear}-${String(newMonth).padStart(2, '0')}`;
     setSelectedMonth(newMonthStr);
     setSelectedDate(`${newMonthStr}-01`);
   };

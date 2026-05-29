@@ -106,6 +106,25 @@ export default function GuestDashboard() {
 
   const filteredAddons = addons.filter(a => a.logDate && a.logDate.startsWith(selectedMonth));
 
+  const oPrice = config?.pricing?.omelette ?? 18;
+  const ePrice = config?.pricing?.boiledEgg ?? 18;
+  const wPrice = config?.pricing?.washingMachine ?? 50;
+
+  let totalOmelettes = 0;
+  let totalEggs = 0;
+  let totalWashing = 0;
+  let totalAddonCost = 0;
+
+  filteredAddons.forEach(a => {
+    const oCount = a.omeletteCount || 0;
+    const eCount = a.boiledEggCount || 0;
+    const wCount = a.washingMachineCount || 0;
+    totalOmelettes += oCount;
+    totalEggs += eCount;
+    totalWashing += wCount;
+    totalAddonCost += (oCount * oPrice) + (eCount * ePrice) + (wCount * wPrice);
+  });
+
   return (
     <AppLayout>
       {/* Premium Welcome Banner */}
@@ -378,14 +397,14 @@ export default function GuestDashboard() {
 
       {/* Add-on & Service Log Card */}
       <div className="card mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
               <ChefHat className="w-4 h-4" />
             </div>
             <div>
               <h3 className="text-slate-800 font-bold text-base">Add-on &amp; Service Log</h3>
-              <p className="text-slate-400 text-xs mt-0.5">Logs of opted Omelettes, Boiled Eggs, and Washing Machine usage.</p>
+              <p className="text-slate-400 text-xs mt-0.5">Summary and daily log of opted services.</p>
             </div>
           </div>
 
@@ -404,56 +423,106 @@ export default function GuestDashboard() {
           </div>
         </div>
 
-        {filteredAddons.length === 0 ? (
-          <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center justify-center">
+        {/* Summary Metric Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 text-base">
+              🍳
+            </div>
+            <div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Omelettes</div>
+              <div className="text-sm font-black text-slate-800 mt-0.5">{totalOmelettes} pcs</div>
+              <div className="text-[9px] text-slate-400 font-medium">₹{totalOmelettes * oPrice} total</div>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0 text-base">
+              🥚
+            </div>
+            <div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Boiled Eggs</div>
+              <div className="text-sm font-black text-slate-800 mt-0.5">{totalEggs} pcs</div>
+              <div className="text-[9px] text-slate-400 font-medium">₹{totalEggs * ePrice} total</div>
+            </div>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-base">
+              🧺
+            </div>
+            <div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Laundry</div>
+              <div className="text-sm font-black text-slate-800 mt-0.5">{totalWashing} uses</div>
+              <div className="text-[9px] text-slate-400 font-medium">₹{totalWashing * wPrice} total</div>
+            </div>
+          </div>
+          <div className="bg-indigo-50/50 border border-indigo-100/50 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100/80 flex items-center justify-center flex-shrink-0 text-base">
+              💰
+            </div>
+            <div>
+              <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">Monthly Total</div>
+              <div className="text-sm font-black text-indigo-700 mt-0.5">₹{totalAddonCost}</div>
+              <div className="text-[9px] text-indigo-400 font-medium">For {formatMonthName(selectedMonth)}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Compact Service Log Feed */}
+        {filteredAddons.filter(a => ((a.omeletteCount || 0) + (a.boiledEggCount || 0) + (a.washingMachineCount || 0)) > 0).length === 0 ? (
+          <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
             <ChefHat className="w-8 h-8 text-slate-300 mb-2" />
-            <span>No add-ons or washing machine services logged for this month.</span>
+            <span>No service usage logged for this month.</span>
           </div>
         ) : (
-          <div className="table-wrap">
-            <table className="table-compact">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Omelette (₹{config?.pricing?.omelette ?? 18})</th>
-                  <th>Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
-                  <th>Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
-                  <th className="text-right">Total Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAddons.map(a => {
-                  const oPrice = config?.pricing?.omelette ?? 18;
-                  const ePrice = config?.pricing?.boiledEgg ?? 18;
-                  const wPrice = config?.pricing?.washingMachine ?? 50;
-                  const oCost = (a.omeletteCount || 0) * oPrice;
-                  const eCost = (a.boiledEggCount || 0) * ePrice;
-                  const wCost = (a.washingMachineCount || 0) * wPrice;
-                  const dayTotal = oCost + eCost + wCost;
-                  return (
-                    <tr key={a.id}>
-                      <td className="font-semibold">{a.logDate}</td>
-                      <td>
-                        {a.omeletteCount > 0 ? (
-                          <span className="font-bold text-slate-700">{a.omeletteCount} pcs</span>
-                        ) : '—'}
-                      </td>
-                      <td>
-                        {a.boiledEggCount > 0 ? (
-                          <span className="font-bold text-slate-700">{a.boiledEggCount} pcs</span>
-                        ) : '—'}
-                      </td>
-                      <td>
-                        {a.washingMachineCount > 0 ? (
-                          <span className="font-bold text-slate-700">{a.washingMachineCount} use</span>
-                        ) : '—'}
-                      </td>
-                      <td className="text-right font-extrabold text-indigo-600">₹{dayTotal}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="flex flex-col gap-2 max-h-[280px] overflow-y-auto pr-1">
+            {filteredAddons.map(a => {
+              const oCount = a.omeletteCount || 0;
+              const eCount = a.boiledEggCount || 0;
+              const wCount = a.washingMachineCount || 0;
+              const dayTotal = (oCount * oPrice) + (eCount * ePrice) + (wCount * wPrice);
+              
+              if (dayTotal === 0) return null;
+
+              // Parse log date correctly
+              const [y, m, d] = a.logDate.split('-').map(Number);
+              const logDateObj = new Date(y, m - 1, d);
+              const formattedDayStr = logDateObj.toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'short',
+                weekday: 'short'
+              });
+
+              return (
+                <div key={a.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-500 min-w-[90px]">{formattedDayStr}</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {oCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full">
+                          <span>🍳 Omelette</span>
+                          <span className="bg-amber-200/60 px-1 py-0.2 rounded text-[9px] font-black text-amber-800">x{oCount}</span>
+                        </span>
+                      )}
+                      {eCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-700 bg-yellow-50/60 border border-yellow-100/60 px-2.5 py-0.5 rounded-full">
+                          <span>🥚 Boiled Egg</span>
+                          <span className="bg-yellow-200/50 px-1 py-0.2 rounded text-[9px] font-black text-yellow-800">x{eCount}</span>
+                        </span>
+                      )}
+                      {wCount > 0 && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">
+                          <span>🧺 Laundry</span>
+                          <span className="bg-blue-200/60 px-1 py-0.2 rounded text-[9px] font-black text-blue-800">x{wCount}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right font-extrabold text-sm text-indigo-600">
+                    ₹{dayTotal}
+                  </div>
+                </div>
+              );
+            }).filter(Boolean)}
           </div>
         )}
       </div>

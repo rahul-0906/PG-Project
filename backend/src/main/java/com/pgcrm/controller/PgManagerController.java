@@ -55,11 +55,18 @@ public class PgManagerController {
                     com.pgcrm.entity.enums.MaintenanceStatus.OPEN)
                 : maintenanceTicketRepository.countByStatus(
                     com.pgcrm.entity.enums.MaintenanceStatus.OPEN);
+        String buildingName = "All Buildings";
+        if (branchId != null) {
+            buildingName = buildingRepository.findById(branchId)
+                    .map(Building::getName)
+                    .orElse("Main Building");
+        }
         return ResponseEntity.ok(Map.of(
                 "totalBeds", total,
                 "vacantBeds", vacant,
                 "occupiedBeds", total - vacant,
-                "pendingMaintenanceTickets", pending
+                "pendingMaintenanceTickets", pending,
+                "buildingName", buildingName
         ));
     }
 
@@ -87,13 +94,24 @@ public class PgManagerController {
                 (String) body.get("vehicleRegistration")
         );
 
+        boolean isVeg = body.get("isVeg") == null || (Boolean) body.get("isVeg");
+        boolean breakfastOpted = body.get("breakfastOpted") != null && (Boolean) body.get("breakfastOpted");
+        boolean lunchOpted = body.get("lunchOpted") != null && (Boolean) body.get("lunchOpted");
+        boolean dinnerOpted = body.get("dinnerOpted") != null && (Boolean) body.get("dinnerOpted");
+
+        guest.setVegPreference(isVeg);
+        guest.setBreakfastPreference(breakfastOpted);
+        guest.setLunchPreference(lunchOpted);
+        guest.setDinnerPreference(dinnerOpted);
+        guestRepository.save(guest);
+
         DailyLog log = DailyLog.builder()
                 .guest(guest)
                 .logDate(checkInDate)
-                .isVeg(body.get("isVeg") == null || (Boolean) body.get("isVeg"))
-                .breakfastOpted(body.get("breakfastOpted") != null && (Boolean) body.get("breakfastOpted"))
-                .lunchOpted(body.get("lunchOpted") != null && (Boolean) body.get("lunchOpted"))
-                .dinnerOpted(body.get("dinnerOpted") != null && (Boolean) body.get("dinnerOpted"))
+                .isVeg(isVeg)
+                .breakfastOpted(breakfastOpted)
+                .lunchOpted(lunchOpted)
+                .dinnerOpted(dinnerOpted)
                 .build();
         dailyLogRepository.save(log);
 

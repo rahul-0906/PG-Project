@@ -58,6 +58,18 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         seedDefaultBusiness();
+        
+        // Ensure all existing guests from previous seed runs have default preferences set to true
+        for (Guest g : guestRepository.findAll()) {
+            if (!g.isBreakfastPreference() && !g.isLunchPreference() && !g.isDinnerPreference()) {
+                g.setBreakfastPreference(true);
+                g.setLunchPreference(true);
+                g.setDinnerPreference(true);
+                g.setVegPreference(true);
+                guestRepository.save(g);
+                log.info("Updated default meal preferences to TRUE for guest: {}", g.getFullName());
+            }
+        }
     }
 
     @Getter @Setter @NoArgsConstructor
@@ -426,7 +438,14 @@ public class DataSeeder implements CommandLineRunner {
                     .build());
 
             List<Guest> seededGuests = List.of(g1, g2, g3, g4, g5, g6, g7, g8);
-            log.info("✅ 8 guests successfully seeded.");
+            for (Guest g : seededGuests) {
+                g.setBreakfastPreference(true);
+                g.setLunchPreference(true);
+                g.setDinnerPreference(true);
+                g.setVegPreference(true);
+                guestRepository.save(g);
+            }
+            log.info("✅ 8 guests successfully seeded with default preferences.");
 
             // 10. Seed Daily Logs (meals and laundry)
             Random random = new Random();

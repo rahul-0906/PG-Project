@@ -62,20 +62,10 @@ public class DailyLogService {
     }
 
     public DailyLog createDefaultLog(Guest guest, LocalDate date) {
-        boolean defBreakfast = false;
-        boolean defLunch = false;
-        boolean defDinner = false;
-        boolean defVeg = true;
-        
-        if (guest != null && guest.getCheckInDate() != null) {
-            DailyLog checkInLog = dailyLogRepository.findByGuestIdAndLogDate(guest.getId(), guest.getCheckInDate()).orElse(null);
-            if (checkInLog != null) {
-                defBreakfast = checkInLog.isBreakfastOpted();
-                defLunch = checkInLog.isLunchOpted();
-                defDinner = checkInLog.isDinnerOpted();
-                defVeg = checkInLog.isVeg();
-            }
-        }
+        boolean defBreakfast = guest != null && guest.isBreakfastPreference();
+        boolean defLunch = guest != null && guest.isLunchPreference();
+        boolean defDinner = guest != null && guest.isDinnerPreference();
+        boolean defVeg = guest == null || guest.isVegPreference();
         
         return DailyLog.builder()
                 .guest(guest)
