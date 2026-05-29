@@ -27,6 +27,9 @@ public class Building {
     @Builder.Default
     private List<Floor> floors = new ArrayList<>();
 
+    @OneToOne(mappedBy = "building", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private BuildingConfig buildingConfig;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

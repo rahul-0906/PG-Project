@@ -10,6 +10,7 @@ import ManagerDashboard from './pages/manager/ManagerDashboard';
 import GuestDashboard from './pages/guest/GuestDashboard';
 import DailyLog from './pages/guest/DailyLog';
 import GuestInvoices from './pages/guest/GuestInvoices';
+import GuestMaintenance from './pages/guest/GuestMaintenance';
 import ManagerGuests from './pages/manager/ManagerGuests';
 import ManagerEbBill from './pages/manager/ManagerEbBill';
 import ManagerMaintenance from './pages/manager/ManagerMaintenance';
@@ -101,6 +102,8 @@ export default function App() {
         <PrivateRoute roles={['GUEST']}><DailyLog /></PrivateRoute>} />
       <Route path="/guest/invoices" element={
         <PrivateRoute roles={['GUEST']}><GuestInvoices /></PrivateRoute>} />
+      <Route path="/guest/maintenance" element={
+        <PrivateRoute roles={['GUEST']}><GuestMaintenance /></PrivateRoute>} />
     </Routes>
   );
 }

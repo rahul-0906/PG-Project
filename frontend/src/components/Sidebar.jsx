@@ -43,6 +43,7 @@ const navMap = {
     { to: '/guest/dashboard', label: 'Dashboard', icon: LayoutGrid },
     { to: '/guest/daily-log', label: 'Meal Planner', icon: CalendarDays },
     { to: '/guest/invoices', label: 'Invoices', icon: FileText },
+    { to: '/guest/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/settings', label: 'Settings', icon: SettingsIcon },
   ],
 };

@@ -36,6 +36,9 @@ public class GuestController {
     private final DailyLogRepository dailyLogRepository;
     private final GuestMapper guestMapper;
     private final InvoiceMapper invoiceMapper;
+    private final BuildingConfigRepository buildingConfigRepository;
+    private final PricingService pricingService;
+    private final MaintenanceTicketRepository maintenanceTicketRepository;
 
     @GetMapping("/profile")
     public ResponseEntity<GuestResponse> getProfile(Authentication auth) {
@@ -127,6 +130,20 @@ public class GuestController {
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard(Authentication auth) {
         Guest guest = guestService.getByUserId(auth.getName());
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+
+        boolean foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
+        boolean allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
+
+        if (buildingId != null) {
+            Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(buildingId);
+            if (configOpt.isPresent()) {
+                foodIncludedInRent = configOpt.get().isFoodIncludedInRent();
+                allowMealCancellations = configOpt.get().isAllowMealCancellations();
+            }
+        }
 
         List<Invoice> invoices = invoiceRepository.findByGuestId(guest.getId());
         long unread = notificationRepository.countByGuestIdAndReadFalse(guest.getId());
@@ -137,8 +154,8 @@ public class GuestController {
                 "checkInDate", guest.getCheckInDate() != null ? guest.getCheckInDate().toString() : "",
                 "totalInvoices", invoices.size(),
                 "unreadNotifications", unread,
-                "foodIncludedInRent", systemConfig.getRules().isFoodIncludedInRent(),
-                "allowMealCancellations", systemConfig.getRules().isAllowMealCancellations()
+                "foodIncludedInRent", foodIncludedInRent,
+                "allowMealCancellations", allowMealCancellations
         ));
     }
 
@@ -147,16 +164,34 @@ public class GuestController {
      * Used by DailyLog to show/hide meals based on what is configured.
      */
     @GetMapping("/tenant-config")
-    public ResponseEntity<Map<String, Object>> getTenantConfig() {
+    public ResponseEntity<Map<String, Object>> getTenantConfig(Authentication auth) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+
+        PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+
+        boolean foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
+        boolean allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
+
+        if (buildingId != null) {
+            Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(buildingId);
+            if (configOpt.isPresent()) {
+                foodIncludedInRent = configOpt.get().isFoodIncludedInRent();
+                allowMealCancellations = configOpt.get().isAllowMealCancellations();
+            }
+        }
+
         return ResponseEntity.ok(Map.ofEntries(
-            Map.entry("foodIncludedInRent",     systemConfig.getRules().isFoodIncludedInRent()),
-            Map.entry("allowMealCancellations", systemConfig.getRules().isAllowMealCancellations()),
+            Map.entry("foodIncludedInRent",     foodIncludedInRent),
+            Map.entry("allowMealCancellations", allowMealCancellations),
             Map.entry("breakfastEnabled",       systemConfig.getRules().isBreakfastEnabled()),
             Map.entry("lunchEnabled",           systemConfig.getRules().isLunchEnabled()),
             Map.entry("dinnerEnabled",          systemConfig.getRules().isDinnerEnabled()),
-            Map.entry("breakfastPrice",         systemConfig.getPricing().getBreakfast()),
-            Map.entry("lunchPrice",             systemConfig.getPricing().getLunch()),
-            Map.entry("dinnerPrice",            systemConfig.getPricing().getDinner()),
+            Map.entry("breakfastPrice",         pricing.breakfast()),
+            Map.entry("lunchPrice",             pricing.lunch()),
+            Map.entry("dinnerPrice",            pricing.dinner()),
             Map.entry("hasWashingMachine",      systemConfig.getRules().isHasWashingMachine())
         ));
     }
@@ -165,5 +200,47 @@ public class GuestController {
     public ResponseEntity<List<DailyLog>> getGuestAddons(Authentication auth) {
         Guest guest = guestService.getByUserId(auth.getName());
         return ResponseEntity.ok(dailyLogRepository.findAddonsByGuestId(guest.getId()));
+    }
+
+    @PostMapping("/maintenance")
+    public ResponseEntity<MaintenanceTicket> createTicket(Authentication auth, @RequestBody Map<String, String> body) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        
+        String title = body.get("title");
+        String description = body.get("description");
+        String priorityStr = body.getOrDefault("priority", "MEDIUM");
+        
+        if (title == null || title.isBlank() || description == null || description.isBlank()) {
+            throw new IllegalArgumentException("Title and description are required");
+        }
+        
+        String location = "N/A";
+        String buildingId = null;
+        if (guest.getBed() != null && guest.getBed().getRoom() != null) {
+            Room room = guest.getBed().getRoom();
+            String floorLabel = room.getFloor() != null ? room.getFloor().getFloorLabel() : "";
+            location = "Room " + room.getRoomNumber() + (floorLabel.isEmpty() ? "" : " (" + floorLabel + ")");
+            if (room.getFloor() != null && room.getFloor().getBuilding() != null) {
+                buildingId = room.getFloor().getBuilding().getId();
+            }
+        }
+        
+        MaintenanceTicket ticket = MaintenanceTicket.builder()
+                .raisedByGuest(guest)
+                .buildingId(buildingId)
+                .title(title)
+                .location(location)
+                .description(description)
+                .status(com.pgcrm.entity.enums.MaintenanceStatus.OPEN)
+                .priority(com.pgcrm.entity.enums.MaintenancePriority.valueOf(priorityStr.toUpperCase()))
+                .build();
+                
+        return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
+    }
+
+    @GetMapping("/maintenance")
+    public ResponseEntity<List<MaintenanceTicket>> getTickets(Authentication auth) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        return ResponseEntity.ok(maintenanceTicketRepository.findByRaisedByGuestId(guest.getId()));
     }
 }

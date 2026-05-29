@@ -29,6 +29,8 @@ public class BuildingSetupService {
     private final BlockRepository blockRepository;
     private final RoomRepository roomRepository;
     private final BedRepository bedRepository;
+    private final BuildingConfigRepository buildingConfigRepository;
+    private final com.pgcrm.config.SystemConfigProperties systemConfig;
 
     // ── Request DTO ────────────────────────────────────────────────
 
@@ -36,6 +38,15 @@ public class BuildingSetupService {
     public static class BuildingSetupRequest {
         private String name;
         private String address;
+        private boolean foodIncludedInRent;
+        private boolean allowMealCancellations;
+        private java.math.BigDecimal breakfastPrice;
+        private java.math.BigDecimal lunchPrice;
+        private java.math.BigDecimal dinnerPrice;
+        private java.math.BigDecimal omelettePrice;
+        private java.math.BigDecimal boiledEggPrice;
+        private java.math.BigDecimal washingMachinePrice;
+        private String ebSplitMethod;
         private List<FloorSetup> floors = new ArrayList<>();
     }
 
@@ -93,6 +104,30 @@ public class BuildingSetupService {
                 .build()
         );
         log.info("✅ Owner created building: {}", building.getName());
+
+        // Create default building config
+        com.pgcrm.entity.enums.EbSplitMethod splitMethod = com.pgcrm.entity.enums.EbSplitMethod.EQUAL_SPLIT;
+        try {
+            if (req.getEbSplitMethod() != null) {
+                splitMethod = com.pgcrm.entity.enums.EbSplitMethod.valueOf(req.getEbSplitMethod());
+            } else if (systemConfig.getRules().getEbSplitMethod() != null) {
+                splitMethod = com.pgcrm.entity.enums.EbSplitMethod.valueOf(systemConfig.getRules().getEbSplitMethod());
+            }
+        } catch (Exception ignored) {}
+
+        BuildingConfig config = BuildingConfig.builder()
+                .building(building)
+                .foodIncludedInRent(req.isFoodIncludedInRent())
+                .allowMealCancellations(req.isAllowMealCancellations())
+                .breakfastPrice(req.getBreakfastPrice() != null ? req.getBreakfastPrice() : systemConfig.getPricing().getBreakfast())
+                .lunchPrice(req.getLunchPrice() != null ? req.getLunchPrice() : systemConfig.getPricing().getLunch())
+                .dinnerPrice(req.getDinnerPrice() != null ? req.getDinnerPrice() : systemConfig.getPricing().getDinner())
+                .omelettePrice(req.getOmelettePrice() != null ? req.getOmelettePrice() : systemConfig.getPricing().getOmelette())
+                .boiledEggPrice(req.getBoiledEggPrice() != null ? req.getBoiledEggPrice() : systemConfig.getPricing().getBoiledEgg())
+                .washingMachinePrice(req.getWashingMachinePrice() != null ? req.getWashingMachinePrice() : systemConfig.getPricing().getWashingMachine())
+                .ebSplitMethod(splitMethod)
+                .build();
+        buildingConfigRepository.save(config);
 
         int totalBlocks = 0, totalRooms = 0, totalBeds = 0;
 

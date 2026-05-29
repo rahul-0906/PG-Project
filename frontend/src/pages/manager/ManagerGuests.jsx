@@ -30,6 +30,7 @@ export default function ManagerGuests() {
     advanceDeposit:'', 
     checkInDate: new Date().toISOString().slice(0,10),
     isVeg: true,
+    foodOptedIn: true,
     breakfastOpted: true,
     lunchOpted: true,
     dinnerOpted: true
@@ -103,6 +104,7 @@ export default function ManagerGuests() {
       advanceDeposit:'', 
       checkInDate: new Date().toISOString().slice(0,10),
       isVeg: true,
+      foodOptedIn: true,
       breakfastOpted: true,
       lunchOpted: true,
       dinnerOpted: true
@@ -379,23 +381,44 @@ export default function ManagerGuests() {
                   
                   {/* Meal Choices */}
                   <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Meal Opt-In Options</label>
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      {[
-                        { key: 'breakfastOpted', label: 'Breakfast' },
-                        { key: 'lunchOpted',     label: 'Lunch' },
-                        { key: 'dinnerOpted',    label: 'Dinner' }
-                      ].map(m => (
-                        <label key={m.key} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
-                          <input 
-                            type="checkbox" 
-                            checked={form[m.key]} 
-                            onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
-                          />
-                          <span>{m.label}</span>
-                        </label>
-                      ))}
-                    </div>
+                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', marginBottom: '0.4rem' }}>
+                      <input 
+                        type="checkbox"
+                        id="opt-in-food-master"
+                        checked={form.foodOptedIn}
+                        onChange={e => {
+                          const checked = e.target.checked;
+                          setForm(f => ({
+                            ...f,
+                            foodOptedIn: checked,
+                            breakfastOpted: checked,
+                            lunchOpted: checked,
+                            dinnerOpted: checked
+                          }));
+                        }}
+                      />
+                      <span className="font-semibold text-slate-700">Opt-in for Food</span>
+                    </label>
+                    
+                    {form.foodOptedIn && (
+                      <div className="flex gap-4 mt-2 pl-5 animate-fade-in">
+                        {[
+                          { key: 'breakfastOpted', label: 'Breakfast', id: 'check-breakfast' },
+                          { key: 'lunchOpted',     label: 'Lunch', id: 'check-lunch' },
+                          { key: 'dinnerOpted',    label: 'Dinner', id: 'check-dinner' }
+                        ].map(m => (
+                          <label key={m.key} className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
+                            <input 
+                              type="checkbox" 
+                              id={m.id}
+                              checked={form[m.key]} 
+                              onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
+                            />
+                            <span>{m.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

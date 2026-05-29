@@ -106,6 +106,7 @@ export const ownerApi = {
   createBuilding: (data) => cachedApi.post('/owner/buildings', data),
   getBuildingLayout: (id) => cachedApi.get(`/owner/buildings/${id}`),
   updateBuilding: (id, data) => cachedApi.put(`/owner/buildings/${id}`, data),
+  deleteBuilding: (id) => cachedApi.delete(`/owner/buildings/${id}`),
 };
 
 export const managerApi = {
@@ -131,6 +132,7 @@ export const managerApi = {
   // Pricing Manager
   getPricing: (buildingId) => cachedApi.get('/manager/pricing', { params: buildingId ? { buildingId } : {} }),
   updateFoodPrice: (key, value, buildingId) => cachedApi.put(`/manager/pricing/${key}`, { value }, { params: buildingId ? { buildingId } : {} }),
+  updateBuildingConfig: (data, buildingId) => cachedApi.put('/manager/pricing/config', data, { params: buildingId ? { buildingId } : {} }),
   updateRoomRent: (roomId, baseRent) => cachedApi.put(`/manager/pricing/rooms/${roomId}/rent`, { baseRent }),
   // Invoice Generator
   previewInvoices: (month, year) => cachedApi.get('/manager/invoices/preview', { params: { month, year } }),
@@ -154,6 +156,8 @@ export const guestApi = {
   getConfig: () => cachedApi.get('/guest/tenant-config'),
   getAddons: () => cachedApi.get('/guest/addons'),
   getMonthlyLogs: (yearMonth) => cachedApi.get(`/guest/daily-log/month/${yearMonth}`),
+  getMaintenanceTickets: () => cachedApi.get('/guest/maintenance'),
+  createMaintenanceTicket: (data) => cachedApi.post('/guest/maintenance', data),
 };
 
 export default cachedApi;

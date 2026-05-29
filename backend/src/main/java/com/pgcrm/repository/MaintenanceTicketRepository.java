@@ -11,6 +11,7 @@ public interface MaintenanceTicketRepository extends JpaRepository<MaintenanceTi
     List<MaintenanceTicket> findByBuildingId(String buildingId);
     List<MaintenanceTicket> findByStatus(MaintenanceStatus status);
     List<MaintenanceTicket> findByBuildingIdAndStatus(String buildingId, MaintenanceStatus status);
+    List<MaintenanceTicket> findByRaisedByGuestId(String guestId);
     long countByBuildingIdAndStatus(String buildingId, MaintenanceStatus status);
     long countByStatus(MaintenanceStatus status);
 }

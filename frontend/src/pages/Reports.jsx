@@ -129,7 +129,10 @@ export default function Reports() {
       api.get(`/reports/payments?year=${year}`)
     ]).then(([r, o, g, p]) => {
       setRevenue(r.data);
-      setOccupancy(o.data);
+      setOccupancy(o.data.map(item => ({
+        ...item,
+        occupancyPct: item.totalBeds > 0 ? Math.round((item.occupiedBeds / item.totalBeds) * 100) : 0
+      })));
       setTurnover(g.data);
       setPayments(p.data);
     }).catch(console.error)

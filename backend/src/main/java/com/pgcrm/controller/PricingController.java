@@ -13,6 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.*;
 
+import com.pgcrm.entity.BuildingConfig;
+import com.pgcrm.repository.BuildingConfigRepository;
+import com.pgcrm.config.SystemConfigProperties;
+
 /**
  * Manager Pricing API — view and update per-building price overrides.
  */
@@ -26,6 +30,8 @@ public class PricingController {
     private final FloorRepository floorRepository;
     private final BlockRepository blockRepository;
     private final RoomRepository roomRepository;
+    private final BuildingConfigRepository buildingConfigRepository;
+    private final SystemConfigProperties systemConfig;
 
     /**
      * GET /api/manager/pricing?buildingId=xxx
@@ -84,10 +90,36 @@ public class PricingController {
 
         boolean schedulerEnabled = pricingService.isBillingSchedulerEnabled(effectiveBuildingId);
 
+        boolean foodIncludedInRent = false;
+        boolean allowMealCancellations = true;
+        String ebSplitMethod = "EQUAL_SPLIT";
+
+        if (effectiveBuildingId != null) {
+            Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(effectiveBuildingId);
+            if (configOpt.isPresent()) {
+                foodIncludedInRent = configOpt.get().isFoodIncludedInRent();
+                allowMealCancellations = configOpt.get().isAllowMealCancellations();
+                if (configOpt.get().getEbSplitMethod() != null) {
+                    ebSplitMethod = configOpt.get().getEbSplitMethod().name();
+                }
+            } else {
+                foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
+                allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
+                ebSplitMethod = systemConfig.getRules().getEbSplitMethod();
+            }
+        } else {
+            foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
+            allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
+            ebSplitMethod = systemConfig.getRules().getEbSplitMethod();
+        }
+
         return ResponseEntity.ok(Map.of(
                 "foodPricing", foodPricing,
                 "buildings", buildings,
-                "billingSchedulerEnabled", schedulerEnabled
+                "billingSchedulerEnabled", schedulerEnabled,
+                "foodIncludedInRent", foodIncludedInRent,
+                "allowMealCancellations", allowMealCancellations,
+                "ebSplitMethod", ebSplitMethod
         ));
     }
 
@@ -121,6 +153,41 @@ public class PricingController {
         }
 
         return ResponseEntity.ok(pricingService.upsert(effectiveBuildingId, key, value, userId));
+    }
+
+    /**
+     * PUT /api/manager/pricing/config?buildingId=xxx
+     * Updates building configurations (rules and split methods).
+     */
+    @PutMapping("/config")
+    public ResponseEntity<?> updateBuildingConfig(
+            @RequestParam(required = false) String buildingId,
+            @RequestAttribute(required = false) String branchId,
+            @RequestBody Map<String, Object> body) {
+        String effectiveBuildingId = buildingId != null ? buildingId : branchId;
+        if (effectiveBuildingId == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Building ID required"));
+        }
+
+        BuildingConfig cfg = buildingConfigRepository.findById(effectiveBuildingId)
+                .orElse(BuildingConfig.builder().buildingId(effectiveBuildingId).build());
+
+        if (body.containsKey("foodIncludedInRent")) {
+            cfg.setFoodIncludedInRent(Boolean.parseBoolean(body.get("foodIncludedInRent").toString()));
+        }
+        if (body.containsKey("allowMealCancellations")) {
+            cfg.setAllowMealCancellations(Boolean.parseBoolean(body.get("allowMealCancellations").toString()));
+        }
+        if (body.containsKey("ebSplitMethod")) {
+            cfg.setEbSplitMethod(com.pgcrm.entity.enums.EbSplitMethod.valueOf(body.get("ebSplitMethod").toString()));
+        }
+
+        // Make sure a reference to building is linked
+        if (cfg.getBuilding() == null) {
+            cfg.setBuilding(buildingRepository.findById(effectiveBuildingId).orElse(null));
+        }
+
+        return ResponseEntity.ok(buildingConfigRepository.save(cfg));
     }
 
     /**

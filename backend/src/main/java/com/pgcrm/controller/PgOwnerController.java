@@ -80,6 +80,36 @@ public class PgOwnerController {
         }
     }
 
+    @CacheEvict(value = "buildings", allEntries = true)
+    @DeleteMapping("/buildings/{buildingId}")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<?> deleteBuilding(@PathVariable String buildingId) {
+        Building building = buildingRepository.findById(buildingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Building not found: " + buildingId));
+
+        // 1. Disassociate and check out active guests in this building
+        List<Guest> activeGuests = guestRepository.findActiveGuestsByBuildingId(buildingId);
+        for (Guest guest : activeGuests) {
+            guest.setBed(null);
+            guest.setActive(false);
+            guestRepository.save(guest);
+        }
+
+        // 2. Disassociate managers assigned to this building
+        List<User> managers = userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_MANAGER);
+        for (User u : managers) {
+            if (buildingId.equals(u.getBranchId())) {
+                u.setBranchId(null);
+                userRepository.save(u);
+            }
+        }
+
+        // 3. Delete the building (will cascade to Floor, Block, Room, Bed, BuildingConfig)
+        buildingRepository.delete(building);
+
+        return ResponseEntity.ok(Map.of("message", "Building deleted successfully"));
+    }
+
     @PostMapping("/managers")
     public ResponseEntity<UserResponse> createManager(@RequestBody Map<String, String> body) {
         String defaultPassword = "Manager@123";

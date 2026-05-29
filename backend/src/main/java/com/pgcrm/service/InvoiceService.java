@@ -31,6 +31,7 @@ public class InvoiceService {
     private final SystemConfigProperties systemConfig;
     private final NotificationService notificationService;
     private final PricingService pricingService;
+    private final BuildingConfigRepository buildingConfigRepository;
 
     /** DTO returned by previewInvoice() — no DB writes */
     @Data
@@ -99,7 +100,13 @@ public class InvoiceService {
 
         // ── 3. FOOD (skip if food included in rent) ───────────────
         BigDecimal foodTotal = BigDecimal.ZERO;
-        if (!systemConfig.getRules().isFoodIncludedInRent()) {
+        boolean foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
+        if (buildingId != null) {
+            foodIncluded = buildingConfigRepository.findById(buildingId)
+                    .map(BuildingConfig::isFoodIncludedInRent)
+                    .orElse(foodIncluded);
+        }
+        if (!foodIncluded) {
             foodTotal = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
         }
         lineItems.add(InvoiceLineItem.builder()
@@ -214,7 +221,13 @@ public class InvoiceService {
         }
 
         BigDecimal food = BigDecimal.ZERO;
-        if (!systemConfig.getRules().isFoodIncludedInRent()) {
+        boolean foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
+        if (buildingId != null) {
+            foodIncluded = buildingConfigRepository.findById(buildingId)
+                    .map(BuildingConfig::isFoodIncludedInRent)
+                    .orElse(foodIncluded);
+        }
+        if (!foodIncluded) {
             food = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
         }
 

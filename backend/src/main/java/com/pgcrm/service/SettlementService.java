@@ -26,6 +26,8 @@ public class SettlementService {
     private final SystemConfigProperties systemConfig;
     private final NotificationService notificationService;
     private final BedRepository bedRepository;
+    private final BuildingConfigRepository buildingConfigRepository;
+    private final PricingService pricingService;
 
     @Transactional
     public Guest initiateCheckout(String guestId) {
@@ -69,19 +71,31 @@ public class SettlementService {
         BigDecimal pendingFood = BigDecimal.ZERO;
         BigDecimal pendingLaundry = BigDecimal.ZERO;
 
-        if (!systemConfig.getRules().isFoodIncludedInRent()) {
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+        PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+
+        boolean foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
+        if (buildingId != null) {
+            foodIncluded = buildingConfigRepository.findById(buildingId)
+                    .map(BuildingConfig::isFoodIncludedInRent)
+                    .orElse(foodIncluded);
+        }
+
+        if (!foodIncluded) {
             for (DailyLog log : logs) {
-                if (log.isBreakfastOpted()) pendingFood = pendingFood.add(systemConfig.getPricing().getBreakfast());
-                if (log.isLunchOpted()) pendingFood = pendingFood.add(systemConfig.getPricing().getLunch());
-                if (log.isDinnerOpted()) pendingFood = pendingFood.add(systemConfig.getPricing().getDinner());
-                pendingFood = pendingFood.add(systemConfig.getPricing().getOmelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
-                pendingFood = pendingFood.add(systemConfig.getPricing().getBoiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
+                if (log.isBreakfastOpted()) pendingFood = pendingFood.add(pricing.breakfast());
+                if (log.isLunchOpted())     pendingFood = pendingFood.add(pricing.lunch());
+                if (log.isDinnerOpted())    pendingFood = pendingFood.add(pricing.dinner());
+                pendingFood = pendingFood.add(pricing.omelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
+                pendingFood = pendingFood.add(pricing.boiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
             }
         }
 
         if (systemConfig.getRules().isHasWashingMachine()) {
             int wmUses = logs.stream().mapToInt(DailyLog::getWashingMachineCount).sum();
-            pendingLaundry = systemConfig.getPricing().getWashingMachine().multiply(BigDecimal.valueOf(wmUses));
+            pendingLaundry = pricing.washingMachine().multiply(BigDecimal.valueOf(wmUses));
         }
 
         BigDecimal totalDue = proratedRent.add(pendingFood).add(pendingLaundry);

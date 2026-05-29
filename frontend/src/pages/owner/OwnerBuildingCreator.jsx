@@ -28,7 +28,7 @@ function makeFloor(number) {
   };
 }
 function makeBlock(name = 'Block A') {
-  return { _id: uid(), name, roomConfigs: [] };
+  return { _id: uid(), name, roomConfigs: [makeRoomConfig()] };
 }
 function makeRoomConfig(sharing = 2) {
   return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''] };
@@ -156,13 +156,17 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
           ))}
         </select>
         <input
-          type="number"
+          type="text"
           className="form-input py-1 text-xs w-20 flex-shrink-0"
           placeholder="Count"
-          min={1}
           value={rc.count}
           onChange={e => {
-            const newCount = parseInt(e.target.value) || 1;
+            const valStr = e.target.value.replace(/[^0-9]/g, '');
+            if (valStr === '') {
+              onUpdate({ ...rc, count: '', roomNumbers: [] });
+              return;
+            }
+            const newCount = parseInt(valStr) || 1;
             const updatedRooms = [...roomNumbers];
             if (updatedRooms.length < newCount) {
               while (updatedRooms.length < newCount) updatedRooms.push('');
@@ -175,11 +179,14 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
         <div className="flex items-center gap-1 flex-1">
           <span className="text-slate-400 text-xs">₹</span>
           <input
-            type="number"
+            type="text"
             className="form-input py-1 text-xs"
             placeholder="Base rent/bed"
             value={rc.baseRent}
-            onChange={e => onUpdate({ ...rc, baseRent: e.target.value })}
+            onChange={e => {
+              const clean = e.target.value.replace(/[^0-9]/g, '');
+              onUpdate({ ...rc, baseRent: clean });
+            }}
             autoComplete="off"
             name={`base-rent-${rc._id}`}
             id={`base-rent-${rc._id}`}
@@ -400,6 +407,79 @@ function Step3({ floors, onChange }) {
   );
 }
 
+function Step4Pricing({ data, onChange }) {
+  const FOOD_ITEMS = [
+    { key: 'breakfastPrice',      label: 'Breakfast Price (₹)',       placeholder: '60' },
+    { key: 'lunchPrice',          label: 'Lunch Price (₹)',            placeholder: '65' },
+    { key: 'dinnerPrice',         label: 'Dinner Price (₹)',           placeholder: '60' },
+    { key: 'omelettePrice',       label: 'Omelette Price (₹)',         placeholder: '18' },
+    { key: 'boiledEggPrice',      label: 'Boiled Egg Price (₹)',       placeholder: '18' },
+    { key: 'washingMachinePrice', label: 'Washing Machine Price (₹)',  placeholder: '50' }
+  ];
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="text-lg font-bold text-slate-800 mb-1">Pricing &amp; Rules Config</h2>
+        <p className="text-sm text-slate-500">Configure default prices for meals/add-ons and key business rules for this building.</p>
+      </div>
+
+      <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-3.5">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+          <span>⚙️</span> Business Rules
+        </h3>
+        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            checked={data.foodIncludedInRent}
+            onChange={e => onChange({ ...data, foodIncludedInRent: e.target.checked })}
+          />
+          <span>Food Included in Rent (Guests won't be charged extra for daily meals)</span>
+        </label>
+        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            checked={data.allowMealCancellations}
+            onChange={e => onChange({ ...data, allowMealCancellations: e.target.checked })}
+          />
+          <span>Allow Meal Cancellations (Guests can cancel meals up to lockout time)</span>
+        </label>
+        <div className="form-group mb-0">
+          <label className="form-label text-xs">EB Split Method</label>
+          <select
+            className="form-input text-xs py-1"
+            value={data.ebSplitMethod || 'EQUAL_SPLIT'}
+            onChange={e => onChange({ ...data, ebSplitMethod: e.target.value })}
+          >
+            <option value="EQUAL_SPLIT">Equal Split</option>
+            <option value="PER_BED">Per Bed Rate</option>
+            <option value="METER_BASED">Meter-based split</option>
+            <option value="MANAGER_MANUAL">Manager Manual</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {FOOD_ITEMS.map(({ key, label, placeholder }) => (
+          <div key={key} className="form-group mb-0">
+            <label className="form-label text-xs">{label}</label>
+            <input
+              type="text"
+              className="form-input text-xs py-1.5"
+              placeholder={placeholder}
+              value={data[key]}
+              onChange={e => {
+                const clean = e.target.value.replace(/[^0-9.]/g, '');
+                onChange({ ...data, [key]: clean });
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Step4({ building, floors }) {
   let totalRooms = 0, totalBeds = 0, totalBlocks = 0;
   floors.forEach(f => {
@@ -411,7 +491,7 @@ function Step4({ building, floors }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Review & Create</h2>
+        <h2 className="text-lg font-bold text-slate-800 mb-1">Review &amp; Create</h2>
         <p className="text-sm text-slate-500">Confirm the configuration before creating the building.</p>
       </div>
 
@@ -435,6 +515,24 @@ function Step4({ building, floors }) {
               <div className="text-xs text-slate-500 mt-0.5">{label}</div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Pricing & Rules Summary Section */}
+      <div className="rounded-xl border border-slate-200 p-4 bg-slate-50">
+        <div className="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2.5">
+          Pricing &amp; Rules Summary
+        </div>
+        <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-slate-600">
+          <div><strong className="text-slate-500">Food Included:</strong> {building.foodIncludedInRent ? 'Yes' : 'No'}</div>
+          <div><strong className="text-slate-500">Allow Meal Cancellations:</strong> {building.allowMealCancellations ? 'Yes' : 'No'}</div>
+          <div><strong className="text-slate-500">EB Split Method:</strong> {building.ebSplitMethod}</div>
+          <div><strong className="text-slate-500">Breakfast Price:</strong> ₹{building.breakfastPrice}</div>
+          <div><strong className="text-slate-500">Lunch Price:</strong> ₹{building.lunchPrice}</div>
+          <div><strong className="text-slate-500">Dinner Price:</strong> ₹{building.dinnerPrice}</div>
+          <div><strong className="text-slate-500">Omelette Price:</strong> ₹{building.omelettePrice}</div>
+          <div><strong className="text-slate-500">Boiled Egg Price:</strong> ₹{building.boiledEggPrice}</div>
+          <div><strong className="text-slate-500">Washing Machine:</strong> ₹{building.washingMachinePrice}</div>
         </div>
       </div>
 
@@ -493,7 +591,19 @@ export default function OwnerBuildingCreator() {
 
   // Wizard state (create mode)
   const [step, setStep] = useState(1);
-  const [building, setBuilding] = useState({ name: '', address: '' });
+  const [building, setBuilding] = useState({
+    name: '',
+    address: '',
+    foodIncludedInRent: false,
+    allowMealCancellations: true,
+    breakfastPrice: '60',
+    lunchPrice: '65',
+    dinnerPrice: '60',
+    omelettePrice: '18',
+    boiledEggPrice: '18',
+    washingMachinePrice: '50',
+    ebSplitMethod: 'EQUAL_SPLIT'
+  });
   const [floors, setFloors] = useState([makeFloor(0)]);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
@@ -503,6 +613,11 @@ export default function OwnerBuildingCreator() {
   const [editData, setEditData] = useState(null); // BuildingEditRequest structure
   const [loadingEdit, setLoadingEdit] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Deletion state
+  const [buildingToDelete, setBuildingToDelete] = useState(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('');
+  const [deletingId, setDeletingId] = useState('');
 
   const [error, setError] = useState('');
 
@@ -541,11 +656,64 @@ export default function OwnerBuildingCreator() {
     }
   };
 
+  const handleDeleteBuilding = async () => {
+    if (!buildingToDelete) return;
+    if (deleteConfirmInput !== buildingToDelete.name) {
+      alert("Please type the building name exactly to confirm deletion.");
+      return;
+    }
+    setDeletingId(buildingToDelete.id);
+    setError('');
+    try {
+      await ownerApi.deleteBuilding(buildingToDelete.id);
+      setBuildingToDelete(null);
+      setDeleteConfirmInput('');
+      fetchBuildings();
+    } catch (err) {
+      setError(err.response?.data?.error || err.message || 'Failed to delete building');
+    } finally {
+      setDeletingId('');
+    }
+  };
+
   useEffect(() => {
     if (mode === 'list') {
       fetchBuildings();
     }
   }, [mode]);
+
+  useEffect(() => {
+    // Auto-cascade block deletes on 0 room configs (empty blocks) in wizard mode
+    let changed = false;
+    const cleanedFloors = floors.map(f => {
+      const activeBlocks = f.blocks.filter(b => b.roomConfigs && b.roomConfigs.length > 0);
+      if (activeBlocks.length !== f.blocks.length) {
+        changed = true;
+        return { ...f, blocks: activeBlocks };
+      }
+      return f;
+    });
+    if (changed) {
+      setFloors(cleanedFloors);
+    }
+  }, [floors]);
+
+  useEffect(() => {
+    // Auto-cascade block deletes on 0 rooms (empty blocks) in layout edit mode
+    if (!editData || !editData.floors) return;
+    let changed = false;
+    const cleanedFloors = editData.floors.map(f => {
+      const activeBlocks = f.blocks.filter(b => b.rooms && b.rooms.length > 0);
+      if (activeBlocks.length !== f.blocks.length) {
+        changed = true;
+        return { ...f, blocks: activeBlocks };
+      }
+      return f;
+    });
+    if (changed) {
+      setEditData(prev => ({ ...prev, floors: cleanedFloors }));
+    }
+  }, [editData?.floors]);
 
   // ── Layout Editor Handlers ───────────────────────────────────────
   const handleStartEdit = async (bldId) => {
@@ -816,7 +984,47 @@ export default function OwnerBuildingCreator() {
   // ── Creator Wizard Handlers ─────────────────────────────────────
   const canNext = () => {
     if (step === 1) return building.name.trim().length > 0;
-    if (step === 2) return floors.length > 0;
+    if (step === 2) {
+      return floors.length > 0 && floors.every(f => f.label && f.label.trim().length > 0);
+    }
+    if (step === 3) {
+      let totalRooms = 0;
+      let hasInvalidRoom = false;
+      let hasInvalidBlock = false;
+
+      for (const f of floors) {
+        // Standalone rooms
+        for (const r of f.rooms) {
+          totalRooms += (parseInt(r.count) || 0);
+          if (!r.baseRent || parseFloat(r.baseRent) <= 0 || !r.count || parseInt(r.count) < 1) {
+            hasInvalidRoom = true;
+          }
+        }
+        // Block rooms
+        for (const b of f.blocks) {
+          if (!b.name || !b.name.trim()) {
+            hasInvalidBlock = true;
+          }
+          if (b.roomConfigs.length === 0) {
+            hasInvalidBlock = true;
+          }
+          for (const r of b.roomConfigs) {
+            totalRooms += (parseInt(r.count) || 0);
+            if (!r.baseRent || parseFloat(r.baseRent) <= 0 || !r.count || parseInt(r.count) < 1) {
+              hasInvalidRoom = true;
+            }
+          }
+        }
+      }
+      return totalRooms > 0 && !hasInvalidRoom && !hasInvalidBlock;
+    }
+    if (step === 4) {
+      const pricingKeys = ['breakfastPrice', 'lunchPrice', 'dinnerPrice', 'omelettePrice', 'boiledEggPrice', 'washingMachinePrice'];
+      return pricingKeys.every(k => {
+        const val = building[k];
+        return val !== undefined && val !== null && val.toString().trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
+      });
+    }
     return true;
   };
 
@@ -827,6 +1035,15 @@ export default function OwnerBuildingCreator() {
       const payload = {
         name: building.name.trim(),
         address: building.address.trim(),
+        foodIncludedInRent: building.foodIncludedInRent,
+        allowMealCancellations: building.allowMealCancellations,
+        breakfastPrice: parseFloat(building.breakfastPrice) || 0,
+        lunchPrice: parseFloat(building.lunchPrice) || 0,
+        dinnerPrice: parseFloat(building.dinnerPrice) || 0,
+        omelettePrice: parseFloat(building.omelettePrice) || 0,
+        boiledEggPrice: parseFloat(building.boiledEggPrice) || 0,
+        washingMachinePrice: parseFloat(building.washingMachinePrice) || 0,
+        ebSplitMethod: building.ebSplitMethod,
         floors: floors.map(f => ({
           number: f.number,
           label: f.label,
@@ -849,7 +1066,7 @@ export default function OwnerBuildingCreator() {
       };
       const res = await ownerApi.createBuilding(payload);
       setResult(res.data);
-      setStep(5);
+      setStep(6);
     } catch (err) {
       setError(err.response?.data?.error || err.message || 'Failed to create building');
     } finally {
@@ -859,13 +1076,25 @@ export default function OwnerBuildingCreator() {
 
   const resetWizard = () => {
     setStep(1);
-    setBuilding({ name: '', address: '' });
+    setBuilding({
+      name: '',
+      address: '',
+      foodIncludedInRent: false,
+      allowMealCancellations: true,
+      breakfastPrice: '60',
+      lunchPrice: '65',
+      dinnerPrice: '60',
+      omelettePrice: '18',
+      boiledEggPrice: '18',
+      washingMachinePrice: '50',
+      ebSplitMethod: 'EQUAL_SPLIT'
+    });
     setFloors([makeFloor(0)]);
     setResult(null);
     setError('');
   };
 
-  const STEPS = ['Building Info', 'Floors', 'Rooms', 'Review'];
+  const STEPS = ['Building Info', 'Floors', 'Rooms', 'Pricing & Rules', 'Review'];
 
   return (
     <AppLayout>
@@ -924,13 +1153,23 @@ export default function OwnerBuildingCreator() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 border-t border-slate-100 pt-3">
                     <button
-                      className="btn btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5 w-full justify-center"
+                      className="btn btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5 flex-1 justify-center"
                       onClick={() => setSearchParams({ edit: b.id })}
                     >
                       <Pencil className="w-3.5 h-3.5" />
-                      <span>Edit Layout & Details</span>
+                      <span>Edit Layout</span>
+                    </button>
+                    <button
+                      className="btn btn-ghost text-red-600 hover:text-red-700 hover:bg-red-50/50 py-1.5 px-3 text-xs flex items-center gap-1.5 flex-1 justify-center"
+                      onClick={() => {
+                        setBuildingToDelete(b);
+                        setDeleteConfirmInput('');
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <span>Delete</span>
                     </button>
                   </div>
                 </div>
@@ -940,6 +1179,74 @@ export default function OwnerBuildingCreator() {
                   No buildings configured. Click "+ Create Building" to set up your first property.
                 </div>
               )}
+            </div>
+          )}
+
+          {buildingToDelete && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 w-full max-w-md mx-4 animate-in fade-in zoom-in duration-200">
+                <h3 className="text-base font-extrabold text-rose-600 mb-2 flex items-center gap-2">
+                  <Trash2 className="w-5 h-5" />
+                  <span>Delete Building?</span>
+                </h3>
+                <div className="text-xs text-slate-500 mb-4 leading-relaxed">
+                  This action is <strong className="text-slate-800">irreversible</strong>. Deleting <strong className="text-slate-800">"{buildingToDelete.name}"</strong> will:
+                  <ul className="list-disc pl-4 mt-2 space-y-1">
+                    <li>Permanently delete all floors, rooms, and beds.</li>
+                    <li>Disassociate and checkout all active guests in this building.</li>
+                    <li>Unassign any managers linked to this building.</li>
+                  </ul>
+                </div>
+                <div className="form-group mb-4">
+                  <label className="form-label text-xs font-bold text-slate-600">
+                    To confirm, type <span className="text-rose-600 font-extrabold">"{buildingToDelete.name}"</span> below:
+                  </label>
+                  <input
+                    type="text"
+                    className="form-input text-xs py-2 w-full mt-1 border-rose-200 focus:border-rose-500 focus:ring-rose-500"
+                    placeholder="Type building name exactly"
+                    value={deleteConfirmInput}
+                    onChange={e => setDeleteConfirmInput(e.target.value)}
+                    autoFocus
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && deleteConfirmInput === buildingToDelete.name) {
+                        handleDeleteBuilding();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 text-xs">
+                  <button
+                    type="button"
+                    className="btn btn-ghost py-2 px-4 font-semibold"
+                    onClick={() => {
+                      setBuildingToDelete(null);
+                      setDeleteConfirmInput('');
+                    }}
+                    disabled={deletingId !== ''}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn bg-rose-600 hover:bg-rose-700 text-white border border-rose-600 hover:border-rose-700 py-2 px-4 font-semibold shadow-sm flex items-center gap-1.5 disabled:opacity-50"
+                    onClick={handleDeleteBuilding}
+                    disabled={deleteConfirmInput !== buildingToDelete.name || deletingId !== ''}
+                  >
+                    {deletingId ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Confirm Delete</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -962,7 +1269,7 @@ export default function OwnerBuildingCreator() {
             </div>
           </div>
 
-          {step <= 4 && (
+          {step <= 5 && (
             <div className="flex items-center gap-0 mb-8 max-w-2xl mx-auto">
               {STEPS.map((label, idx) => {
                 const num = idx + 1;
@@ -993,8 +1300,9 @@ export default function OwnerBuildingCreator() {
             {step === 1 && <Step1 data={building} onChange={setBuilding} />}
             {step === 2 && <Step2 floors={floors} onChange={setFloors} />}
             {step === 3 && <Step3 floors={floors} onChange={setFloors} />}
-            {step === 4 && <Step4 building={building} floors={floors} />}
-            {step === 5 && result && (
+            {step === 4 && <Step4Pricing data={building} onChange={setBuilding} />}
+            {step === 5 && <Step4 building={building} floors={floors} />}
+            {step === 6 && result && (
               <div className="text-center py-6">
                 <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
                 <h2 className="text-xl font-bold text-slate-800 mb-1">Building Created!</h2>
@@ -1028,14 +1336,14 @@ export default function OwnerBuildingCreator() {
               </div>
             )}
 
-            {step <= 4 && (
+            {step <= 5 && (
               <div className="flex justify-between mt-8 pt-5 border-t border-slate-100">
                 {step > 1 ? (
                   <button className="btn btn-ghost flex items-center gap-1" onClick={() => setStep(s => s - 1)}>
                     <ChevronLeft className="w-4 h-4" /> Back
                   </button>
                 ) : <div />}
-                {step < 4 ? (
+                {step < 5 ? (
                   <button
                     className="btn btn-primary flex items-center gap-1"
                     disabled={!canNext()}
@@ -1246,10 +1554,13 @@ export default function OwnerBuildingCreator() {
                                 <div className="flex items-center gap-1">
                                   <span className="text-slate-400 text-xs">₹</span>
                                   <input
-                                    type="number"
+                                    type="text"
                                     className="form-input py-1 px-2 text-xs"
                                     value={room.baseRent}
-                                    onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'baseRent', e.target.value)}
+                                    onChange={e => {
+                                      const clean = e.target.value.replace(/[^0-9]/g, '');
+                                      updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'baseRent', clean);
+                                    }}
                                     autoComplete="off"
                                     name={`edit-base-rent-block-${room.id || room._tempId}`}
                                     id={`edit-base-rent-block-${room.id || room._tempId}`}
@@ -1320,10 +1631,13 @@ export default function OwnerBuildingCreator() {
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-400 text-xs">₹</span>
                                 <input
-                                  type="number"
+                                  type="text"
                                   className="form-input py-1 px-2 text-xs"
                                   value={room.baseRent}
-                                  onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'baseRent', e.target.value)}
+                                  onChange={e => {
+                                    const clean = e.target.value.replace(/[^0-9]/g, '');
+                                    updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'baseRent', clean);
+                                  }}
                                   autoComplete="off"
                                   name={`edit-base-rent-standalone-${room.id || room._tempId}`}
                                   id={`edit-base-rent-standalone-${room.id || room._tempId}`}

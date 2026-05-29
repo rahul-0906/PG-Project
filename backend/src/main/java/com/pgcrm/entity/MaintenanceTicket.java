@@ -23,6 +23,9 @@ public class MaintenanceTicket {
     private String buildingId;
 
     @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false)
     private String location;
 
     @Column(nullable = false, length = 1000)

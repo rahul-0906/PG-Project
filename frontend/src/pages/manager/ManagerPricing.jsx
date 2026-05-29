@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi, ownerApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import { Tag, Check, Pencil, X, Loader2, ChefHat, Bed, Building2, RefreshCcw, Clock, Calendar } from 'lucide-react';
+import { Tag, Check, Pencil, X, Loader2, ChefHat, Bed, Building2, RefreshCcw, Clock, Calendar, Settings } from 'lucide-react';
 
 const FOOD_KEYS = [
   { key: 'breakfast',      label: 'Breakfast',       icon: '🍳' },
@@ -75,6 +75,12 @@ export default function ManagerPricing() {
   const [schedulerEnabled, setSchedulerEnabled] = useState(false);
   const [savingScheduler, setSavingScheduler] = useState(false);
 
+  // New building configuration states
+  const [foodIncludedInRent, setFoodIncludedInRent] = useState(false);
+  const [allowMealCancellations, setAllowMealCancellations] = useState(true);
+  const [ebSplitMethod, setEbSplitMethod] = useState('EQUAL_SPLIT');
+  const [savingConfig, setSavingConfig] = useState(false);
+
   const { user } = useAuth();
 
   const showToast = (msg) => {
@@ -98,6 +104,10 @@ export default function ManagerPricing() {
       const res = await managerApi.getPricing(selectedBuildingId || undefined);
       setPricingData(res.data);
       setSchedulerEnabled(res.data.billingSchedulerEnabled ?? false);
+      setFoodIncludedInRent(res.data.foodIncludedInRent ?? false);
+      setAllowMealCancellations(res.data.allowMealCancellations ?? true);
+      setEbSplitMethod(res.data.ebSplitMethod ?? 'EQUAL_SPLIT');
+
       if (user?.role === 'PG_MANAGER' && res.data?.buildings?.length > 0) {
         setBuildings(res.data.buildings);
         if (!selectedBuildingId) {
@@ -163,6 +173,28 @@ export default function ManagerPricing() {
       showToast('Failed to update billing scheduler status');
     } finally {
       setSavingScheduler(false);
+    }
+  };
+
+  const handleConfigUpdate = async (key, val) => {
+    setSavingConfig(true);
+    try {
+      const payload = {};
+      if (key === 'foodIncludedInRent') payload.foodIncludedInRent = val;
+      if (key === 'allowMealCancellations') payload.allowMealCancellations = val;
+      if (key === 'ebSplitMethod') payload.ebSplitMethod = val;
+
+      await managerApi.updateBuildingConfig(payload, selectedBuildingId);
+      
+      if (key === 'foodIncludedInRent') setFoodIncludedInRent(val);
+      if (key === 'allowMealCancellations') setAllowMealCancellations(val);
+      if (key === 'ebSplitMethod') setEbSplitMethod(val);
+      
+      showToast('Building rules updated successfully');
+    } catch {
+      showToast('Failed to update building rules');
+    } finally {
+      setSavingConfig(false);
     }
   };
 
@@ -274,6 +306,97 @@ export default function ManagerPricing() {
                 <span className="text-xs font-semibold text-slate-600 w-16 text-right">
                   {schedulerEnabled ? 'Enabled' : 'Disabled'}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Building Rules & Config */}
+          <div className="card">
+            <h3 className="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-emerald-500" />
+              Building Rules & Config
+            </h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Configure food inclusion rules, cancellation eligibility, and utility split methods specifically for this building.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Food Included */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🍽️</span>
+                    <span className="text-sm font-semibold text-slate-700">Food Included in Rent</span>
+                  </div>
+                  <span className="text-xs text-slate-400">If enabled, meals are included in the base rent dynamically.</span>
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-2">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {foodIncludedInRent ? 'Included' : 'Billed Separately'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      id="toggle-food-included"
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={foodIncludedInRent}
+                      onChange={(e) => handleConfigUpdate('foodIncludedInRent', e.target.checked)}
+                      disabled={savingConfig}
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Allow Meal Cancellations */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">❌</span>
+                    <span className="text-sm font-semibold text-slate-700">Allow Meal Cancellations</span>
+                  </div>
+                  <span className="text-xs text-slate-400">Enables guests to cancel meals for daily food refunds.</span>
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-2">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {allowMealCancellations ? 'Allowed' : 'Disabled'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      id="toggle-meal-cancellations"
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={allowMealCancellations}
+                      onChange={(e) => handleConfigUpdate('allowMealCancellations', e.target.checked)}
+                      disabled={savingConfig}
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* EB Split Method */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">⚡</span>
+                    <span className="text-sm font-semibold text-slate-700">Electricity Bill Split</span>
+                  </div>
+                  <span className="text-xs text-slate-400">Method used to divide the building's monthly electricity bill.</span>
+                </div>
+                <div className="mt-auto pt-2">
+                  <select
+                    id="eb-split-method-select"
+                    className="form-input w-full py-1.5 text-xs bg-white cursor-pointer"
+                    value={ebSplitMethod}
+                    onChange={(e) => handleConfigUpdate('ebSplitMethod', e.target.value)}
+                    disabled={savingConfig}
+                  >
+                    <option value="EQUAL_SPLIT">Equal Split (per active guest)</option>
+                    <option value="PER_BED">Fixed Rate Per Bed</option>
+                    <option value="METER_BASED">Sub-meter Reading Based</option>
+                    <option value="MANAGER_MANUAL">Manager Manual Entry</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
