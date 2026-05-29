@@ -1,5 +1,7 @@
 package com.pgcrm.service;
 
+import com.pgcrm.exception.ResourceNotFoundException;
+import com.pgcrm.exception.SignatureVerificationException;
 import com.pgcrm.entity.Invoice;
 import com.pgcrm.config.SystemConfigProperties;
 import com.pgcrm.entity.enums.InvoiceStatus;
@@ -46,7 +48,7 @@ public class PaymentService {
     @Transactional
     public Map<String, Object> createOrder(String invoiceId) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
 
         if (invoice.getStatus() == InvoiceStatus.PAID) {
             throw new RuntimeException("Invoice is already paid");
@@ -99,14 +101,11 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Verifies Razorpay payment signature and marks invoice as PAID.
-     */
     @Transactional
     public Invoice verifyAndCapture(String invoiceId, String razorpayOrderId,
                                     String razorpayPaymentId, String signature) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new RuntimeException("Invoice not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
 
         String keySecret = globalKeySecret;
 
@@ -130,10 +129,12 @@ public class PaymentService {
             mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
             String computed = HexFormat.of().formatHex(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
             if (!computed.equals(signature)) {
-                throw new RuntimeException("Payment signature verification failed");
+                throw new SignatureVerificationException("Signature verification failed");
             }
+        } catch (SignatureVerificationException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("Signature verification error: " + e.getMessage());
+            throw new SignatureVerificationException("Signature verification error: " + e.getMessage());
         }
     }
 
@@ -144,7 +145,7 @@ public class PaymentService {
     @Transactional
     public Invoice recordManualPayment(String invoiceId, BigDecimal amount, String method) {
         Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new RuntimeException("Invoice not found: " + invoiceId));
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
 
         if (invoice.getStatus() == InvoiceStatus.PAID) {
             throw new RuntimeException("Invoice is already paid");

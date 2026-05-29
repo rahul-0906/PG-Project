@@ -4,6 +4,8 @@ import com.pgcrm.entity.*;
 import com.pgcrm.entity.enums.Role;
 import com.pgcrm.repository.*;
 import com.pgcrm.security.JwtUtil;
+import com.pgcrm.dto.AuthResponse;
+import com.pgcrm.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,45 +26,52 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     @Transactional(readOnly = true)
-    public Map<String, String> login(String email, String password) {
+    public AuthResponse login(String email, String password) {
         // Lookup user across all tenants
         User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new ResourceNotFoundException("Invalid credentials"));
 
         if (!user.isActive()) throw new RuntimeException("Account is deactivated");
 
         // Verify password
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new ResourceNotFoundException("Invalid credentials");
         }
 
         String accessToken = jwtUtil.generateAccessToken(
                 user.getId(), user.getRole(), user.getBranchId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
-        return Map.of(
-                "accessToken",        accessToken,
-                "refreshToken",       refreshToken,
-                "role",               user.getRole().name(),
-                "userId",             user.getId(),
-                "fullName",           user.getFullName() != null ? user.getFullName() : "",
-
-                "firstLogin",         String.valueOf(user.isFirstLogin()),
-                "mustChangePassword", String.valueOf(user.isMustChangePassword())
-        );
+        return AuthResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .role(user.getRole().name())
+                .userId(user.getId())
+                .fullName(user.getFullName() != null ? user.getFullName() : "")
+                .firstLogin(user.isFirstLogin())
+                .mustChangePassword(user.isMustChangePassword())
+                .build();
     }
 
     @Transactional
-    public Map<String, String> refresh(String refreshToken) {
+    public AuthResponse refresh(String refreshToken) {
         if (!jwtUtil.isTokenValid(refreshToken)) {
             throw new RuntimeException("Invalid refresh token");
         }
         String userId = jwtUtil.extractUserId(refreshToken);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
         String newAccess = jwtUtil.generateAccessToken(
                 user.getId(), user.getRole(), user.getBranchId());
-        return Map.of("accessToken", newAccess);
+        return AuthResponse.builder()
+                .accessToken(newAccess)
+                .refreshToken(refreshToken)
+                .role(user.getRole().name())
+                .userId(user.getId())
+                .fullName(user.getFullName() != null ? user.getFullName() : "")
+                .firstLogin(user.isFirstLogin())
+                .mustChangePassword(user.isMustChangePassword())
+                .build();
     }
 }

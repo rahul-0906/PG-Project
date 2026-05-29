@@ -6,6 +6,8 @@ import com.pgcrm.entity.enums.BedStatus;
 import com.pgcrm.entity.enums.KycStatus;
 import com.pgcrm.entity.enums.Role;
 import com.pgcrm.repository.*;
+import com.pgcrm.exception.ResourceNotFoundException;
+import com.pgcrm.exception.BedUnavailableException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,10 +39,10 @@ public class GuestService {
                          LocalDate checkInDate, String vehicleRegistration) {
 
         Bed bed = bedRepository.findById(bedId)
-                .orElseThrow(() -> new RuntimeException("Bed not found: " + bedId));
+                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + bedId));
 
         if (bed.getStatus() != BedStatus.VACANT) {
-            throw new RuntimeException("Bed is not vacant: " + bed.getBedLabel());
+            throw new BedUnavailableException("Bed is not vacant: " + bed.getBedLabel());
         }
 
         // Generate secure temp password
@@ -105,7 +107,7 @@ public class GuestService {
 
     public Guest getByUserId(String userId) {
         return guestRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Guest profile not found for user: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("Guest profile not found for user: " + userId));
     }
 
     private String generateTempPassword(int length) {

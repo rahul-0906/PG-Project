@@ -14,10 +14,42 @@ To ensure the highest standard of data privacy, compliance, and customizability,
 * **Isolated Database Instances**: Each client deployment is provisioned with its own distinct database instance (using PostgreSQL in production). This prevents data leakage across different clients, simplifies custom schema expansions, and eases backups and compliance audits.
 * **No Shared Resources**: Application execution and file storage are isolated per tenant, eliminating resource contention and "noisy neighbor" issues common in multi-tenant environments.
 
+> [!TIP]
+> **Production Reverse Proxy & Multi-Tenant Domain Routing**
+> In a live production environment, a reverse proxy like **Nginx** handles incoming customer traffic for custom domains (e.g., `srisaipg.in`, `galaxyhostel.com`). Nginx acts as an edge router, matching host header domains to individual single-tenant backend ports and dynamically mounting SSL security layers via Let's Encrypt automated ACME clients.
+
 ### 1.2 Consolidated White-Labeling Engine
 The system supports full whitelabel configurations out of the box through a single externalized configuration file (`tenant-config.yml`). 
 * **Dynamic Assets**: Branding names, theme colors, dynamic logos, tax rates, support emails, and transaction configurations are loaded dynamically on boot.
 * **External Configuration**: The backend dynamically looks up `./tenant-config.yml` on the host filesystem before falling back to default configurations, permitting administrators to customize properties without rebuilding application JARs.
+
+```yaml
+# Example tenant-config.yml
+pg:
+  system:
+    branding:
+      name: "Sri Sai Luxury PG"
+      shortTitle: "Sri Sai"
+    rules:
+      foodIncludedInRent: false
+      allowMealCancellations: true
+      ebSplitMethod: "SUB_METER"
+      hasWashingMachine: true
+      paymentDueDayOfMonth: 5
+      noticePeriodDays: 30
+      breakfastEnabled: true
+      lunchEnabled: true
+      dinnerEnabled: true
+      breakfastLockoutTime: "22:00:00"
+      dinnerLockoutTime: "14:00:00"
+    pricing:
+      breakfast: 60.00
+      lunch: 70.00
+      dinner: 70.00
+      washingMachine: 50.00
+      omelette: 20.00
+      boiledEgg: 15.00
+```
 
 ### 1.3 Tenant Customization & Scope Separation
 Role-Based Access Control (RBAC) separates administrative capabilities from guest interactions. Owners configure global setups, managers oversee operational logs, and guests view invoices and request maintenance, keeping operational boundaries clean.
@@ -145,6 +177,24 @@ On startup, the system seeds default credentials for testing:
 * **PG Owner**: `owner@pgcrm.com` / `Owner@123`
 * **PG Manager**: `manager@pgcrm.com` / `Manager@123`
 * **Guest**: `guest@pgcrm.com` / `Guest@123`
+
+### 5.3 Interactive API Documentation
+The backend exposes interactive OpenAPI 3.0 documentation using Swagger UI. When the server is running, navigate to:
+* **Swagger UI URL**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+This interactive sandbox lists all operational REST routes, DTO payload requirements, and security configurations, facilitating third-party developer integrations.
+
+### 5.4 Running Testing Suites
+The project includes end-to-end automated testing metrics for verifying codebase compliance.
+* **Backend JUnit 5 Tests**:
+  Navigate to the `/backend` folder and run:
+  ```bash
+  mvn test
+  ```
+* **Frontend Tests**:
+  Navigate to the `/frontend` folder and run:
+  ```bash
+  npm run test
+  ```
 
 ---
 

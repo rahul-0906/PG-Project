@@ -3,6 +3,8 @@ package com.pgcrm.service;
 import com.pgcrm.config.SystemConfigProperties;
 import com.pgcrm.entity.*;
 import com.pgcrm.repository.*;
+import com.pgcrm.exception.ResourceNotFoundException;
+import com.pgcrm.exception.InvalidLockoutException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +26,7 @@ public class DailyLogService {
         validateLockouts(logDate, incoming);
 
         Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
                 .orElse(DailyLog.builder().guest(guest).logDate(logDate).build());
@@ -57,7 +59,7 @@ public class DailyLogService {
         // Dinner: locked after same day's lockout time
         LocalDateTime dinnerLock = logDate.atTime(systemConfig.getRules().getDinnerLockoutTime());
         if (now.isAfter(dinnerLock) && incoming.isDinnerOpted()) {
-            throw new RuntimeException("Dinner selection is locked after " + systemConfig.getRules().getDinnerLockoutTime() + " on the same day.");
+            throw new InvalidLockoutException("Dinner selection is locked after " + systemConfig.getRules().getDinnerLockoutTime() + " on the same day.");
         }
     }
 

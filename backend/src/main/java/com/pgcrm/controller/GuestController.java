@@ -4,6 +4,9 @@ import com.pgcrm.entity.*;
 import com.pgcrm.repository.*;
 import com.pgcrm.service.*;
 import com.pgcrm.config.SystemConfigProperties;
+import com.pgcrm.dto.GuestResponse;
+import com.pgcrm.dto.InvoiceResponse;
+import com.pgcrm.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
@@ -29,12 +33,12 @@ public class GuestController {
     private final DailyLogRepository dailyLogRepository;
 
     @GetMapping("/profile")
-    public ResponseEntity<Guest> getProfile(Authentication auth) {
-        return ResponseEntity.ok(guestService.getByUserId(auth.getName()));
+    public ResponseEntity<GuestResponse> getProfile(Authentication auth) {
+        return ResponseEntity.ok(GuestResponse.fromEntity(guestService.getByUserId(auth.getName())));
     }
 
     @PutMapping("/profile")
-    public ResponseEntity<Guest> updateProfile(Authentication auth,
+    public ResponseEntity<GuestResponse> updateProfile(Authentication auth,
                                                 @RequestBody Map<String, String> body) {
         Guest guest = guestService.getByUserId(auth.getName());
         // Only editable basic fields
@@ -45,7 +49,7 @@ public class GuestController {
         if (body.containsKey("fullName") && body.get("fullName") != null && !body.get("fullName").isBlank())
             guest.setFullName(body.get("fullName"));
         guest = guestService.save(guest);
-        return ResponseEntity.ok(guest);
+        return ResponseEntity.ok(GuestResponse.fromEntity(guest));
     }
 
     @GetMapping("/daily-log/{date}")
@@ -71,16 +75,21 @@ public class GuestController {
     }
 
     @GetMapping("/invoices")
-    public ResponseEntity<List<Invoice>> getInvoices(Authentication auth) {
+    public ResponseEntity<List<InvoiceResponse>> getInvoices(Authentication auth) {
         Guest guest = guestService.getByUserId(auth.getName());
-        return ResponseEntity.ok(invoiceRepository.findByGuestId(guest.getId()));
+        List<Invoice> invoices = invoiceRepository.findByGuestId(guest.getId());
+        List<InvoiceResponse> responses = invoices.stream()
+                .map(InvoiceResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping(value = "/invoices/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> downloadInvoicePdf(Authentication auth, @PathVariable String id) {
         // Validate ownership
         Guest guest = guestService.getByUserId(auth.getName());
-        Invoice inv = invoiceRepository.findById(id).orElseThrow(() -> new RuntimeException("Invoice not found"));
+        Invoice inv = invoiceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + id));
         if (!inv.getGuest().getId().equals(guest.getId())) {
             throw new RuntimeException("Unauthorized");
         }

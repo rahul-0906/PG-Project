@@ -33,77 +33,127 @@ api.interceptors.response.use(
   }
 );
 
+// ── In-Memory Caching Wrapper ──────────────────────────────────────
+const cache = new Map();
+const CACHE_TTL_MS = 5000; // 5 seconds Cache Time-to-Live
+
+const cachedApi = {
+  get: (url, config) => {
+    const cacheKey = JSON.stringify({ url, params: config?.params });
+    const cachedEntry = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL_MS)) {
+      return Promise.resolve(cachedEntry.response);
+    }
+
+    const requestPromise = api.get(url, config);
+    cache.set(cacheKey, { timestamp: now, response: requestPromise });
+
+    return requestPromise.catch(err => {
+      cache.delete(cacheKey);
+      throw err;
+    });
+  },
+  post: (url, data, config) => {
+    cache.clear(); // Invalidate entire cache on write
+    return api.post(url, data, config);
+  },
+  put: (url, data, config) => {
+    cache.clear(); // Invalidate entire cache on write
+    return api.put(url, data, config);
+  },
+  delete: (url, config) => {
+    cache.clear(); // Invalidate entire cache on write
+    return api.delete(url, config);
+  }
+};
+
 export const authApi = {
-  login: (email, password) => api.post('/auth/login', { email, password }),
-  logout: () => api.post('/auth/logout'),
+  login: (email, password) => cachedApi.post('/auth/login', { email, password }),
+  logout: () => cachedApi.post('/auth/logout'),
 };
 
 export const systemApi = {
-  getConfig: () => axios.get('/api/system/config'), // Unauthenticated — uses raw axios
+  getConfig: () => {
+    const url = '/api/system/config';
+    const cacheKey = JSON.stringify({ url });
+    const cachedEntry = cache.get(cacheKey);
+    const now = Date.now();
+
+    if (cachedEntry && (now - cachedEntry.timestamp < CACHE_TTL_MS)) {
+      return Promise.resolve(cachedEntry.response);
+    }
+
+    const requestPromise = axios.get(url);
+    cache.set(cacheKey, { timestamp: now, response: requestPromise });
+
+    return requestPromise.catch(err => {
+      cache.delete(cacheKey);
+      throw err;
+    });
+  }
 };
 
-
-
-
 export const ownerApi = {
-  getDashboard: () => api.get('/owner/dashboard'),
-  getBranches: () => api.get('/owner/branches'),
-  getManagers: () => api.get('/owner/managers'),
-  createManager: (data) => api.post('/owner/managers', data),
-  updateManager: (id, data) => api.put(`/owner/managers/${id}`, data),
-  getConfig: () => api.get('/owner/config'),
+  getDashboard: () => cachedApi.get('/owner/dashboard'),
+  getBranches: () => cachedApi.get('/owner/branches'),
+  getManagers: () => cachedApi.get('/owner/managers'),
+  createManager: (data) => cachedApi.post('/owner/managers', data),
+  updateManager: (id, data) => cachedApi.put(`/owner/managers/${id}`, data),
+  getConfig: () => cachedApi.get('/owner/config'),
   // Building Creator
-  createBuilding: (data) => api.post('/owner/buildings', data),
-  getBuildingLayout: (id) => api.get(`/owner/buildings/${id}`),
-  updateBuilding: (id, data) => api.put(`/owner/buildings/${id}`, data),
+  createBuilding: (data) => cachedApi.post('/owner/buildings', data),
+  getBuildingLayout: (id) => cachedApi.get(`/owner/buildings/${id}`),
+  updateBuilding: (id, data) => cachedApi.put(`/owner/buildings/${id}`, data),
 };
 
 export const managerApi = {
-  getDashboard: () => api.get('/manager/dashboard'),
-  getGuests: () => api.get('/manager/guests'),
-  checkIn: (data) => api.post('/manager/guests', data),
-  updateGuest: (id, data) => api.put(`/manager/guests/${id}`, data),
-  initiateCheckout: (id) => api.post(`/manager/guests/${id}/initiate-checkout`),
-  confirmCheckout: (id) => api.post(`/manager/guests/${id}/confirm-checkout`),
-  recordEbBill: (data) => api.post('/manager/eb-bill', data),
-  recordMeterBasedEbBill: (data) => api.post('/manager/eb-bill/meter', data),
-  getFoodCount: (date) => api.get(`/manager/food-count/${date}`),
-  getMaintenanceTickets: () => api.get('/manager/maintenance'),
-  createTicket: (data) => api.post('/manager/maintenance', data),
-  resolveTicket: (id) => api.put(`/manager/maintenance/${id}/resolve`),
-  getVacancies: () => api.get('/manager/vacancies'),
-  getVacantBeds: () => api.get('/inventory/vacant-beds'),
-  getAllBeds: () => api.get('/inventory/beds'),
+  getDashboard: () => cachedApi.get('/manager/dashboard'),
+  getGuests: () => cachedApi.get('/manager/guests'),
+  checkIn: (data) => cachedApi.post('/manager/guests', data),
+  updateGuest: (id, data) => cachedApi.put(`/manager/guests/${id}`, data),
+  initiateCheckout: (id) => cachedApi.post(`/manager/guests/${id}/initiate-checkout`),
+  confirmCheckout: (id) => cachedApi.post(`/manager/guests/${id}/confirm-checkout`),
+  recordEbBill: (data) => cachedApi.post('/manager/eb-bill', data),
+  recordMeterBasedEbBill: (data) => cachedApi.post('/manager/eb-bill/meter', data),
+  getFoodCount: (date) => cachedApi.get(`/manager/food-count/${date}`),
+  getMaintenanceTickets: () => cachedApi.get('/manager/maintenance'),
+  createTicket: (data) => cachedApi.post('/manager/maintenance', data),
+  resolveTicket: (id) => cachedApi.put(`/manager/maintenance/${id}/resolve`),
+  getVacancies: () => cachedApi.get('/manager/vacancies'),
+  getVacantBeds: () => cachedApi.get('/inventory/vacant-beds'),
+  getAllBeds: () => cachedApi.get('/inventory/beds'),
   // Guest add-ons (egg/omelette/veg/WM) — managed by manager
-  getGuestLog: (guestId, date) => api.get(`/manager/guest-log/${guestId}/${date}`),
-  updateGuestLog: (guestId, date, data) => api.put(`/manager/guest-log/${guestId}/${date}`, data),
-  getGuestsByDate: (date) => api.get(`/manager/guests-with-log/${date}`),
+  getGuestLog: (guestId, date) => cachedApi.get(`/manager/guest-log/${guestId}/${date}`),
+  updateGuestLog: (guestId, date, data) => cachedApi.put(`/manager/guest-log/${guestId}/${date}`, data),
+  getGuestsByDate: (date) => cachedApi.get(`/manager/guests-with-log/${date}`),
   // Pricing Manager
-  getPricing: (buildingId) => api.get('/manager/pricing', { params: buildingId ? { buildingId } : {} }),
-  updateFoodPrice: (key, value, buildingId) => api.put(`/manager/pricing/${key}`, { value }, { params: buildingId ? { buildingId } : {} }),
-  updateRoomRent: (roomId, baseRent) => api.put(`/manager/pricing/rooms/${roomId}/rent`, { baseRent }),
+  getPricing: (buildingId) => cachedApi.get('/manager/pricing', { params: buildingId ? { buildingId } : {} }),
+  updateFoodPrice: (key, value, buildingId) => cachedApi.put(`/manager/pricing/${key}`, { value }, { params: buildingId ? { buildingId } : {} }),
+  updateRoomRent: (roomId, baseRent) => cachedApi.put(`/manager/pricing/rooms/${roomId}/rent`, { baseRent }),
   // Invoice Generator
-  previewInvoices: (month, year) => api.get('/manager/invoices/preview', { params: { month, year } }),
-  generateInvoice: (guestId, month, year) => api.post('/manager/billing/generate', { guestId, month, year }),
-  generateAllInvoices: (month, year) => api.post('/manager/invoices/generate-all', { month, year }),
-  getMonthlyMeals: (month, year) => api.get('/manager/monthly-meals', { params: { month, year } }),
-  getAssignedBuildings: () => api.get('/manager/assigned-buildings'),
-  updateSharingRent: (sharingType, baseRent, buildingId) => api.put(`/manager/pricing/sharing/${sharingType}/rent`, { baseRent }, { params: buildingId ? { buildingId } : {} }),
+  previewInvoices: (month, year) => cachedApi.get('/manager/invoices/preview', { params: { month, year } }),
+  generateInvoice: (guestId, month, year) => cachedApi.post('/manager/billing/generate', { guestId, month, year }),
+  generateAllInvoices: (month, year) => cachedApi.post('/manager/invoices/generate-all', { month, year }),
+  getMonthlyMeals: (month, year) => cachedApi.get('/manager/monthly-meals', { params: { month, year } }),
+  getAssignedBuildings: () => cachedApi.get('/manager/assigned-buildings'),
+  updateSharingRent: (sharingType, baseRent, buildingId) => cachedApi.put(`/manager/pricing/sharing/${sharingType}/rent`, { baseRent }, { params: buildingId ? { buildingId } : {} }),
 };
 
 export const guestApi = {
-  getProfile: () => api.get('/guest/profile'),
-  updateProfile: (data) => api.put('/guest/profile', data),
-  getDashboard: () => api.get('/guest/dashboard'),
-  getLog: (date) => api.get(`/guest/daily-log/${date}`),
-  updateLog: (date, data) => api.put(`/guest/daily-log/${date}`, data),
-  getInvoices: () => api.get('/guest/invoices'),
-  downloadInvoicePdf: (id) => api.get(`/guest/invoices/${id}/pdf`, { responseType: 'blob' }),
-  getNotifications: () => api.get('/guest/notifications'),
-  markRead: (id) => api.put(`/guest/notifications/${id}/read`),
-  getConfig: () => api.get('/guest/tenant-config'),
-  getAddons: () => api.get('/guest/addons'),
-  getMonthlyLogs: (yearMonth) => api.get(`/guest/daily-log/month/${yearMonth}`),
+  getProfile: () => cachedApi.get('/guest/profile'),
+  updateProfile: (data) => cachedApi.put('/guest/profile', data),
+  getDashboard: () => cachedApi.get('/guest/dashboard'),
+  getLog: (date) => cachedApi.get(`/guest/daily-log/${date}`),
+  updateLog: (date, data) => cachedApi.put(`/guest/daily-log/${date}`, data),
+  getInvoices: () => cachedApi.get('/guest/invoices'),
+  downloadInvoicePdf: (id) => cachedApi.get(`/guest/invoices/${id}/pdf`, { responseType: 'blob' }),
+  getNotifications: () => cachedApi.get('/guest/notifications'),
+  markRead: (id) => cachedApi.put(`/guest/notifications/${id}/read`),
+  getConfig: () => cachedApi.get('/guest/tenant-config'),
+  getAddons: () => cachedApi.get('/guest/addons'),
+  getMonthlyLogs: (yearMonth) => cachedApi.get(`/guest/daily-log/month/${yearMonth}`),
 };
 
-export default api;
+export default cachedApi;

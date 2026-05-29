@@ -1,7 +1,10 @@
 package com.pgcrm.controller;
 
+import com.pgcrm.dto.AuthRequest;
+import com.pgcrm.dto.AuthResponse;
 import com.pgcrm.entity.User;
 import com.pgcrm.entity.enums.AuditAction;
+import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.repository.UserRepository;
 import com.pgcrm.service.AuditService;
 import com.pgcrm.service.AuthService;
@@ -24,12 +27,12 @@ public class AuthController {
     private final AuditService auditService;
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(authService.login(body.get("email"), body.get("password")));
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest body) {
+        return ResponseEntity.ok(authService.login(body.getEmail(), body.getPassword()));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String, String>> refresh(@RequestBody Map<String, String> body) {
+    public ResponseEntity<AuthResponse> refresh(@RequestBody Map<String, String> body) {
         return ResponseEntity.ok(authService.refresh(body.get("refreshToken")));
     }
 
@@ -53,7 +56,7 @@ public class AuthController {
         }
         String userId = auth.getName();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
         String currentPassword = body.get("currentPassword");
         String newPassword     = body.get("newPassword");

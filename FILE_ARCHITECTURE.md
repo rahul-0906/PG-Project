@@ -13,8 +13,10 @@ The backend codebase is written in Java 17 and built on Spring Boot 3.2.5. It fo
 backend/src/main/java/com/pgcrm/
 ├── config/
 ├── controller/
+├── dto/
 ├── entity/
 │   └── enums/
+├── exception/
 ├── repository/
 ├── scheduler/
 ├── security/
@@ -42,6 +44,29 @@ This package manages initialization parameters, JSON mapping overrides, and thir
 
 ---
 
+### 1.1b DTO Package (`com.pgcrm.dto`)
+
+Exposes decoupled Request and Response DTO structures to prevent raw database entities from leaking into HTTP viewports.
+
+* `AuthRequest.java`: Binds credentials (email, password) during login operations.
+* `AuthResponse.java`: Yields access tokens, refresh tokens, role lists, full names, and initial login flags.
+* `GuestCheckInRequest.java`: Transports guest details, room assignments, advance deposits, and check-in preferences.
+* `GuestResponse.java`: Formats guest files, including layouts (room codes, bed labels) and check-in histories.
+* `InvoiceResponse.java`: Summarizes invoice values, payment methods, Razorpay credentials, and nested line items.
+* `SystemConfigResponse.java`: Groups system whitelabel config, including branding rules and baseline pricing.
+* `UserResponse.java`: Standardizes user profiles for managers and owners.
+
+### 1.1c Exception Package (`com.pgcrm.exception`)
+
+Handles custom business-level errors to manage operational exceptions.
+
+* `ResourceNotFoundException.java`: Thrown when looking up a missing record (User, Guest, Invoice). Maps to HTTP status 404 (NOT_FOUND).
+* `BedUnavailableException.java`: Thrown when a bed assignment is requested for an occupied or notice bed. Maps to HTTP status 400 (BAD_REQUEST).
+* `InvalidLockoutException.java`: Thrown when a guest attempts to update breakfast, lunch, or dinner after their respective lockout times. Maps to HTTP status 400 (BAD_REQUEST).
+* `SignatureVerificationException.java`: Thrown when a payment gateway verification signature fails SHA-256 HMAC validation. Maps to HTTP status 400 (BAD_REQUEST).
+
+---
+
 ### 1.2 Controller Package (`com.pgcrm.controller`)
 
 Controllers define HTTP endpoint routing and map payload structures. They are secured using Spring Security role-based filters.
@@ -53,21 +78,24 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 #### `AuthController.java`
 * **Operational Scope**: User Authentication & Session Management.
 * **Endpoints**:
-  * `POST /api/auth/login`: Accepts credentials, validates via Spring Security, generates a JWT, and returns a JSON payload with user details and roles.
+  * `POST /api/auth/login`: Accepts `AuthRequest` DTO, validates credentials, and returns an `AuthResponse` DTO.
   * `POST /api/auth/change-password`: Modifies user password after validating the current password.
   * `GET /api/auth/me`: Authenticates active requests via JWT and yields full session details.
 * **Access Control**: Public for login; authenticated for other endpoints.
 
 #### `GlobalExceptionHandler.java`
 * **Operational Scope**: Global Exception Interceptor.
-* **Internal Logic**: Uses `@RestControllerAdvice` to intercept exceptions (e.g., `BadCredentialsException`, `EntityNotFoundException`, `IllegalArgumentException`) and return a standardized JSON error payload with specific HTTP status codes.
+* **Internal Logic**: Intercepts custom exceptions (`ResourceNotFoundException`, `BedUnavailableException`, `InvalidLockoutException`, `SignatureVerificationException`) and maps them to clean HTTP payloads with corresponding status codes.
 
 #### `GuestController.java`
 * **Operational Scope**: Guest Portal REST Interface.
 * **Endpoints**:
+  * `GET /api/guest/profile`: Retrieves guest details, returning a `GuestResponse` DTO.
+  * `PUT /api/guest/profile`: Updates profile details and returns `GuestResponse` DTO.
   * `GET /api/guest/dashboard`: Fetches check-in details, current bed assignments, and pending invoices.
   * `GET /api/guest/daily-log/month/{yearMonth}`: Fetches all meal and service logs for the guest within a target calendar month.
   * `PUT /api/guest/daily-log`: Updates future date meal preferences.
+  * `GET /api/guest/invoices`: Returns guest invoices mapped into `InvoiceResponse` DTOs.
   * `GET /api/guest/addons`: Returns chronological add-on logs.
   * `POST /api/guest/maintenance`: Files a maintenance ticket.
 * **Access Control**: Restricted to `GUEST` role.
@@ -91,7 +119,8 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 * **Endpoints**:
   * `GET /api/manager/dashboard`: Aggregates occupancy statistics, pending tickets, and income trends.
   * `GET /api/manager/assigned-buildings`: Returns buildings associated with the active manager.
-  * `POST /api/manager/guests`: Onboards and checks in a new guest, assigning them a bed and seeding default preferences.
+  * `POST /api/manager/guests`: Onboards and checks in a new guest using `GuestCheckInRequest` and returns a `GuestResponse` DTO.
+  * `PUT /api/manager/guests/{id}`: Updates guest profile details and returns a `GuestResponse` DTO.
   * `PUT /api/manager/guests/{id}/checkout`: Handles exit dates and releases assigned beds back to `VACANT`.
   * `GET /api/manager/monthly-meals`: Returns the 31-day meal tracker matrix.
 * **Access Control**: Restricted to `PG_MANAGER` and `PG_OWNER` roles.
@@ -99,9 +128,9 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 #### `PgOwnerController.java`
 * **Operational Scope**: Owner Control & Manager Registries.
 * **Endpoints**:
-  * `GET /api/owner/managers`: Lists active property managers.
-  * `POST /api/owner/managers`: Registers a new manager.
-  * `PUT /api/owner/managers/{id}`: Modifies manager profiles and building scope assignments.
+  * `GET /api/owner/managers`: Lists active property managers as a list of `UserResponse` DTOs.
+  * `POST /api/owner/managers`: Registers a new manager and returns `UserResponse` DTO.
+  * `PUT /api/owner/managers/{id}`: Modifies manager profiles, building assignments, and yields `UserResponse` DTO.
   * `POST /api/owner/buildings`: Initiates building setups.
 * **Access Control**: Restricted to `PG_OWNER` role.
 
@@ -124,7 +153,7 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 #### `SystemConfigController.java`
 * **Operational Scope**: Public system-branding metadata.
 * **Endpoints**:
-  * `GET /api/system/config`: Resolves name, logo path, and CSS primary theme colors.
+  * `GET /api/system/config`: Resolves name, logo path, and CSS primary theme colors as a `SystemConfigResponse` DTO.
 * **Access Control**: Public.
 
 ---
@@ -311,7 +340,7 @@ Handles business computations, integrations, and reports.
 * **Logic**: Updates details and queries profile listings.
 
 #### `InvoicePdfService.java`
-* **Logic**: Utilizes PDF generator engines (such as OpenPDF) to compile official tax invoices containing logo headers, guest metadata, transaction summaries, and payment status stamps.
+* **Logic**: Strictly utilizes the core classes of the **OpenPDF** (`com.lowagie.text.*`) library—such as `Document`, `PdfWriter`, `PdfPTable`, `PdfPCell`, `Paragraph`, and `Font`—to programmatically construct and style official tax invoices.
 
 #### `InvoiceService.java`
 * **Logic**: Computes and previews invoices for selected months.

@@ -3,12 +3,15 @@ package com.pgcrm.controller;
 import com.pgcrm.entity.*;
 import com.pgcrm.repository.*;
 import com.pgcrm.service.BuildingSetupService;
+import com.pgcrm.dto.UserResponse;
+import com.pgcrm.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/owner")
@@ -72,7 +75,7 @@ public class PgOwnerController {
     }
 
     @PostMapping("/managers")
-    public ResponseEntity<User> createManager(@RequestBody Map<String, String> body) {
+    public ResponseEntity<UserResponse> createManager(@RequestBody Map<String, String> body) {
         String defaultPassword = "Manager@123";
         User manager = User.builder()
                 .email(body.get("email"))
@@ -85,23 +88,27 @@ public class PgOwnerController {
                 .firstLogin(true)
                 .mustChangePassword(true)
                 .build();
-        return ResponseEntity.ok(userRepository.save(manager));
+        return ResponseEntity.ok(UserResponse.fromEntity(userRepository.save(manager)));
     }
 
     @GetMapping("/managers")
-    public ResponseEntity<List<User>> getManagers() {
-        return ResponseEntity.ok(userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_MANAGER));
+    public ResponseEntity<List<UserResponse>> getManagers() {
+        List<User> managers = userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_MANAGER);
+        List<UserResponse> responses = managers.stream()
+                .map(UserResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(responses);
     }
 
     @PutMapping("/managers/{id}")
-    public ResponseEntity<User> updateManager(@PathVariable String id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<UserResponse> updateManager(@PathVariable String id, @RequestBody Map<String, String> body) {
         User manager = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Manager not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found: " + id));
         if (body.containsKey("fullName")) manager.setFullName(body.get("fullName"));
         if (body.containsKey("email")) manager.setEmail(body.get("email"));
         if (body.containsKey("branchId")) manager.setBranchId(body.get("branchId"));
         if (body.containsKey("active")) manager.setActive(Boolean.parseBoolean(body.get("active")));
-        return ResponseEntity.ok(userRepository.save(manager));
+        return ResponseEntity.ok(UserResponse.fromEntity(userRepository.save(manager)));
     }
 
     @GetMapping("/config")

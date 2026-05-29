@@ -3,6 +3,9 @@ package com.pgcrm.controller;
 import com.pgcrm.entity.*;
 import com.pgcrm.repository.*;
 import com.pgcrm.service.*;
+import com.pgcrm.dto.GuestCheckInRequest;
+import com.pgcrm.dto.GuestResponse;
+import com.pgcrm.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -12,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/manager")
@@ -73,31 +77,39 @@ public class PgManagerController {
     // ── Guest Management ──────────────────────────────────────────
 
     @GetMapping("/guests")
-    public ResponseEntity<List<Guest>> getActiveGuests(@RequestAttribute(required = false) String branchId) {
-        if (branchId != null) return ResponseEntity.ok(guestRepository.findActiveGuestsByBuildingId(branchId));
-        return ResponseEntity.ok(guestRepository.findByActiveTrue());
+    public ResponseEntity<List<GuestResponse>> getActiveGuests(@RequestAttribute(required = false) String branchId) {
+        List<Guest> guests;
+        if (branchId != null) {
+            guests = guestRepository.findActiveGuestsByBuildingId(branchId);
+        } else {
+            guests = guestRepository.findByActiveTrue();
+        }
+        List<GuestResponse> response = guests.stream()
+                .map(GuestResponse::fromEntity)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/guests")
-    public ResponseEntity<Guest> checkIn(@RequestBody Map<String, Object> body) {
-        LocalDate checkInDate = body.get("checkInDate") != null
-                ? LocalDate.parse(body.get("checkInDate").toString()) : LocalDate.now();
+    public ResponseEntity<GuestResponse> checkIn(@RequestBody GuestCheckInRequest body) {
+        LocalDate checkInDate = body.getCheckInDate() != null
+                ? body.getCheckInDate() : LocalDate.now();
         Guest guest = guestService.checkIn(
-                (String) body.get("bedId"),
-                (String) body.get("fullName"),
-                (String) body.get("email"),
-                (String) body.get("phone"),
-                (String) body.get("whatsappNumber"),
-                body.get("advanceDeposit") != null
-                        ? new BigDecimal(body.get("advanceDeposit").toString()) : BigDecimal.ZERO,
+                body.getBedId(),
+                body.getFullName(),
+                body.getEmail(),
+                body.getPhone(),
+                body.getWhatsappNumber(),
+                body.getAdvanceDeposit() != null
+                        ? body.getAdvanceDeposit() : BigDecimal.ZERO,
                 checkInDate,
-                (String) body.get("vehicleRegistration")
+                body.getVehicleRegistration()
         );
 
-        boolean isVeg = body.get("isVeg") == null || (Boolean) body.get("isVeg");
-        boolean breakfastOpted = body.get("breakfastOpted") != null && (Boolean) body.get("breakfastOpted");
-        boolean lunchOpted = body.get("lunchOpted") != null && (Boolean) body.get("lunchOpted");
-        boolean dinnerOpted = body.get("dinnerOpted") != null && (Boolean) body.get("dinnerOpted");
+        boolean isVeg = body.isVeg();
+        boolean breakfastOpted = body.isBreakfastOpted();
+        boolean lunchOpted = body.isLunchOpted();
+        boolean dinnerOpted = body.isDinnerOpted();
 
         guest.setVegPreference(isVeg);
         guest.setBreakfastPreference(breakfastOpted);
@@ -115,14 +127,14 @@ public class PgManagerController {
                 .build();
         dailyLogRepository.save(log);
 
-        return ResponseEntity.ok(guest);
+        return ResponseEntity.ok(GuestResponse.fromEntity(guest));
     }
 
     @PutMapping("/guests/{guestId}")
-    public ResponseEntity<Guest> updateGuestDetails(@PathVariable String guestId,
+    public ResponseEntity<GuestResponse> updateGuestDetails(@PathVariable String guestId,
                                                     @RequestBody Map<String, Object> body) {
         Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
 
         if (body.containsKey("fullName")) guest.setFullName((String) body.get("fullName"));
         if (body.containsKey("email")) guest.setEmail((String) body.get("email"));
@@ -143,7 +155,7 @@ public class PgManagerController {
             userRepository.save(user);
         }
 
-        return ResponseEntity.ok(guestRepository.save(guest));
+        return ResponseEntity.ok(GuestResponse.fromEntity(guestRepository.save(guest)));
     }
 
     @PostMapping("/guests/{guestId}/initiate-checkout")
