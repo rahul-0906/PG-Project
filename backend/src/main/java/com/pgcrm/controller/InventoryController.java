@@ -10,6 +10,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
+
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
@@ -23,11 +26,13 @@ public class InventoryController {
 
     // ── Buildings ─────────────────────────────────────────────────
 
+    @Cacheable(value = "buildings")
     @GetMapping("/buildings")
     public ResponseEntity<List<Building>> getBuildings() {
         return ResponseEntity.ok(buildingRepository.findAll());
     }
 
+    @CacheEvict(value = "buildings", allEntries = true)
     @PostMapping("/buildings")
     public ResponseEntity<Building> addBuilding(@RequestBody Map<String, String> body) {
         Building b = Building.builder()

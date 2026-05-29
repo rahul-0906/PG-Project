@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { ownerApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   LayoutGrid, 
   Bed, 
@@ -36,19 +37,47 @@ function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor 
 
 export default function OwnerDashboard() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [branches, setBranches] = useState([]);
-  const [managers, setManagers] = useState([]);
+  const queryClient = useQueryClient();
+  
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [managerForm, setManagerForm] = useState({ fullName: '', email: '', branchIds: [] });
-  const [savingManager, setSavingManager] = useState(false);
   const [editingManager, setEditingManager] = useState(null);
 
-  useEffect(() => {
-    ownerApi.getDashboard().then(r => setData(r.data)).catch(()=>{});
-    ownerApi.getBranches().then(r => setBranches(r.data)).catch(()=>{});
-    ownerApi.getManagers().then(r => setManagers(r.data)).catch(()=>{});
-  }, []);
+  const { data } = useQuery({
+    queryKey: ['ownerDashboard'],
+    queryFn: () => ownerApi.getDashboard().then(r => r.data),
+  });
+
+  const { data: branches = [] } = useQuery({
+    queryKey: ['ownerBranches'],
+    queryFn: () => ownerApi.getBranches().then(r => r.data),
+  });
+
+  const { data: managers = [] } = useQuery({
+    queryKey: ['ownerManagers'],
+    queryFn: () => ownerApi.getManagers().then(r => r.data),
+  });
+
+  const saveManagerMutation = useMutation({
+    mutationFn: (payload) => {
+      if (editingManager) {
+        return ownerApi.updateManager(editingManager.id, payload);
+      } else {
+        return ownerApi.createManager(payload);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ownerManagers'] });
+      setShowManagerModal(false);
+      setManagerForm({ fullName: '', email: '', branchIds: [] });
+      setEditingManager(null);
+    },
+    onError: () => {
+      alert(editingManager ? 'Failed to update manager' : 'Failed to create manager');
+    }
+  });
+
+  const savingManager = saveManagerMutation.isPending;
 
   const openEditManager = (mgr) => {
     setEditingManager(mgr);
@@ -72,27 +101,14 @@ export default function OwnerDashboard() {
     return ids.map(id => branches.find(b => b.id === id)?.name || 'Unknown').filter(Boolean).join(', ');
   };
 
-  const saveManager = async (e) => {
+  const saveManager = (e) => {
     e.preventDefault();
     if (managerForm.branchIds.length === 0) return;
-    setSavingManager(true);
-    try {
-      const payload = {
-        fullName: managerForm.fullName,
-        email: managerForm.email,
-        branchId: managerForm.branchIds.join(','),
-      };
-      if (editingManager) {
-        await ownerApi.updateManager(editingManager.id, payload);
-      } else {
-        await ownerApi.createManager(payload);
-      }
-      setShowManagerModal(false);
-      setManagerForm({ fullName: '', email: '', branchIds: [] });
-      setEditingManager(null);
-      ownerApi.getManagers().then(r => setManagers(r.data));
-    } catch (err) { alert(editingManager ? 'Failed to update manager' : 'Failed to create manager'); }
-    finally { setSavingManager(false); }
+    saveManagerMutation.mutate({
+      fullName: managerForm.fullName,
+      email: managerForm.email,
+      branchId: managerForm.branchIds.join(','),
+    });
   };
 
   return (

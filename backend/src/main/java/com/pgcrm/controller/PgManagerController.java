@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.pgcrm.mapper.GuestMapper;
 
 @RestController
 @RequestMapping("/api/manager")
@@ -34,6 +35,7 @@ public class PgManagerController {
     private final UserRepository userRepository;
     private final BuildingRepository buildingRepository;
     private final DailyLogService dailyLogService;
+    private final GuestMapper guestMapper;
 
     @GetMapping("/assigned-buildings")
     public ResponseEntity<List<Building>> getAssignedBuildings(Authentication auth) {
@@ -85,7 +87,7 @@ public class PgManagerController {
             guests = guestRepository.findByActiveTrue();
         }
         List<GuestResponse> response = guests.stream()
-                .map(GuestResponse::fromEntity)
+                .map(guestMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(response);
     }
@@ -127,7 +129,7 @@ public class PgManagerController {
                 .build();
         dailyLogRepository.save(log);
 
-        return ResponseEntity.ok(GuestResponse.fromEntity(guest));
+        return ResponseEntity.ok(guestMapper.toResponse(guest));
     }
 
     @PutMapping("/guests/{guestId}")
@@ -155,7 +157,7 @@ public class PgManagerController {
             userRepository.save(user);
         }
 
-        return ResponseEntity.ok(GuestResponse.fromEntity(guestRepository.save(guest)));
+        return ResponseEntity.ok(guestMapper.toResponse(guestRepository.save(guest)));
     }
 
     @PostMapping("/guests/{guestId}/initiate-checkout")

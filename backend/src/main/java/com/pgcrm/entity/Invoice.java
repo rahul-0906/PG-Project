@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.pgcrm.entity.enums.InvoiceStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -12,12 +14,18 @@ import java.util.List;
 
 @Entity
 @Table(name = "invoices")
+@SQLDelete(sql = "UPDATE invoices SET is_deleted = true WHERE id=?")
+@SQLRestriction("is_deleted = false")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Invoice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean deleted = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guest_id", nullable = false)

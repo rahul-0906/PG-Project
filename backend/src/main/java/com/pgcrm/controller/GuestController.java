@@ -19,6 +19,9 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+import com.pgcrm.mapper.GuestMapper;
+import com.pgcrm.mapper.InvoiceMapper;
+
 @RestController
 @RequestMapping("/api/guest")
 @RequiredArgsConstructor
@@ -31,10 +34,12 @@ public class GuestController {
     private final SystemConfigProperties systemConfig;
     private final InvoicePdfService invoicePdfService;
     private final DailyLogRepository dailyLogRepository;
+    private final GuestMapper guestMapper;
+    private final InvoiceMapper invoiceMapper;
 
     @GetMapping("/profile")
     public ResponseEntity<GuestResponse> getProfile(Authentication auth) {
-        return ResponseEntity.ok(GuestResponse.fromEntity(guestService.getByUserId(auth.getName())));
+        return ResponseEntity.ok(guestMapper.toResponse(guestService.getByUserId(auth.getName())));
     }
 
     @PutMapping("/profile")
@@ -49,7 +54,7 @@ public class GuestController {
         if (body.containsKey("fullName") && body.get("fullName") != null && !body.get("fullName").isBlank())
             guest.setFullName(body.get("fullName"));
         guest = guestService.save(guest);
-        return ResponseEntity.ok(GuestResponse.fromEntity(guest));
+        return ResponseEntity.ok(guestMapper.toResponse(guest));
     }
 
     @GetMapping("/daily-log/{date}")
@@ -79,7 +84,7 @@ public class GuestController {
         Guest guest = guestService.getByUserId(auth.getName());
         List<Invoice> invoices = invoiceRepository.findByGuestId(guest.getId());
         List<InvoiceResponse> responses = invoices.stream()
-                .map(InvoiceResponse::fromEntity)
+                .map(invoiceMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }

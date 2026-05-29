@@ -13,6 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
+import com.pgcrm.mapper.UserMapper;
+
 @RestController
 @RequestMapping("/api/owner")
 @RequiredArgsConstructor
@@ -25,6 +28,7 @@ public class PgOwnerController {
     private final UserRepository userRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private final BuildingSetupService buildingSetupService;
+    private final UserMapper userMapper;
 
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboard() {
@@ -45,6 +49,7 @@ public class PgOwnerController {
     }
 
     /** Creates a new building with floors, blocks, rooms, and beds in one transaction. */
+    @CacheEvict(value = "buildings", allEntries = true)
     @PostMapping("/buildings")
     public ResponseEntity<?> createBuilding(@RequestBody BuildingSetupService.BuildingSetupRequest req) {
         try {
@@ -64,6 +69,7 @@ public class PgOwnerController {
         }
     }
 
+    @CacheEvict(value = "buildings", allEntries = true)
     @PutMapping("/buildings/{buildingId}")
     public ResponseEntity<?> updateBuilding(@PathVariable String buildingId, @RequestBody BuildingSetupService.BuildingEditRequest req) {
         try {
@@ -88,14 +94,14 @@ public class PgOwnerController {
                 .firstLogin(true)
                 .mustChangePassword(true)
                 .build();
-        return ResponseEntity.ok(UserResponse.fromEntity(userRepository.save(manager)));
+        return ResponseEntity.ok(userMapper.toResponse(userRepository.save(manager)));
     }
 
     @GetMapping("/managers")
     public ResponseEntity<List<UserResponse>> getManagers() {
         List<User> managers = userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_MANAGER);
         List<UserResponse> responses = managers.stream()
-                .map(UserResponse::fromEntity)
+                .map(userMapper::toResponse)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
@@ -108,7 +114,7 @@ public class PgOwnerController {
         if (body.containsKey("email")) manager.setEmail(body.get("email"));
         if (body.containsKey("branchId")) manager.setBranchId(body.get("branchId"));
         if (body.containsKey("active")) manager.setActive(Boolean.parseBoolean(body.get("active")));
-        return ResponseEntity.ok(UserResponse.fromEntity(userRepository.save(manager)));
+        return ResponseEntity.ok(userMapper.toResponse(userRepository.save(manager)));
     }
 
     @GetMapping("/config")

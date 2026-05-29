@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -11,6 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "daily_logs", indexes = {
     @Index(name = "idx_daily_log_guest_date", columnList = "guest_id, log_date")
 })
+@SQLDelete(sql = "UPDATE daily_logs SET is_deleted = true WHERE id=?")
+@SQLRestriction("is_deleted = false")
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class DailyLog {
@@ -18,6 +22,10 @@ public class DailyLog {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean deleted = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guest_id", nullable = false)

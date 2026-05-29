@@ -16,6 +16,8 @@ import {
   User as UserIcon
 } from 'lucide-react';
 
+import { useQuery } from '@tanstack/react-query';
+
 function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
@@ -34,9 +36,11 @@ function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor 
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
-  const [data, setData] = useState(null);
-
-  useEffect(() => { managerApi.getDashboard().then(r => setData(r.data)).catch(() => {}); }, []);
+  
+  const { data, isLoading } = useQuery({
+    queryKey: ['managerDashboard'],
+    queryFn: () => managerApi.getDashboard().then(r => r.data),
+  });
 
   const pieData = data ? [
     { name: 'Occupied', value: data.occupiedBeds },

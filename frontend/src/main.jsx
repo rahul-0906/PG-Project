@@ -35,15 +35,28 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes standard stale time
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <SystemConfigProvider>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </SystemConfigProvider>
+        <QueryClientProvider client={queryClient}>
+          <SystemConfigProvider>
+            <AuthProvider>
+              <App />
+            </AuthProvider>
+          </SystemConfigProvider>
+        </QueryClientProvider>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

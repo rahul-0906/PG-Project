@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { guestApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 import { useSystemConfig } from '../../context/SystemConfigContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { 
   User, 
@@ -40,24 +41,44 @@ function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-100', iconColor
 }
 
 export default function GuestDashboard() {
-  const [data, setData] = useState(null);
-  const [invoices, setInvoices] = useState([]);
   const navigate = useNavigate();
   const { updateUser } = useAuth();
+  const queryClient = useQueryClient();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', whatsappNumber: '', vehicleRegistration: '' });
-  const [savingProfile, setSavingProfile] = useState(false);
 
   const { config } = useSystemConfig();
-  const [addons, setAddons] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
-  useEffect(() => {
-    guestApi.getDashboard().then(r => setData(r.data)).catch(() => {});
-    guestApi.getInvoices().then(r => setInvoices(r.data)).catch(() => {});
-    guestApi.getAddons().then(r => setAddons(r.data)).catch(() => {});
-  }, []);
+  const { data } = useQuery({
+    queryKey: ['guestDashboard'],
+    queryFn: () => guestApi.getDashboard().then(r => r.data)
+  });
+
+  const { data: invoices = [] } = useQuery({
+    queryKey: ['guestInvoices'],
+    queryFn: () => guestApi.getInvoices().then(r => r.data)
+  });
+
+  const { data: addons = [] } = useQuery({
+    queryKey: ['guestAddons'],
+    queryFn: () => guestApi.getAddons().then(r => r.data)
+  });
+
+  const saveProfileMutation = useMutation({
+    mutationFn: (form) => guestApi.updateProfile(form),
+    onSuccess: (_, form) => {
+      updateUser({ fullName: form.fullName });
+      setShowProfileModal(false);
+      queryClient.invalidateQueries({ queryKey: ['guestDashboard'] });
+    },
+    onError: () => {
+      alert('Failed to save profile');
+    }
+  });
+
+  const savingProfile = saveProfileMutation.isPending;
 
   const openProfile = async () => {
     try {
@@ -72,16 +93,9 @@ export default function GuestDashboard() {
     } catch (err) { alert('Failed to load profile'); }
   };
 
-  const saveProfile = async (e) => {
+  const saveProfile = (e) => {
     e.preventDefault();
-    setSavingProfile(true);
-    try {
-      await guestApi.updateProfile(profileForm);
-      updateUser({ fullName: profileForm.fullName });
-      setShowProfileModal(false);
-      guestApi.getDashboard().then(r => setData(r.data)); // refresh name
-    } catch (err) { alert('Failed to save profile'); }
-    finally { setSavingProfile(false); }
+    saveProfileMutation.mutate(profileForm);
   };
 
   const chartData = invoices.slice(0, 6).reverse().map(inv => ({
