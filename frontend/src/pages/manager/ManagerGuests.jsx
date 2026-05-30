@@ -572,17 +572,17 @@ export default function ManagerGuests() {
                   </td>
                   <td>
                     <div className="flex justify-end gap-1.5">
-                      <button className="btn btn-primary flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => startEdit(g)}>
+                      <button className="btn btn-primary flex items-center justify-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '75px' }} onClick={() => startEdit(g)}>
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </button>
                       {g.noticeDate ? (
-                        <button className="btn btn-ghost flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => handleConfirmCheckoutClick(g)}>
+                        <button className="btn btn-ghost flex items-center justify-center gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '102px' }} onClick={() => handleConfirmCheckoutClick(g)}>
                           <LogOut className="w-3.5 h-3.5 text-emerald-500" />
                           <span>Checkout</span>
                         </button>
                       ) : (
-                        <button className="btn btn-ghost flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
+                        <button className="btn btn-ghost flex items-center justify-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '102px' }} onClick={() => initiateCheckout(g)}>
                           <LogOut className="w-3.5 h-3.5 text-amber-500" />
                           <span>Notice</span>
                         </button>
