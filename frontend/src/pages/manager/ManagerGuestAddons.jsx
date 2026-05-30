@@ -325,7 +325,7 @@ export default function ManagerGuestAddons() {
                             </div>
                             <div>
                               <div className="font-bold text-slate-800 text-xs leading-none">{g.fullName}</div>
-                              <div className="text-[10px] text-slate-400 font-semibold mt-1">Bed: {g.bed?.bedLabel ?? '—'}</div>
+                              <div className="text-[10px] text-slate-400 font-semibold mt-1">Bed: {g.bedLabel ?? '—'}</div>
                             </div>
                           </div>
                         </td>

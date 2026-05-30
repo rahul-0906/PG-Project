@@ -151,7 +151,7 @@ export default function ManagerGuests() {
 
   // Extract unique floors of active guests for filtering
   const guestFloors = ['All', ...new Set(guests.map(g => 
-    g.bed?.room?.floor?.floorLabel || `Floor ${g.bed?.room?.floor?.floorNumber}` || 'Other'
+    g.floorName || 'Other'
   ).filter(Boolean))];
 
   // Filter guest list
@@ -161,7 +161,7 @@ export default function ManagerGuests() {
       g.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       g.phone?.includes(searchQuery);
 
-    const floorLabel = g.bed?.room?.floor?.floorLabel || `Floor ${g.bed?.room?.floor?.floorNumber}` || 'Other';
+    const floorLabel = g.floorName || 'Other';
     const floorMatch = selectedFloor === 'All' || floorLabel === selectedFloor;
 
     return searchMatch && floorMatch;
@@ -278,7 +278,7 @@ export default function ManagerGuests() {
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 mt-1">
                                   {beds.map(bed => {
-                                    const occupant = guests.find(g => g.bed?.id === bed.id);
+                                    const occupant = guests.find(g => g.bedId === bed.id);
                                     const isNoticePeriod = occupant && occupant.noticeDate;
                                     const isOccupied = bed.status === 'OCCUPIED' || (occupant && !isNoticePeriod);
                                     const isVacant = !isOccupied && !isNoticePeriod;
@@ -471,7 +471,7 @@ export default function ManagerGuests() {
               {filteredGuests.map(g => (
                 <tr key={g.id}>
                   <td style={{fontWeight:600}}>{g.fullName}<div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div></td>
-                  <td><span className="badge badge-accent">{g.bed?.bedLabel ?? 'N/A'}</span></td>
+                  <td><span className="badge badge-accent">{g.bedLabel ?? 'N/A'}</span></td>
                   <td style={{color:'var(--text-muted)'}}>{g.checkInDate}</td>
                   <td><span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>{g.kycStatus}</span></td>
                   <td>

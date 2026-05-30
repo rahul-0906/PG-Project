@@ -12,28 +12,56 @@ import java.util.Optional;
 @Repository
 public interface GuestRepository extends JpaRepository<Guest, String> {
 
+    @Query("""
+        SELECT g FROM Guest g
+        LEFT JOIN FETCH g.user
+        LEFT JOIN FETCH g.bed b
+        LEFT JOIN FETCH b.room r
+        LEFT JOIN FETCH r.floor f
+        LEFT JOIN FETCH r.block
+        WHERE g.active = true
+        """)
     List<Guest> findByActiveTrue();
-
-    Optional<Guest> findByUserId(String userId);
 
     @Query("""
         SELECT g FROM Guest g
+        LEFT JOIN FETCH g.user
+        LEFT JOIN FETCH g.bed b
+        LEFT JOIN FETCH b.room r
+        LEFT JOIN FETCH r.floor f
+        LEFT JOIN FETCH r.block
+        WHERE g.user.id = :userId
+        """)
+    Optional<Guest> findByUserId(@Param("userId") String userId);
+
+    @Query("""
+        SELECT g FROM Guest g
+        LEFT JOIN FETCH g.user
+        LEFT JOIN FETCH g.bed b
+        LEFT JOIN FETCH b.room r
+        LEFT JOIN FETCH r.floor f
+        LEFT JOIN FETCH r.block
         WHERE g.active = true
-        AND g.bed.room.block.id = :blockId
+        AND b.room.block.id = :blockId
         AND g.checkInDate <= :periodEnd
         AND (g.actualCheckOutDate IS NULL OR g.actualCheckOutDate >= :periodStart)
         """)
-    List<Guest> findActiveGuestsInBlock(String blockId, LocalDate periodStart, LocalDate periodEnd);
+    List<Guest> findActiveGuestsInBlock(@Param("blockId") String blockId, @Param("periodStart") LocalDate periodStart, @Param("periodEnd") LocalDate periodEnd);
 
     @Query("SELECT COUNT(g) FROM Guest g WHERE g.active = true")
     long countActive();
 
     @Query("""
         SELECT g FROM Guest g
+        LEFT JOIN FETCH g.user
+        LEFT JOIN FETCH g.bed b
+        LEFT JOIN FETCH b.room r
+        LEFT JOIN FETCH r.floor f
+        LEFT JOIN FETCH r.block
         WHERE g.active = true
-        AND g.bed.room.floor.building.id = :buildingId
+        AND b.room.floor.building.id = :buildingId
         """)
-    List<Guest> findActiveGuestsByBuildingId(String buildingId);
+    List<Guest> findActiveGuestsByBuildingId(@Param("buildingId") String buildingId);
 
     // ── Reports ───────────────────────────────────────────────────
 
@@ -58,6 +86,11 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
 
     @Query("""
         SELECT g FROM Guest g
+        LEFT JOIN FETCH g.user
+        LEFT JOIN FETCH g.bed b
+        LEFT JOIN FETCH b.room r
+        LEFT JOIN FETCH r.floor f
+        LEFT JOIN FETCH r.block
         WHERE g.active = true
         """)
     List<Guest> findActive();
