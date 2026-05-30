@@ -233,7 +233,7 @@ export default function DailyLog() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Section: Calendar */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="card shadow-sm border border-slate-200 p-4 bg-white rounded-xl max-w-[500px] mx-auto lg:mx-0">
+          <div className="card shadow-sm border border-slate-200 p-4 bg-white rounded-xl w-full">
             {/* Calendar Control Header */}
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
               <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
@@ -303,9 +303,9 @@ export default function DailyLog() {
 
                     {/* B/L/D Dot Indicators at bottom */}
                     <div className="flex gap-0.5 justify-center pb-0.5">
-                      {dayLog?.breakfastOpted && <span className="w-1 h-1 rounded-full bg-amber-500" title="Breakfast" />}
-                      {dayLog?.lunchOpted && <span className="w-1 h-1 rounded-full bg-emerald-500" title="Lunch" />}
-                      {dayLog?.dinnerOpted && <span className="w-1 h-1 rounded-full bg-blue-500" title="Dinner" />}
+                      {dayLog?.breakfastOpted && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="Breakfast" />}
+                      {dayLog?.lunchOpted && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Lunch" />}
+                      {dayLog?.dinnerOpted && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" title="Dinner" />}
                     </div>
                   </button>
                 );
