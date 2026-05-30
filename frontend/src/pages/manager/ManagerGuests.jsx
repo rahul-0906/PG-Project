@@ -15,7 +15,8 @@ import {
   Edit2, 
   LogOut, 
   AlertTriangle, 
-  Loader2 
+  Loader2,
+  Check
 } from 'lucide-react';
 
 export default function ManagerGuests() {
@@ -55,6 +56,11 @@ export default function ManagerGuests() {
   // Checkout notice states
   const [confirmCheckoutGuest, setConfirmCheckoutGuest] = useState(null);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  // Final checkout states
+  const [confirmFinalCheckoutGuest, setConfirmFinalCheckoutGuest] = useState(null);
+  const [finalCheckoutLoading, setFinalCheckoutLoading] = useState(false);
+  const [settlementResult, setSettlementResult] = useState(null);
 
   const startEdit = (g) => {
     setEditingGuest(g);
@@ -145,6 +151,33 @@ export default function ManagerGuests() {
       alert(err.response?.data?.error || 'Failed to initiate checkout');
     } finally {
       setCheckoutLoading(false);
+    }
+  };
+
+  const handleConfirmCheckoutClick = (g) => {
+    setConfirmFinalCheckoutGuest(g);
+  };
+
+  const handleFinalizeCheckout = async () => {
+    if (!confirmFinalCheckoutGuest) return;
+    setFinalCheckoutLoading(true);
+    try {
+      const res = await managerApi.confirmCheckout(confirmFinalCheckoutGuest.id);
+      setConfirmFinalCheckoutGuest(null);
+      setSettlementResult({
+        guestName: confirmFinalCheckoutGuest.fullName,
+        proratedRent: res.data.proratedRent || 0,
+        pendingFood: res.data.pendingFood || 0,
+        pendingLaundry: res.data.pendingLaundry || 0,
+        totalDue: res.data.totalDue || 0,
+        advanceDeposit: res.data.advanceDeposit || 0,
+        settlementAmount: res.data.settlementAmount || 0
+      });
+      managerApi.getGuests().then(r => setGuests(r.data));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to complete checkout');
+    } finally {
+      setFinalCheckoutLoading(false);
     }
   };
 
@@ -296,7 +329,7 @@ export default function ManagerGuests() {
                                   {beds.map(bed => {
                                     const occupant = guests.find(g => g.bedId === bed.id);
                                     const isNoticePeriod = occupant && occupant.noticeDate;
-                                    const isOccupied = bed.status === 'OCCUPIED' || (occupant && !isNoticePeriod);
+                                    const isOccupied = (bed.status === 'OCCUPIED' || occupant) && !isNoticePeriod;
                                     const isVacant = !isOccupied && !isNoticePeriod;
 
                                     const isSelected = form.bedId === bed.id;
@@ -505,9 +538,24 @@ export default function ManagerGuests() {
             <tbody>
               {filteredGuests.map(g => (
                 <tr key={g.id}>
-                  <td style={{fontWeight:600}}>{g.fullName}<div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div></td>
+                  <td style={{fontWeight:600}}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{g.fullName}</span>
+                      {g.noticeDate && (
+                        <span className="badge badge-warning" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', border: '1px solid #f59e0b' }}>Notice</span>
+                      )}
+                    </div>
+                    <div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div>
+                  </td>
                   <td><span className="badge badge-accent">{g.bedLabel ?? 'N/A'}</span></td>
-                  <td style={{color:'var(--text-muted)'}}>{g.checkInDate}</td>
+                  <td style={{color:'var(--text-muted)'}}>
+                    <div>{g.checkInDate}</div>
+                    {g.noticeDate && (
+                      <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 600, marginTop: '0.2rem' }}>
+                        Exit: {g.exitDate || '—'}
+                      </div>
+                    )}
+                  </td>
                   <td><span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>{g.kycStatus}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -515,10 +563,17 @@ export default function ManagerGuests() {
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </button>
-                      <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
-                        <LogOut className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Notice</span>
-                      </button>
+                      {g.noticeDate ? (
+                        <button className="btn btn-ghost flex items-center gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => handleConfirmCheckoutClick(g)}>
+                          <LogOut className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>Checkout</span>
+                        </button>
+                      ) : (
+                        <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
+                          <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                          <span>Notice</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -615,6 +670,102 @@ export default function ManagerGuests() {
                 disabled={checkoutLoading}
               >
                 {checkoutLoading ? 'Processing...' : 'Confirm Notice'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Final Checkout Confirmation Modal */}
+      {confirmFinalCheckoutGuest && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
+            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-500 flex items-center justify-center">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <span>Complete Guest Checkout</span>
+            </h3>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>
+              Are you sure you want to finalize checkout and settle accounts for <strong style={{ color: 'var(--text-primary)' }}>{confirmFinalCheckoutGuest.fullName}</strong>?
+              <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                This will automatically calculate pro-rated rent and pending add-on logs, release the bed, and mark their profile as inactive.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-ghost" 
+                onClick={() => setConfirmFinalCheckoutGuest(null)}
+                disabled={finalCheckoutLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }} 
+                onClick={handleFinalizeCheckout} 
+                disabled={finalCheckoutLoading}
+              >
+                {finalCheckoutLoading ? 'Processing...' : 'Confirm Checkout'}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Settlement Result Modal */}
+      {settlementResult && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
+            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div className="p-2 bg-indigo-50 rounded-lg text-indigo-500 flex items-center justify-center">
+                <Check className="w-5 h-5" />
+              </div>
+              <span>Checkout Successful</span>
+            </h3>
+            
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs flex flex-col gap-2.5 font-medium text-slate-600 mb-6">
+              <div className="flex justify-between border-b border-slate-200/60 pb-1.5 font-bold text-slate-800 text-sm">
+                <span>Guest</span>
+                <span>{settlementResult.guestName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pro-rated Rent</span>
+                <span>₹{settlementResult.proratedRent.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Food Dues</span>
+                <span>₹{settlementResult.pendingFood.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between pb-1.5 border-b border-slate-200/60">
+                <span>Laundry Dues</span>
+                <span>₹{settlementResult.pendingLaundry.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-slate-800">
+                <span>Total Dues</span>
+                <span>₹{settlementResult.totalDue.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-indigo-600">
+                <span>Advance Paid</span>
+                <span>₹{settlementResult.advanceDeposit.toFixed(2)}</span>
+              </div>
+              <div className={`flex justify-between font-bold text-sm pt-2.5 border-t border-slate-200 ${settlementResult.settlementAmount >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <span>{settlementResult.settlementAmount >= 0 ? 'Refund Amount' : 'Additional Due'}</span>
+                <span>₹{Math.abs(settlementResult.settlementAmount).toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                onClick={() => setSettlementResult(null)}
+              >
+                Close Receipt
               </button>
             </div>
           </div>
