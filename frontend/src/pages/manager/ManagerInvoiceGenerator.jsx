@@ -14,13 +14,13 @@ const MONTHS = [
 function StatusBadge({ generated }) {
   if (generated) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
+      <span className="badge badge-success text-[10px]">
         <CheckCircle2 className="w-3 h-3" /> Generated
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 border border-amber-200">
+    <span className="badge badge-warning text-[10px]">
       <Clock className="w-3 h-3" /> Pending
     </span>
   );
@@ -28,7 +28,7 @@ function StatusBadge({ generated }) {
 
 function MoneyCell({ amount }) {
   const n = parseFloat(amount ?? 0);
-  return <span className="font-medium text-slate-800">₹{n.toFixed(0)}</span>;
+  return <span className="font-semibold text-slate-800">₹{n.toFixed(0)}</span>;
 }
 
 export default function ManagerInvoiceGenerator() {
@@ -125,12 +125,12 @@ export default function ManagerInvoiceGenerator() {
         </div>
         <div className="flex-shrink-0">
           {schedulerEnabled ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="badge badge-success text-[11px] px-3 py-1.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
               Auto-Billing: Active (1st of month)
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+            <span className="badge badge-warning text-[11px] px-3 py-1.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
               Auto-Billing: Paused (Manual Mode)
             </span>
@@ -139,7 +139,7 @@ export default function ManagerInvoiceGenerator() {
       </div>
 
       {/* Controls bar */}
-      <div className="card mb-5">
+      <div className="card mb-5" style={{ padding: '1.25rem' }}>
         <div className="flex flex-wrap items-end gap-4">
           <div className="form-group mb-0">
             <label className="form-label">Month</label>
@@ -180,8 +180,7 @@ export default function ManagerInvoiceGenerator() {
           {previews.length > 0 && pendingCount > 0 && (
             <button
               id="btn-generate-all"
-              className="btn btn-primary flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700"
-              style={{ background: 'linear-gradient(135deg, #059669, #047857)' }}
+              className="btn btn-success flex items-center gap-2 font-semibold"
               onClick={handleGenerateAll}
               disabled={generatingAll}
             >
@@ -196,10 +195,10 @@ export default function ManagerInvoiceGenerator() {
 
       {/* Result banner */}
       {result && (
-        <div className="mb-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-wrap gap-4 items-center">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <div className="flex gap-4 text-sm">
-            <span className="font-semibold text-emerald-800">✅ {result.generated} generated</span>
+        <div className="mb-4 p-4 rounded-xl bg-green-50 border border-green-200 flex flex-wrap gap-4 items-center">
+          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <div className="flex gap-4 text-sm font-semibold">
+            <span className="text-green-800">✅ {result.generated} generated</span>
             <span className="text-slate-500">⏭ {result.skipped} already existed</span>
             {result.failed > 0 && <span className="text-red-600">❌ {result.failed} failed</span>}
           </div>
@@ -213,7 +212,7 @@ export default function ManagerInvoiceGenerator() {
 
       {/* Summary stats */}
       {previews.length > 0 && (
-        <div className="grid grid-cols-4 gap-4 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
           {[
             { label: 'Total Guests', value: previews.length, icon: Users, color: 'text-blue-500' },
             { label: 'Pending', value: pendingCount, icon: Clock, color: 'text-amber-500' },
@@ -233,7 +232,7 @@ export default function ManagerInvoiceGenerator() {
 
       {/* Table */}
       {previews.length > 0 && (
-        <div className="card">
+        <div className="card" style={{ padding: '1.25rem' }}>
           {/* Filter + search */}
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div className="flex gap-1.5">
@@ -244,9 +243,9 @@ export default function ManagerInvoiceGenerator() {
               ].map(({ key, label }) => (
                 <button
                   key={key}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     filter === key
-                      ? 'bg-indigo-600 text-white'
+                      ? 'bg-primary text-white shadow-sm'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                   onClick={() => setFilter(key)}
@@ -266,19 +265,19 @@ export default function ManagerInvoiceGenerator() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="table-wrap">
+            <table>
               <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Guest</th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Room / Bed</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Rent</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">EB</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Food</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Laundry</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</th>
-                  <th className="text-center py-3 px-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="py-3 px-3" />
+                <tr>
+                  <th>Guest</th>
+                  <th>Room / Bed</th>
+                  <th className="text-right">Rent</th>
+                  <th className="text-right">EB</th>
+                  <th className="text-right">Food</th>
+                  <th className="text-right">Laundry</th>
+                  <th className="text-right">Total</th>
+                  <th className="text-center">Status</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,58 +286,58 @@ export default function ManagerInvoiceGenerator() {
                   return (
                     <tr
                       key={p.guestId}
-                      className={`border-b border-slate-50 transition-colors ${
-                        rs === 'done' ? 'bg-emerald-50' :
-                        rs === 'error' ? 'bg-red-50' : 'hover:bg-slate-50'
+                      className={`transition-colors ${
+                        rs === 'done' ? 'bg-green-50' :
+                        rs === 'error' ? 'bg-red-50' : ''
                       }`}
                     >
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-800">{p.guestName}</div>
-                        <div className="text-xs text-slate-400">{p.floor}</div>
+                      <td className="font-semibold text-slate-900">
+                        <div>{p.guestName}</div>
+                        <div className="text-xs text-slate-500 font-normal mt-0.5">{p.floor}</div>
                       </td>
-                      <td className="py-3 px-3">
-                        <div className="text-slate-700">{p.roomNumber}</div>
-                        <div className="text-xs text-slate-400">{p.bedLabel}</div>
+                      <td className="text-slate-700 font-normal">
+                        <div>{p.roomNumber}</div>
+                        <div className="text-xs text-slate-500 font-normal mt-0.5">{p.bedLabel}</div>
                       </td>
-                      <td className="py-3 px-3 text-right"><MoneyCell amount={p.rent} /></td>
-                      <td className="py-3 px-3 text-right"><MoneyCell amount={p.ebShare} /></td>
-                      <td className="py-3 px-3 text-right"><MoneyCell amount={p.food} /></td>
-                      <td className="py-3 px-3 text-right"><MoneyCell amount={p.laundry} /></td>
-                      <td className="py-3 px-3 text-right">
-                        <span className="font-bold text-slate-900">
-                          ₹{parseFloat(p.total || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
-                        </span>
+                      <td className="text-right"><MoneyCell amount={p.rent} /></td>
+                      <td className="text-right"><MoneyCell amount={p.ebShare} /></td>
+                      <td className="text-right"><MoneyCell amount={p.food} /></td>
+                      <td className="text-right"><MoneyCell amount={p.laundry} /></td>
+                      <td className="text-right font-bold text-slate-900">
+                        ₹{parseFloat(p.total || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
                       </td>
-                      <td className="py-3 px-3 text-center">
+                      <td className="text-center">
                         {rs === 'done'
-                          ? <span className="text-xs text-emerald-600 font-semibold">✅ Sent</span>
+                          ? <span className="text-xs text-green-600 font-semibold">✅ Sent</span>
                           : rs === 'error'
                           ? <span className="text-xs text-red-600 font-semibold">❌ Error</span>
                           : <StatusBadge generated={p.alreadyGenerated} />
                         }
                       </td>
-                      <td className="py-3 px-3">
-                        {!p.alreadyGenerated && rs !== 'done' && (
-                          <button
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                            onClick={() => handleGenerateOne(p.guestId, p.guestName)}
-                            disabled={generating === p.guestId}
-                          >
-                            {generating === p.guestId
-                              ? <Loader2 className="w-3 h-3 animate-spin" />
-                              : <Send className="w-3 h-3" />}
-                            {generating === p.guestId ? 'Sending...' : 'Generate & Send'}
-                          </button>
-                        )}
-                        {p.alreadyGenerated && (
-                          <button
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-50 text-slate-500 hover:bg-slate-100 transition-colors"
-                            onClick={() => handleGenerateOne(p.guestId, p.guestName)}
-                            disabled={generating === p.guestId}
-                          >
-                            <RefreshCcw className="w-3 h-3" /> Resend
-                          </button>
-                        )}
+                      <td>
+                        <div className="flex justify-end">
+                          {!p.alreadyGenerated && rs !== 'done' && (
+                            <button
+                              className="btn btn-primary text-xxs py-1 px-2.5 flex items-center gap-1 min-w-[120px] justify-center"
+                              onClick={() => handleGenerateOne(p.guestId, p.guestName)}
+                              disabled={generating === p.guestId}
+                            >
+                              {generating === p.guestId
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : <Send className="w-3 h-3" />}
+                              {generating === p.guestId ? 'Sending...' : 'Generate & Send'}
+                            </button>
+                          )}
+                          {p.alreadyGenerated && (
+                            <button
+                              className="btn btn-secondary text-xxs py-1 px-2.5 flex items-center gap-1 min-w-[75px] justify-center"
+                              onClick={() => handleGenerateOne(p.guestId, p.guestName)}
+                              disabled={generating === p.guestId}
+                            >
+                              <RefreshCcw className="w-3 h-3" /> Resend
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -346,7 +345,7 @@ export default function ManagerInvoiceGenerator() {
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <div className="py-10 text-center text-slate-400 text-sm">No guests match the filter.</div>
+              <div className="py-10 text-center text-slate-400 text-sm font-medium">No guests match the filter.</div>
             )}
           </div>
         </div>

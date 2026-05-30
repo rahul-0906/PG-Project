@@ -55,15 +55,15 @@ export default function Settings() {
       </div>
 
       <div className="max-w-xl">
-        <div className="card shadow-md border border-slate-200/80 p-6 bg-white rounded-2xl">
-          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
+        <div className="card shadow-md border border-slate-200 p-6 bg-white rounded-xl">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2 border-b border-slate-200 pb-3">
             <Lock className="w-4 h-4 text-indigo-500" />
             <span>Change Password</span>
           </h3>
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div className="form-group">
-              <label className="form-label text-slate-500 font-bold text-xs uppercase tracking-wide">Current Password</label>
+              <label className="form-label">Current Password</label>
               <input
                 type="password"
                 className="form-input"
@@ -75,7 +75,7 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label text-slate-500 font-bold text-xs uppercase tracking-wide">New Password</label>
+              <label className="form-label">New Password</label>
               <input
                 type="password"
                 className="form-input"
@@ -87,7 +87,7 @@ export default function Settings() {
             </div>
 
             <div className="form-group">
-              <label className="form-label text-slate-500 font-bold text-xs uppercase tracking-wide">Confirm New Password</label>
+              <label className="form-label">Confirm New Password</label>
               <input
                 type="password"
                 className="form-input"
@@ -99,15 +99,15 @@ export default function Settings() {
             </div>
 
             {error && (
-              <div className="flex items-center gap-2 text-rose-700 text-xs font-semibold bg-rose-50 border border-rose-100 px-3 py-2.5 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 text-red-800 text-xs font-semibold bg-red-100 border border-red-200 px-3 py-2.5 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
-              <div className="flex items-center gap-2 text-emerald-700 text-xs font-semibold bg-emerald-50 border border-emerald-100 px-3 py-2.5 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <div className="flex items-center gap-2 text-green-800 text-xs font-semibold bg-green-100 border border-green-200 px-3 py-2.5 rounded-lg">
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
                 <span>{success}</span>
               </div>
             )}

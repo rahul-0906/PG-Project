@@ -262,9 +262,9 @@ export default function Reports() {
         <div className="card">
           {activeTab === 'revenue' && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color:'var(--text-primary)', margin: 0, fontWeight: 700 }}>Monthly Revenue Breakdown</h3>
-                <button onClick={handleExportRevenue} className="btn btn-ghost flex items-center gap-2" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Revenue Breakdown</h3>
+                <button onClick={handleExportRevenue} className="btn btn-ghost flex items-center gap-2 py-1.5 px-3 text-xs">
                   <Download className="w-4 h-4 text-slate-500" />
                   <span>Export CSV</span>
                 </button>
@@ -283,11 +283,11 @@ export default function Reports() {
                 const selectedData = revenue.find(r => r.month === selectedMonthName);
                 if (!selectedData) return null;
                 return (
-                  <div className="card" style={{ marginTop: '2rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="card mt-8 bg-slate-50 border border-slate-200 rounded-xl p-6">
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+                      <div className="flex items-center gap-2">
                         <Coins className="w-5 h-5 text-indigo-500" />
-                        <h4 style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>
+                        <h4 className="font-heading text-sm font-semibold text-slate-900">
                           {selectedMonthName} {year} Revenue Details
                         </h4>
                       </div>
@@ -329,9 +329,9 @@ export default function Reports() {
 
           {activeTab === 'occupancy' && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color:'var(--text-primary)', margin: 0, fontWeight: 700 }}>Monthly Occupancy Rate</h3>
-                <button onClick={handleExportOccupancy} className="btn btn-ghost flex items-center gap-2" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Occupancy Rate</h3>
+                <button onClick={handleExportOccupancy} className="btn btn-ghost flex items-center gap-2 py-1.5 px-3 text-xs">
                   <Download className="w-4 h-4 text-slate-500" />
                   <span>Export CSV</span>
                 </button>
@@ -352,11 +352,11 @@ export default function Reports() {
                 if (!selectedData) return null;
                 const vacantBeds = Math.max(0, selectedData.totalBeds - selectedData.occupiedBeds);
                 return (
-                  <div className="card" style={{ marginTop: '2rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="card mt-8 bg-slate-50 border border-slate-200 rounded-xl p-6">
+                    <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
+                      <div className="flex items-center gap-2">
                         <Bed className="w-5 h-5 text-emerald-500" />
-                        <h4 style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem', color: '#1e293b' }}>
+                        <h4 className="font-heading text-sm font-semibold text-slate-900">
                           {selectedMonthName} {year} Occupancy Details
                         </h4>
                       </div>
@@ -392,14 +392,14 @@ export default function Reports() {
 
           {activeTab === 'turnover' && (
             <>
-              <h3 style={{ color:'var(--text-primary)', marginBottom:'1.5rem', fontWeight: 700 }}>Guest Turnover</h3>
-              <div style={{ display:'flex', gap:'1.5rem', flexWrap:'wrap' }}>
-                <div style={{ flex:1, minWidth:280 }}>
-                  <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', marginBottom:'0.75rem', fontWeight: 600 }}>Check-Ins</p>
+              <h3 className="font-heading text-base font-semibold text-slate-900 mb-6">Guest Turnover</h3>
+              <div className="flex gap-6 flex-wrap">
+                <div className="flex-1 min-w-[280px]">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">Check-Ins</p>
                   <BarChart data={turnover} valueKey="checkIns" labelKey="month" color="#22d3ee" prefix="" />
                 </div>
-                <div style={{ flex:1, minWidth:280 }}>
-                  <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', marginBottom:'0.75rem', fontWeight: 600 }}>Check-Outs</p>
+                <div className="flex-1 min-w-[280px]">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider mb-3">Check-Outs</p>
                   <BarChart data={turnover} valueKey="checkOuts" labelKey="month" color="#ef4444" prefix="" />
                 </div>
               </div>
@@ -408,7 +408,7 @@ export default function Reports() {
 
           {activeTab === 'payments' && payments && (
             <div>
-              <h3 className="text-slate-800 font-bold mb-4">Payment Summary — {year}</h3>
+              <h3 className="font-heading text-base font-semibold text-slate-900 mb-4">Payment Summary — {year}</h3>
               <div className="grid-4">
                 {[
                   { label:'Total Collected', value:`₹${Number(payments.totalRevenue||0).toLocaleString('en-IN')}`, icon: DollarSign, iconColor: 'text-blue-500' },

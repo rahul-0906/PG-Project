@@ -63,18 +63,18 @@ export default function Login() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-app p-4">
-      <div className="w-full max-w-[400px] bg-surface border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 fade-in-up">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="w-full max-w-[400px] bg-white border border-slate-200 shadow-xl rounded-2xl p-6 sm:p-8 fade-in-up">
         <div className="flex flex-col items-center justify-center mb-6">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 text-white shadow-md shadow-indigo-100 mb-3">
             <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path d="M19 2H5C3.89543 2 3 2.89543 3 4V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V4C21 2.89543 20.1046 2 19 2ZM11 6H13V8H11V6ZM11 10H13V12H11V10ZM11 14H13V16H11V14ZM7 6H9V8H7V6ZM7 10H9V12H7V10ZM7 14H9V16H7V14ZM17 18H7V17H17V18ZM17 14H15V16H17V14ZM17 10H15V12H17V10ZM17 6H15V8H17V6Z" />
             </svg>
           </div>
-          <h2 className="text-xl font-black text-slate-900 tracking-tight">
+          <h2 className="font-heading text-xl font-semibold tracking-tight text-slate-800">
             {config?.branding?.name || 'PG CRM'}
           </h2>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center mt-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 text-center mt-1">
             Single-Tenant PG &amp; Hostel Management
           </p>
         </div>
@@ -106,7 +106,7 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="text-rose-700 text-xs font-semibold bg-rose-50 border border-rose-100 px-3 py-2.5 rounded-lg text-center leading-relaxed">
+            <div className="text-red-800 text-xs font-semibold bg-red-100 border border-red-200 px-3 py-2.5 rounded-lg text-center leading-relaxed">
               {error}
             </div>
           )}
@@ -121,8 +121,8 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="mt-6 bg-slate-50 border border-slate-100 rounded-xl p-4 space-y-2">
-          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
             ⚡ QUICK LOGIN (DEMO)
           </p>
           {DEMOS.map(d => (

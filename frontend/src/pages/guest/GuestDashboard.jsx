@@ -21,19 +21,19 @@ import {
   CreditCard
 } from 'lucide-react';
 
-function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-100', iconColor = 'text-slate-500', children }) {
+function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-100', iconColor = 'text-slate-505', children }) {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5 flex flex-col justify-between transition-all duration-200 hover:border-primary/40 hover:shadow-md min-h-[140px]">
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between transition-all duration-200 hover:border-primary/40 hover:shadow-md min-h-[140px]">
       <div>
         <div className="flex items-center justify-between w-full mb-1">
-          <span className="text-xxs font-bold text-slate-400 uppercase tracking-wider">{label}</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</span>
           {Icon && (
             <div className={`p-1.5 rounded-lg ${iconBg} ${iconColor}`}>
               <Icon className="w-3.5 h-3.5" />
             </div>
           )}
         </div>
-        {value !== undefined && <div className="text-2xl font-black text-slate-900 tracking-tight">{value}</div>}
+        {value !== undefined && <div className="text-2xl font-bold text-slate-900 tracking-tight">{value}</div>}
       </div>
       {children}
     </div>
@@ -180,7 +180,7 @@ export default function GuestDashboard() {
       {showProfileModal && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
-            <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary" />
               <span>Edit Profile</span>
             </h3>
@@ -288,10 +288,10 @@ export default function GuestDashboard() {
       {/* Grid: Actions & Chart */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
         {/* Quick Actions Panel */}
-        <div className="lg:col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 flex flex-col gap-4">
+        <div className="lg:col-span-1 bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex flex-col gap-4">
           <div>
-            <h3 className="text-slate-800 font-bold text-base">Quick Operations</h3>
-            <p className="text-slate-400 text-xs mt-0.5">Common tasks and pages you can access immediately.</p>
+            <h3 className="font-heading text-base font-semibold text-slate-900">Quick Operations</h3>
+            <p className="text-slate-500 text-xs mt-1">Common tasks and pages you can access immediately.</p>
           </div>
           
           <div className="flex flex-col gap-3 mt-2">
@@ -312,7 +312,7 @@ export default function GuestDashboard() {
             </button>
 
             <button 
-              className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
+              className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 group text-left"
               onClick={() => navigate('/guest/invoices')}
             >
               <div className="flex items-center gap-3">
@@ -321,10 +321,10 @@ export default function GuestDashboard() {
                 </div>
                 <div>
                   <div className="font-bold text-slate-800 text-sm">My Invoices</div>
-                  <div className="text-slate-400 text-xxs mt-0.5">View & clear invoices</div>
+                  <div className="text-slate-500 text-xxs mt-0.5">View & clear invoices</div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
             </button>
 
             <button 
@@ -346,15 +346,15 @@ export default function GuestDashboard() {
         </div>
 
         {/* Chart Panel */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
                 <TrendingUp className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-slate-800 font-bold text-base">Monthly Spending Trend</h3>
-                <p className="text-slate-400 text-xs mt-0.5">Breakdown of rent, food, EB, and washing machine bills.</p>
+                <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Spending Trend</h3>
+                <p className="text-slate-500 text-xs mt-1">Breakdown of rent, food, EB, and washing machine bills.</p>
               </div>
             </div>
           </div>
@@ -417,13 +417,13 @@ export default function GuestDashboard() {
               <ChefHat className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-slate-800 font-bold text-base">Add-on &amp; Service Log</h3>
-              <p className="text-slate-400 text-xs mt-0.5">Summary and daily log of opted services.</p>
+              <h3 className="font-heading text-base font-semibold text-slate-900">Add-on &amp; Service Log</h3>
+              <p className="text-slate-500 text-xs mt-1">Summary and daily log of opted services.</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Month:</span>
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">Month:</span>
             <select 
               value={selectedMonth} 
               onChange={e => setSelectedMonth(e.target.value)}
@@ -439,43 +439,43 @@ export default function GuestDashboard() {
 
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 text-base">
               🍳
             </div>
             <div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Omelettes</div>
-              <div className="text-sm font-black text-slate-800 mt-0.5">{totalOmelettes} pcs</div>
-              <div className="text-[9px] text-slate-400 font-medium">₹{totalOmelettes * oPrice} total</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Omelettes</div>
+              <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalOmelettes} pcs</div>
+              <div className="text-[9px] text-slate-500 font-medium">₹{totalOmelettes * oPrice} total</div>
             </div>
           </div>
-          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0 text-base">
               🥚
             </div>
             <div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Boiled Eggs</div>
-              <div className="text-sm font-black text-slate-800 mt-0.5">{totalEggs} pcs</div>
-              <div className="text-[9px] text-slate-400 font-medium">₹{totalEggs * ePrice} total</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Boiled Eggs</div>
+              <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalEggs} pcs</div>
+              <div className="text-[9px] text-slate-500 font-medium">₹{totalEggs * ePrice} total</div>
             </div>
           </div>
-          <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-base">
               🧺
             </div>
             <div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Laundry</div>
-              <div className="text-sm font-black text-slate-800 mt-0.5">{totalWashing} uses</div>
-              <div className="text-[9px] text-slate-400 font-medium">₹{totalWashing * wPrice} total</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Laundry</div>
+              <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalWashing} uses</div>
+              <div className="text-[9px] text-slate-500 font-medium">₹{totalWashing * wPrice} total</div>
             </div>
           </div>
-          <div className="bg-indigo-50/50 border border-indigo-100/50 p-3.5 rounded-xl flex items-center gap-3">
+          <div className="bg-indigo-50/50 border border-indigo-200 p-3.5 rounded-xl flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-100/80 flex items-center justify-center flex-shrink-0 text-base">
               💰
             </div>
             <div>
-              <div className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider">Monthly Total</div>
-              <div className="text-sm font-black text-indigo-700 mt-0.5">₹{totalAddonCost}</div>
+              <div className="text-[9px] font-semibold text-indigo-500 uppercase tracking-wider">Monthly Total</div>
+              <div className="text-sm font-semibold text-indigo-700 mt-0.5">₹{totalAddonCost}</div>
               <div className="text-[9px] text-indigo-400 font-medium">For {formatMonthName(selectedMonth)}</div>
             </div>
           </div>

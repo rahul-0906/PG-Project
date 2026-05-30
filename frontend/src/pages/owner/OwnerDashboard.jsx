@@ -22,15 +22,15 @@ import {
 
 function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
+    <div className="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
       {Icon && (
         <div className={`p-2 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
           <Icon className="w-4 h-4" />
         </div>
       )}
       <div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</div>
-        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">{value}</div>
+        <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</div>
+        <div className="text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">{value}</div>
       </div>
     </div>
   );
@@ -157,6 +157,7 @@ export default function OwnerDashboard() {
           </div>
         </div>
       </div>
+
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -175,16 +176,16 @@ export default function OwnerDashboard() {
       </div>
       
       <div className="grid-2">
-        <div className="card">
-          <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+        <div className="card" style={{ padding: '1.25rem' }}>
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <GitBranch className="w-5 h-5 text-slate-400" />
             <span>Branches ({branches.length})</span>
           </h3>
           {branches.map(b => (
             <div key={b.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-2 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-sm text-slate-800">{b.name}</div>
-                <div className="text-xs text-slate-400 mt-0.5">{b.address}</div>
+                <div className="font-semibold text-sm text-slate-900">{b.name}</div>
+                <div className="text-xs text-slate-500 font-normal mt-0.5">{b.address}</div>
               </div>
               <div className="flex items-center gap-2">
                 <Link
@@ -199,16 +200,16 @@ export default function OwnerDashboard() {
               </div>
             </div>
           ))}
-          {branches.length === 0 && <p className="text-slate-400 text-xs mt-2">No branches configured yet.</p>}
+          {branches.length === 0 && <p className="text-slate-400 text-xs mt-2 font-medium">No branches configured yet.</p>}
         </div>
 
-        <div className="card">
+        <div className="card" style={{ padding: '1.25rem' }}>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-slate-800 font-bold flex items-center gap-2">
+            <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
               <UserCheck className="w-5 h-5 text-slate-400" />
               <span>Managers ({managers.length})</span>
             </h3>
-            <button className="btn btn-primary flex items-center gap-1 px-2.5 py-1 text-xs" onClick={openCreateManager}>
+            <button className="btn btn-primary flex items-center gap-1 px-2.5 py-1 text-xs font-semibold" onClick={openCreateManager}>
               <Plus className="w-3.5 h-3.5" />
               <span>Add Manager</span>
             </button>
@@ -216,9 +217,9 @@ export default function OwnerDashboard() {
           {managers.map(m => (
             <div key={m.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-2 flex justify-between items-center">
               <div>
-                <div className="font-semibold text-sm text-slate-800">{m.fullName}</div>
-                <div className="text-xs text-slate-400 mt-0.5">
-                  {m.email} • <span className="font-semibold text-slate-500">{getManagerBranchNames(m)}</span>
+                <div className="font-semibold text-sm text-slate-900">{m.fullName}</div>
+                <div className="text-xs text-slate-500 font-normal mt-0.5">
+                  {m.email} • <span className="font-semibold text-slate-600">{getManagerBranchNames(m)}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -244,14 +245,14 @@ export default function OwnerDashboard() {
               </div>
             </div>
           ))}
-          {managers.length === 0 && <p className="text-slate-400 text-xs mt-2">No managers added yet.</p>}
+          {managers.length === 0 && <p className="text-slate-400 text-xs mt-2 font-medium">No managers added yet.</p>}
         </div>
       </div>
 
       {showManagerModal && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
-            <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <UserPlus className="w-5 h-5 text-primary" />
               <span>{editingManager ? 'Edit Manager' : 'Create Manager'}</span>
             </h3>
@@ -291,7 +292,7 @@ export default function OwnerDashboard() {
                   <p className="text-[10px] text-rose-500 font-semibold mt-1">Please select at least one branch.</p>
                 )}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
+              <div className="flex justify-end gap-2 mt-6">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowManagerModal(false)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={savingManager || managerForm.branchIds.length === 0}>
                   {savingManager ? 'Saving...' : editingManager ? 'Save Changes' : 'Create Manager'}

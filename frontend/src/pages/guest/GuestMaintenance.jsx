@@ -19,9 +19,9 @@ const PRIORITY_BADGES = {
 };
 
 const STATUS_BADGES = {
-  OPEN: 'bg-amber-100 text-amber-800 border-amber-200',
+  OPEN: 'bg-red-100 text-red-800 border-red-200',
   IN_PROGRESS: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-  RESOLVED: 'bg-emerald-100 text-emerald-800 border-emerald-200'
+  RESOLVED: 'bg-green-100 text-green-800 border-green-200'
 };
 
 export default function GuestMaintenance() {
@@ -115,8 +115,8 @@ export default function GuestMaintenance() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Submit Ticket Form */}
         <div className="lg:col-span-1">
-          <div className="card shadow-sm border border-slate-200 bg-white rounded-2xl p-6">
-            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <div className="card shadow-sm border border-slate-200 bg-white rounded-xl p-6">
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Plus className="w-5 h-5 text-indigo-500" />
               New Request
             </h3>
@@ -184,13 +184,13 @@ export default function GuestMaintenance() {
 
         {/* Tickets History List */}
         <div className="lg:col-span-2">
-          <div className="card shadow-sm border border-slate-200 bg-white rounded-2xl overflow-hidden p-0">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+          <div className="card shadow-sm border border-slate-200 bg-white rounded-xl overflow-hidden p-0">
+            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
                 <Clock className="w-5 h-5 text-indigo-500" />
                 Ticket History
               </h3>
-              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full">
+              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
                 {tickets.length} Ticket{tickets.length !== 1 ? 's' : ''}
               </span>
             </div>
@@ -210,17 +210,17 @@ export default function GuestMaintenance() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200">
-                      <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ticket Info</th>
-                      <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Location</th>
-                      <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Priority</th>
-                      <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Ticket Info</th>
+                      <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Location</th>
+                      <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Priority</th>
+                      <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-200">
                     {tickets.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="py-3.5 px-4 max-w-[280px]">
-                          <div className="font-bold text-slate-800 text-sm truncate">{t.title}</div>
+                          <div className="font-semibold text-slate-900 text-sm truncate">{t.title}</div>
                           <div className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2" title={t.description}>
                             {t.description}
                           </div>

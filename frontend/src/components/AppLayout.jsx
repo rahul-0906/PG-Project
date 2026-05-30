@@ -4,7 +4,7 @@ import TopHeader from './TopHeader';
 
 export default function AppLayout({ children }) {
   return (
-    <div className="h-screen w-full flex flex-col overflow-hidden bg-app">
+    <div className="h-screen w-full flex flex-col overflow-hidden bg-slate-50">
       <TopHeader />
       <div className="flex-1 flex overflow-hidden pt-16">
         <Sidebar />

@@ -232,12 +232,12 @@ export default function ManagerGuests() {
         </button>
       </div>
       {showForm && (
-        <div className="card" style={{ marginBottom: '1.5rem' }}>
-          <h3 style={{ marginBottom:'1rem', fontWeight:700 }}>New Guest Check-In</h3>
+        <div className="card mb-6">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4">New Guest Check-In</h3>
           
           {/* Step 1: Bed Selection */}
-          <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
-            <h4 style={{ marginBottom: '0.75rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+          <div className="pb-6 mb-6 border-b border-slate-200">
+            <h4 className="font-heading text-sm font-semibold text-slate-800 mb-3">
               1. Select an Available Bed
             </h4>
             {loadingBeds ? (
@@ -246,18 +246,17 @@ export default function ManagerGuests() {
                 <span>Loading available beds...</span>
               </div>
             ) : vacantBeds.length === 0 ? (
-              <div className="flex items-center gap-1.5 text-rose-500 text-sm">
+              <div className="flex items-center gap-1.5 text-red-500 text-sm font-semibold">
                 <AlertTriangle className="w-4 h-4" />
                 <span>No beds configured in the building.</span>
               </div>
             ) : !vacantBeds.some(bed => bed.status === 'VACANT') ? (
-              <div className="flex items-center gap-1.5 text-rose-500 text-sm">
+              <div className="flex items-center gap-1.5 text-red-500 text-sm font-semibold">
                 <AlertTriangle className="w-4 h-4" />
                 <span>No vacant beds available in the building.</span>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {/* Horizontal Floor Selection Tabs */}
+              <div className="flex flex-col gap-4">
                 {/* Horizontal Floor Selection Tabs & Legend */}
                 <div className="flex flex-col gap-3">
                   <div className="flex gap-2 flex-wrap">
@@ -282,7 +281,7 @@ export default function ManagerGuests() {
                   </div>
 
                   {/* Status Legend */}
-                  <div className="flex gap-4 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex-wrap">
+                  <div className="flex gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex-wrap">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block"></span>
                       <span>Vacant (Selectable)</span>
@@ -292,7 +291,7 @@ export default function ManagerGuests() {
                       <span>Occupied</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 inline-block"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
                       <span>Notice Period (Leaving Soon)</span>
                     </div>
                   </div>
@@ -300,7 +299,7 @@ export default function ManagerGuests() {
 
                 {currentFloor && groupedBeds[currentFloor] && (
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div className="flex items-center gap-1 font-bold text-sm text-primary mb-3">
+                    <div className="flex items-center gap-1 font-bold text-sm text-primary mb-3 font-heading">
                       <MapPin className="w-4 h-4" />
                       <span>{currentFloor}</span>
                     </div>
@@ -308,7 +307,7 @@ export default function ManagerGuests() {
                     <div className="flex flex-col gap-4">
                       {Object.entries(groupedBeds[currentFloor]).map(([blockName, rooms]) => (
                         <div key={blockName} className="flex flex-col gap-2 pl-3 border-l-2 border-slate-200">
-                          <div className="flex items-center gap-1 text-slate-400 font-bold text-xs uppercase tracking-wider mb-1">
+                          <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">
                             <Layers className="w-3.5 h-3.5" />
                             <span>{blockName}</span>
                           </div>
@@ -317,7 +316,7 @@ export default function ManagerGuests() {
                             {Object.entries(rooms).map(([roomNum, beds]) => (
                               <div key={roomNum} className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col gap-2 min-w-[220px] flex-grow md:flex-initial shadow-sm hover:border-slate-300 transition-colors">
                                 <div className="flex flex-col gap-0.5">
-                                  <span className="flex items-center gap-1 font-bold text-xs text-slate-700">
+                                  <span className="flex items-center gap-1 font-semibold text-xs text-slate-700 font-heading">
                                     <Home className="w-3.5 h-3.5 text-slate-400" />
                                     <span>Room {roomNum}</span>
                                   </span>
@@ -334,7 +333,7 @@ export default function ManagerGuests() {
 
                                     const isSelected = form.bedId === bed.id;
 
-                                    let btnClasses = "px-2.5 py-1 rounded-md border text-[11px] transition-all font-bold ";
+                                    let btnClasses = "px-2.5 py-1 rounded-md border text-[11px] transition-all font-semibold ";
                                     let isDisabled = false;
 
                                     if (isVacant) {
@@ -344,7 +343,7 @@ export default function ManagerGuests() {
                                         btnClasses += "bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:shadow-sm cursor-pointer";
                                       }
                                     } else if (isNoticePeriod) {
-                                      btnClasses += "bg-yellow-50 border-yellow-200 text-yellow-700 cursor-not-allowed opacity-90";
+                                      btnClasses += "bg-amber-50 border-amber-200 text-amber-700 cursor-not-allowed opacity-90";
                                       isDisabled = true;
                                     } else {
                                       // Occupied
@@ -369,7 +368,7 @@ export default function ManagerGuests() {
                                         </button>
                                         {isNoticePeriod && occupant && (
                                           <div className="absolute bottom-full mb-1.5 hidden group-hover:block bg-slate-900/95 backdrop-blur-sm text-white text-[10px] rounded-lg px-2.5 py-1.5 z-30 whitespace-nowrap border border-slate-700/50 shadow-lg shadow-slate-900/20 pointer-events-none left-1/2 -translate-x-1/2 text-left">
-                                            <div className="font-extrabold text-yellow-400 mb-0.5">Notice Period</div>
+                                            <div className="font-extrabold text-amber-400 mb-0.5">Notice Period</div>
                                             <div className="font-bold">{occupant.fullName}</div>
                                             <div className="text-[9px] text-slate-300 mt-0.5">
                                               Notice: {occupant.noticeDate || '—'}<br />
@@ -405,8 +404,8 @@ export default function ManagerGuests() {
           {/* Step 2: Guest Details Form */}
           {form.bedId && selectedBedInfo && (
             <form onSubmit={checkIn} className="fade-in-up">
-              <h4 style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
-                2. Guest Details for Bed <span style={{ color: 'var(--success)' }}>{selectedBedInfo.bedLabel}</span> (Room {selectedBedInfo.room?.roomNumber}, Rent: ₹{selectedBedInfo.room?.baseRent})
+              <h4 className="font-heading text-sm font-semibold text-slate-800 mb-4">
+                2. Guest Details for Bed <span className="text-primary font-bold">{selectedBedInfo.bedLabel}</span> (Room {selectedBedInfo.room?.roomNumber}, Rent: ₹{selectedBedInfo.room?.baseRent})
               </h4>
               <div className="grid-3">
                 {[['fullName','Full Name'],['email','Email ID'],['phone','Phone'],['whatsappNumber','WhatsApp Number'],['advanceDeposit','Advance Deposit (₹)']].map(([key, label]) => (
@@ -422,17 +421,17 @@ export default function ManagerGuests() {
               </div>
 
               {/* Meal Preferences & Selection */}
-              <div style={{ background: 'var(--bg-secondary)', padding: '1rem', borderRadius: '10px', border: '1px solid var(--border)', marginTop: '1rem', marginBottom: '1.25rem' }}>
-                <div className="flex items-center gap-1.5 font-bold text-xs text-primary mb-3 uppercase tracking-wider">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-5">
+                <div className="flex items-center gap-1.5 font-bold text-[10px] text-primary mb-3 uppercase tracking-wider font-heading">
                   <Utensils className="w-4 h-4" />
                   <span>Meal Preferences &amp; Selections</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Veg / Non Veg */}
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '0.4rem' }}>Food Preference</label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem' }}>
-                      <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : 'var(--text-muted)' }}>
+                  <div className="form-group mb-0">
+                    <label className="form-label mb-1.5 block">Food Preference</label>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : '#94a3b8' }}>
                         <Leaf className="w-3.5 h-3.5" />
                         <span>Veg</span>
                       </span>
@@ -440,7 +439,7 @@ export default function ManagerGuests() {
                         <input type="checkbox" checked={!form.isVeg} onChange={() => setForm(f => ({ ...f, isVeg: !f.isVeg }))} />
                         <span className="toggle-slider" />
                       </label>
-                      <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : 'var(--text-muted)' }}>
+                      <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : '#94a3b8' }}>
                         <Utensils className="w-3.5 h-3.5" />
                         <span>Non-Veg</span>
                       </span>
@@ -448,8 +447,8 @@ export default function ManagerGuests() {
                   </div>
                   
                   {/* Meal Choices */}
-                  <div className="form-group" style={{ margin: 0 }}>
-                    <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', marginBottom: '0.4rem' }}>
+                  <div className="form-group mb-0">
+                    <label className="form-label mb-1.5 flex items-center gap-1.5 cursor-pointer">
                       <input 
                         type="checkbox"
                         id="opt-in-food-master"
@@ -491,16 +490,16 @@ export default function ManagerGuests() {
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ marginTop: '0.5rem' }} disabled={saving}>{saving?'Saving...':'Confirm Check-In'}</button>
+              <button type="submit" className="btn btn-primary mt-2" disabled={saving}>{saving?'Saving...':'Confirm Check-In'}</button>
             </form>
           )}
         </div>
       )}
 
       {/* Filter Toolbar for Guests List */}
-      <div className="card" style={{ marginBottom: '1.5rem', padding: '1rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div className="form-group" style={{ margin: 0, flex: 1, minWidth: '200px' }}>
+      <div className="card mb-6" style={{ padding: '1rem' }}>
+        <div className="flex gap-4 flex-wrap items-center">
+          <div className="form-group mb-0 flex-1 min-w-[200px]">
             <label className="form-label flex items-center gap-1.5">
               <Search className="w-4 h-4 text-slate-400" />
               <span>Search Guest (Name / Email / Phone)</span>
@@ -513,7 +512,7 @@ export default function ManagerGuests() {
               className="form-input"
             />
           </div>
-          <div className="form-group" style={{ margin: 0, width: '200px' }}>
+          <div className="form-group mb-0 w-[200px]">
             <label className="form-label flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-slate-400" />
               <span>Filter by Floor</span>
@@ -534,31 +533,45 @@ export default function ManagerGuests() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Bed</th><th>Check-In</th><th>KYC</th><th>Actions</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Bed</th>
+                <th>Check-In</th>
+                <th>KYC</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {filteredGuests.map(g => (
                 <tr key={g.id}>
-                  <td style={{fontWeight:600}}>
+                  <td className="font-semibold text-slate-900">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span>{g.fullName}</span>
                       {g.noticeDate && (
-                        <span className="badge badge-warning" style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', border: '1px solid #f59e0b' }}>Notice</span>
+                        <span className="badge badge-warning text-[10px]">Notice</span>
                       )}
                     </div>
-                    <div style={{fontSize:'0.75rem',color:'var(--text-muted)'}}>{g.email}</div>
+                    <div className="text-xs text-slate-500 font-normal mt-0.5">{g.email}</div>
                   </td>
-                  <td><span className="badge badge-accent">{g.bedLabel ?? 'N/A'}</span></td>
-                  <td style={{color:'var(--text-muted)'}}>
+                  <td>
+                    <span className="badge badge-accent border border-violet-100">{g.bedLabel ?? 'N/A'}</span>
+                  </td>
+                  <td className="text-slate-500 font-normal">
                     <div>{g.checkInDate}</div>
                     {g.noticeDate && (
-                      <div style={{ fontSize: '0.7rem', color: '#f59e0b', fontWeight: 600, marginTop: '0.2rem' }}>
+                      <div className="text-[10px] text-amber-600 font-semibold mt-1">
                         Exit: {g.exitDate || '—'}
                       </div>
                     )}
                   </td>
-                  <td><span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>{g.kycStatus}</span></td>
                   <td>
-                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                    <span className={`badge ${g.kycStatus==='VERIFIED'?'badge-success':g.kycStatus==='REJECTED'?'badge-danger':'badge-warning'}`}>
+                      {g.kycStatus}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="flex justify-end gap-1.5">
                       <button className="btn btn-primary flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => startEdit(g)}>
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit</span>
@@ -569,8 +582,8 @@ export default function ManagerGuests() {
                           <span>Checkout</span>
                         </button>
                       ) : (
-                        <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
-                          <LogOut className="w-3.5 h-3.5 text-slate-400" />
+                        <button className="btn btn-ghost flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
+                          <LogOut className="w-3.5 h-3.5 text-amber-500" />
                           <span>Notice</span>
                         </button>
                       )}
@@ -580,7 +593,7 @@ export default function ManagerGuests() {
               ))}
               {filteredGuests.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                  <td colSpan={5} className="text-center text-slate-400 py-8">
                     No active guests match the search filters.
                   </td>
                 </tr>
@@ -594,7 +607,7 @@ export default function ManagerGuests() {
       {editingGuest && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 500, width: '100%' }}>
-            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <Edit2 className="w-5 h-5 text-primary" />
               <span>Edit Guest Details</span>
             </h3>
@@ -627,7 +640,7 @@ export default function ManagerGuests() {
                   <option value="REJECTED">REJECTED</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.75rem' }}>
+              <div className="flex justify-end gap-2 mt-6">
                 <button type="button" className="btn btn-ghost" onClick={() => setEditingGuest(null)}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={updating}>{updating ? 'Saving...' : 'Save Changes'}</button>
               </div>
@@ -641,19 +654,19 @@ export default function ManagerGuests() {
       {confirmCheckoutGuest && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
-            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <div className="p-2 bg-amber-50 rounded-lg text-amber-500 flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <span>Initiate Checkout Notice</span>
             </h3>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>
-              Are you sure you want to initiate the checkout notice for <strong style={{ color: 'var(--text-primary)' }}>{confirmCheckoutGuest.fullName}</strong>?
-              <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <div className="text-slate-600 text-sm mb-6 leading-relaxed">
+              Are you sure you want to initiate the checkout notice for <strong className="text-slate-900">{confirmCheckoutGuest.fullName}</strong>?
+              <p className="mt-2 text-xs text-slate-400">
                 This will trigger the notice period sequence according to the configured building rules.
               </p>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <div className="flex justify-end gap-2">
               <button 
                 type="button" 
                 className="btn btn-ghost" 
@@ -664,8 +677,7 @@ export default function ManagerGuests() {
               </button>
               <button 
                 type="button" 
-                className="btn btn-primary" 
-                style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white' }} 
+                className="btn btn-warning" 
                 onClick={handleConfirmCheckout} 
                 disabled={checkoutLoading}
               >
@@ -681,19 +693,19 @@ export default function ManagerGuests() {
       {confirmFinalCheckoutGuest && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
-            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div className="p-2 bg-emerald-50 rounded-lg text-emerald-500 flex items-center justify-center">
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <div className="p-2 bg-green-50 rounded-lg text-green-500 flex items-center justify-center">
                 <LogOut className="w-5 h-5" />
               </div>
               <span>Complete Guest Checkout</span>
             </h3>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>
-              Are you sure you want to finalize checkout and settle accounts for <strong style={{ color: 'var(--text-primary)' }}>{confirmFinalCheckoutGuest.fullName}</strong>?
-              <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+            <div className="text-slate-600 text-sm mb-6 leading-relaxed">
+              Are you sure you want to finalize checkout and settle accounts for <strong className="text-slate-900">{confirmFinalCheckoutGuest.fullName}</strong>?
+              <p className="mt-2 text-xs text-slate-400">
                 This will automatically calculate pro-rated rent and pending add-on logs, release the bed, and mark their profile as inactive.
               </p>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+            <div className="flex justify-end gap-2">
               <button 
                 type="button" 
                 className="btn btn-ghost" 
@@ -704,8 +716,7 @@ export default function ManagerGuests() {
               </button>
               <button 
                 type="button" 
-                className="btn btn-primary" 
-                style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white' }} 
+                className="btn btn-success" 
                 onClick={handleFinalizeCheckout} 
                 disabled={finalCheckoutLoading}
               >
@@ -721,7 +732,7 @@ export default function ManagerGuests() {
       {settlementResult && createPortal(
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
-            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <div className="p-2 bg-indigo-50 rounded-lg text-indigo-500 flex items-center justify-center">
                 <Check className="w-5 h-5" />
               </div>
@@ -753,13 +764,13 @@ export default function ManagerGuests() {
                 <span>Advance Paid</span>
                 <span>₹{settlementResult.advanceDeposit.toFixed(2)}</span>
               </div>
-              <div className={`flex justify-between font-bold text-sm pt-2.5 border-t border-slate-200 ${settlementResult.settlementAmount >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+              <div className={`flex justify-between font-bold text-sm pt-2.5 border-t border-slate-200/60 ${settlementResult.settlementAmount >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                 <span>{settlementResult.settlementAmount >= 0 ? 'Refund Amount' : 'Additional Due'}</span>
                 <span>₹{Math.abs(settlementResult.settlementAmount).toFixed(2)}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div className="flex justify-end">
               <button 
                 type="button" 
                 className="btn btn-primary" 

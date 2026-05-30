@@ -6,11 +6,14 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        heading: ['Plus Jakarta Sans', 'sans-serif'],
+      },
       colors: {
         primary: {
           DEFAULT: 'var(--color-primary)',
-          hover: 'var(--color-primary-hover, var(--color-primary))',
-          glow: 'var(--color-primary-glow, rgba(37, 99, 235, 0.08))',
+          hover: 'var(--color-primary-hover)',
         },
         surface: 'var(--bg-surface)',
         app: 'var(--bg-app)',

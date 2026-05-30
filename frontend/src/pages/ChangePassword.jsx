@@ -38,26 +38,19 @@ export default function ChangePassword() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'var(--bg-main)', padding: '1rem'
-    }}>
-      <div className="login-card fade-in-up" style={{ maxWidth: 480, width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🔐</div>
-          <h2 style={{ color: 'var(--text-primary)', margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+      <div className="bg-white border border-slate-200 shadow-xl rounded-2xl p-8 max-w-md w-full fade-in-up">
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-2">🔐</div>
+          <h2 className="font-heading text-2xl font-bold tracking-tight text-slate-900">
             Set Your New Password
           </h2>
-          <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 0', fontSize: '0.9rem' }}>
+          <p className="text-slate-500 text-sm mt-2">
             For security, you must change your temporary password before continuing.
           </p>
         </div>
 
-        <div style={{
-          background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-          borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1.5rem',
-          fontSize: '0.85rem', color: '#f59e0b'
-        }}>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 mb-6 text-xs">
           ⚠️ This is a one-time step. Your password must be at least 8 characters.
         </div>
 
@@ -82,14 +75,10 @@ export default function ChangePassword() {
           </div>
 
           {error && (
-            <div style={{
-              color: 'var(--danger)', background: 'rgba(239,68,68,0.1)',
-              borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.85rem'
-            }}>{error}</div>
+            <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 mb-4 text-xs font-medium">{error}</div>
           )}
 
-          <button id="btn-change-password" type="submit" className="btn btn-primary"
-            style={{ width: '100%', justifyContent: 'center', padding: '0.85rem' }} disabled={loading}>
+          <button id="btn-change-password" type="submit" className="btn btn-primary w-full py-3 justify-center" disabled={loading}>
             {loading ? '⏳ Changing...' : '🔐 Set New Password & Continue'}
           </button>
         </form>
@@ -101,8 +90,7 @@ export default function ChangePassword() {
             logout();
             navigate('/login', { replace: true });
           }}
-          style={{ background: 'none', border: 'none', color: 'var(--text-muted)',
-            width: '100%', marginTop: '1rem', cursor: 'pointer', fontSize: '0.8rem' }}>
+          className="text-slate-500 hover:text-slate-800 text-xs w-full text-center mt-4 bg-transparent border-0 cursor-pointer">
           ← Back to Login
         </button>
       </div>

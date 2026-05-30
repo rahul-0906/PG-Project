@@ -125,16 +125,20 @@ export default function AuditLog() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} style={{ padding:'3rem', textAlign:'center', color:'var(--text-muted)' }}>
-                  ⏳ Loading audit trail...
-                </td></tr>
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-500 text-sm">
+                    ⏳ Loading audit trail...
+                  </td>
+                </tr>
               ) : logs.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding:'3rem', textAlign:'center', color:'var(--text-muted)' }}>
-                  No audit records found for the selected filters.
-                </td></tr>
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-500 text-sm">
+                    No audit records found for the selected filters.
+                  </td>
+                </tr>
               ) : logs.map((log, i) => (
                 <tr key={log.id || i}>
-                  <td style={{ color:'var(--text-muted)', whiteSpace:'nowrap', fontSize:'0.8rem' }}>
+                  <td className="text-slate-500 whitespace-nowrap text-xs">
                     {new Date(log.timestamp).toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' })}
                   </td>
                   <td>
@@ -146,7 +150,7 @@ export default function AuditLog() {
                       {ACTION_LABELS[log.action] || log.action}
                     </span>
                   </td>
-                  <td style={{ color:'var(--text-primary)', maxWidth:300 }}>
+                  <td className="text-slate-700 text-sm max-w-[300px] truncate">
                     {log.description}
                   </td>
                   <td>
@@ -154,7 +158,7 @@ export default function AuditLog() {
                       {log.actorRole || 'SYSTEM'}
                     </span>
                   </td>
-                  <td style={{ color:'var(--text-muted)', fontSize:'0.8rem' }}>
+                  <td className="text-slate-500 text-xs">
                     {log.entityType ? `${log.entityType}` : '—'}
                   </td>
                 </tr>
@@ -168,7 +172,7 @@ export default function AuditLog() {
           <div style={{ display:'flex', justifyContent:'center', gap:'0.5rem', marginTop:'1.5rem' }}>
             <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
               className="btn btn-ghost" style={{ fontSize:'0.8rem', padding:'0.4rem 1rem' }}>← Prev</button>
-            <span style={{ color:'var(--text-muted)', display:'flex', alignItems:'center', fontSize:'0.85rem' }}>
+            <span className="text-slate-500 flex items-center text-sm">
               Page {page + 1} of {Math.ceil(total / PAGE_SIZE)}
             </span>
             <button disabled={(page + 1) * PAGE_SIZE >= total} onClick={() => setPage(p => p + 1)}

@@ -57,8 +57,8 @@ function EditablePrice({ value, onSave, saving }) {
       className="flex items-center gap-2 group"
       onClick={start}
     >
-      <span className="font-semibold text-slate-800">₹{parseFloat(value || 0).toFixed(2)}</span>
-      <Pencil className="w-3 h-3 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+      <span className="font-semibold text-slate-900">₹{parseFloat(value || 0).toFixed(2)}</span>
+      <Pencil className="w-3 h-3 text-slate-300 group-hover:text-primary transition-colors" />
     </button>
   );
 }
@@ -264,21 +264,21 @@ export default function ManagerPricing() {
       </div>
 
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
           <Check className="w-4 h-4" /> {toast}
         </div>
       )}
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
-          <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
         </div>
       ) : (
         <div className="flex flex-col gap-6">
           {/* Building Rules & Config */}
-          <div className="card">
-            <h3 className="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
-              <Settings className="w-5 h-5 text-emerald-500" />
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
               Building Rules & Config
             </h3>
             <p className="text-sm text-slate-500 mb-4">
@@ -303,7 +303,7 @@ export default function ManagerPricing() {
                     onClick={() => setLocalFoodIncluded(prev => !prev)}
                     className="relative inline-flex items-center focus:outline-none"
                   >
-                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localFoodIncluded ? 'bg-emerald-600' : 'bg-slate-200'}`}>
+                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localFoodIncluded ? 'bg-primary' : 'bg-slate-200'}`}>
                       <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localFoodIncluded ? 'translate-x-5' : 'translate-x-0'}`}></div>
                     </div>
                   </button>
@@ -328,7 +328,7 @@ export default function ManagerPricing() {
                     onClick={() => setLocalMealCancellations(prev => !prev)}
                     className="relative inline-flex items-center focus:outline-none"
                   >
-                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localMealCancellations ? 'bg-emerald-600' : 'bg-slate-200'}`}>
+                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localMealCancellations ? 'bg-primary' : 'bg-slate-200'}`}>
                       <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localMealCancellations ? 'translate-x-5' : 'translate-x-0'}`}></div>
                     </div>
                   </button>
@@ -360,8 +360,8 @@ export default function ManagerPricing() {
             </div>
 
             {/* Cut-off Settings */}
-            <div className="border-t border-slate-100 pt-5 mt-5">
-              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <div className="border-t border-slate-150 pt-5 mt-5">
+              <h4 className="font-heading text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
                 <span>🕒</span> Meal Cut-off Settings
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-700">
@@ -419,7 +419,7 @@ export default function ManagerPricing() {
             </div>
 
             {/* Save Config Rules Action Row */}
-            <div className="flex justify-end mt-4 pt-3 border-t border-slate-100">
+            <div className="flex justify-end mt-5 pt-4 border-t border-slate-150">
               <button
                 type="button"
                 className="btn btn-primary flex items-center gap-2 text-xs py-1.5 px-4 font-semibold"
@@ -442,9 +442,9 @@ export default function ManagerPricing() {
           </div>
 
           {/* Food & Addon Pricing */}
-          <div className="card">
-            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <ChefHat className="w-5 h-5 text-orange-500" />
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-primary" />
               Food & Addon Pricing
             </h3>
             <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
@@ -465,13 +465,13 @@ export default function ManagerPricing() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-slate-400 mt-3">Click any price to edit it. Changes are saved immediately.</p>
+            <p className="text-xs text-slate-400 mt-3 font-medium">Click any price to edit it. Changes are saved immediately.</p>
           </div>
 
           {/* Automatic Billing Settings */}
-          <div className="card">
-            <h3 className="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-indigo-500" />
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-2 flex items-center gap-2">
+              <Clock className="w-5 h-5 text-primary" />
               Automatic Billing Scheduler
             </h3>
             <p className="text-sm text-slate-500 mb-4">
@@ -487,7 +487,7 @@ export default function ManagerPricing() {
               </div>
               <div className="flex items-center gap-2">
                 {savingScheduler ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
                 ) : (
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -497,7 +497,7 @@ export default function ManagerPricing() {
                       checked={schedulerEnabled}
                       onChange={handleToggleScheduler}
                     />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                   </label>
                 )}
                 <span className="text-xs font-semibold text-slate-600 w-16 text-right">
@@ -508,9 +508,9 @@ export default function ManagerPricing() {
           </div>
 
           {/* Room Rents by Sharing Type */}
-          <div className="card">
-            <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Bed className="w-5 h-5 text-blue-500" />
+          <div className="card" style={{ padding: '1.25rem' }}>
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Bed className="w-5 h-5 text-primary" />
               Room Rents by Sharing Type (Global for Building)
             </h3>
             <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
@@ -549,7 +549,7 @@ export default function ManagerPricing() {
                 );
               })}
             </div>
-            <p className="text-xs text-slate-400 mt-3">Click any price to edit. Changes apply building-wide immediately.</p>
+            <p className="text-xs text-slate-400 mt-3 font-medium">Click any price to edit. Changes apply building-wide immediately.</p>
           </div>
         </div>
       )}

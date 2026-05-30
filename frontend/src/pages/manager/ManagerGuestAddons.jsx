@@ -51,9 +51,9 @@ function DailyRosterCell({ log, day }) {
   return (
     <div className="flex flex-col items-center justify-center gap-0.5 relative group py-1">
       <div className="flex items-center justify-center gap-1">
-        <span className={bOpt ? "text-amber-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Breakfast">●</span>
-        <span className={lOpt ? "text-emerald-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Lunch">●</span>
-        <span className={dOpt ? "text-blue-500 font-black text-sm leading-none" : "text-slate-200 leading-none"} title="Dinner">●</span>
+        <span className={bOpt ? "text-amber-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Breakfast">●</span>
+        <span className={lOpt ? "text-emerald-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Lunch">●</span>
+        <span className={dOpt ? "text-blue-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Dinner">●</span>
       </div>
       {hasAddons && (
         <span className="absolute bottom-0 text-[7px] font-bold text-indigo-500 leading-none scale-75">*</span>
@@ -254,13 +254,13 @@ export default function ManagerGuestAddons() {
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.label} className="bg-white rounded-xl border border-slate-200/80 p-3 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200">
+              <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200">
                 <div className={`p-2 rounded-lg ${s.bg}`}>
                   <Icon className={`w-4 h-4 ${s.color}`} />
                 </div>
                 <div>
                   <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{s.label}</div>
-                  <div className="text-base font-black text-slate-800 mt-0.5">{s.val}</div>
+                  <div className="text-base font-extrabold text-slate-900 mt-0.5">{s.val}</div>
                 </div>
               </div>
             );
@@ -324,7 +324,7 @@ export default function ManagerGuestAddons() {
                               {g.fullName?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-bold text-slate-800 text-xs leading-none">{g.fullName}</div>
+                              <div className="font-semibold text-slate-900 text-xs leading-none">{g.fullName}</div>
                               <div className="text-[10px] text-slate-400 font-semibold mt-1">Bed: {g.bedLabel ?? '—'}</div>
                             </div>
                           </div>
@@ -333,7 +333,7 @@ export default function ManagerGuestAddons() {
                           <select
                             value={log.isVeg ? 'veg' : 'non-veg'}
                             onChange={e => updateField(g.id, 'isVeg', e.target.value === 'veg')}
-                            className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-xxs font-bold uppercase tracking-wider text-slate-700 focus:outline-none"
+                            className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-xxs font-bold uppercase tracking-wider text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
                           >
                             <option value="veg">Veg</option>
                             <option value="non-veg">Non-Veg</option>
@@ -378,7 +378,7 @@ export default function ManagerGuestAddons() {
                             >
                               −
                             </button>
-                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.omeletteCount}</span>
+                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.omeletteCount}</span>
                             <button
                               type="button"
                               onClick={() => updateField(g.id, 'omeletteCount', log.omeletteCount + 1)}
@@ -397,7 +397,7 @@ export default function ManagerGuestAddons() {
                             >
                               −
                             </button>
-                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.boiledEggCount}</span>
+                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.boiledEggCount}</span>
                             <button
                               type="button"
                               onClick={() => updateField(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
@@ -416,7 +416,7 @@ export default function ManagerGuestAddons() {
                             >
                               −
                             </button>
-                            <span className="w-5 text-center font-bold text-xs text-slate-800">{log.washingMachineCount}</span>
+                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.washingMachineCount}</span>
                             <button
                               type="button"
                               onClick={() => updateField(g.id, 'washingMachineCount', log.washingMachineCount + 1)}
@@ -515,13 +515,13 @@ export default function ManagerGuestAddons() {
             <div className="table-wrap">
               <table className="min-w-full table-compact">
                 <thead>
-                  <tr className="bg-slate-50">
-                    <th className="py-2.5 px-3 text-left font-bold text-slate-600">Guest Name</th>
-                    <th className="text-center py-2.5 font-bold text-slate-600">Bed</th>
-                    <th className="text-center font-bold text-indigo-600 bg-indigo-50/30 py-2.5" title="Breakfast count">Breakfast (B)</th>
-                    <th className="text-center font-bold text-emerald-600 bg-emerald-50/30 py-2.5" title="Lunch count">Lunch (L)</th>
-                    <th className="text-center font-bold text-blue-600 bg-blue-50/30 py-2.5" title="Dinner count">Dinner (D)</th>
-                    <th className="text-center py-2.5 font-bold text-slate-600">Action</th>
+                  <tr className="bg-slate-50/50">
+                    <th className="py-2.5 px-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">Guest Name</th>
+                    <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs">Bed</th>
+                    <th className="text-center font-semibold text-indigo-600 bg-indigo-50/30 py-2.5 text-xs" title="Breakfast count">Breakfast (B)</th>
+                    <th className="text-center font-semibold text-emerald-600 bg-emerald-50/30 py-2.5 text-xs" title="Lunch count">Lunch (L)</th>
+                    <th className="text-center font-semibold text-blue-600 bg-blue-50/30 py-2.5 text-xs" title="Dinner count">Dinner (D)</th>
+                    <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -538,21 +538,21 @@ export default function ManagerGuestAddons() {
                     return (
                       <React.Fragment key={row.guestId}>
                         <tr 
-                          className={`hover:bg-slate-50 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                          className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
                           onClick={() => setExpandedGuestId(isExpanded ? null : row.guestId)}
                         >
-                          <td className="py-3 px-3 font-extrabold text-slate-800 text-xs">
+                          <td className="py-3 px-3 font-semibold text-slate-900 text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-black text-xxs">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xxs">
                                 {row.guestName?.charAt(0).toUpperCase()}
                               </div>
                               <span>{row.guestName}</span>
                             </div>
                           </td>
-                          <td className="text-slate-500 font-bold text-center text-xs">{row.bedLabel}</td>
-                          <td className="text-center font-black text-indigo-600 bg-indigo-50/5 text-xs">{bCount}</td>
-                          <td className="text-center font-black text-emerald-600 bg-emerald-50/5 text-xs">{lCount}</td>
-                          <td className="text-center font-black text-blue-600 bg-blue-50/5 text-xs">{dCount}</td>
+                          <td className="text-slate-600 font-semibold text-center text-xs">{row.bedLabel || '—'}</td>
+                          <td className="text-center font-bold text-indigo-600 bg-indigo-50/5 text-xs">{bCount}</td>
+                          <td className="text-center font-bold text-emerald-600 bg-emerald-50/5 text-xs">{lCount}</td>
+                          <td className="text-center font-bold text-blue-600 bg-blue-50/5 text-xs">{dCount}</td>
                           <td className="text-center py-2.5">
                             <button
                               type="button"
@@ -569,9 +569,9 @@ export default function ManagerGuestAddons() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={6} className="bg-slate-50/60 p-4 border-b border-slate-200">
-                              <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-sm">
+                              <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-slate-100 pb-2">
-                                  <h4 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                  <h4 className="text-xs font-semibold text-slate-900 flex items-center gap-1.5 font-heading">
                                     <Calendar className="w-3.5 h-3.5 text-primary" />
                                     <span>Daily Opt-in Breakdown for {row.guestName}</span>
                                   </h4>
@@ -589,7 +589,7 @@ export default function ManagerGuestAddons() {
                                       return (
                                         <div 
                                           key={dayNum} 
-                                          className="flex flex-col items-center border border-slate-100 rounded-lg p-2 bg-slate-50/50 min-w-[50px] shadow-sm hover:border-indigo-200/60 transition-colors"
+                                          className="flex flex-col items-center border border-slate-100 rounded-lg p-2 bg-slate-50/50 min-w-[50px] shadow-sm hover:border-indigo-200 transition-colors"
                                         >
                                           <span className="text-[9px] font-bold text-slate-400 mb-1">{dayNum}</span>
                                           <div className="h-6 flex items-center justify-center">
@@ -616,3 +616,4 @@ export default function ManagerGuestAddons() {
     </AppLayout>
   );
 }
+

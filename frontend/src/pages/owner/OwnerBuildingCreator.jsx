@@ -40,7 +40,7 @@ function Step1({ data, onChange }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Building Details</h2>
+        <h2 className="font-heading text-lg font-semibold text-slate-900 mb-1">Building Details</h2>
         <p className="text-sm text-slate-500">Give your new building a name and address.</p>
       </div>
       <div className="form-group">
@@ -83,7 +83,7 @@ function Step2({ floors, onChange }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Define Floors</h2>
+        <h2 className="font-heading text-lg font-semibold text-slate-900 mb-1">Define Floors</h2>
         <p className="text-sm text-slate-500">Add all floors in your building. You can rename each floor label.</p>
       </div>
       <div className="flex flex-col gap-3">
@@ -269,7 +269,7 @@ function Step3({ floors, onChange }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Configure Rooms</h2>
+        <h2 className="font-heading text-lg font-semibold text-slate-900 mb-1">Configure Rooms</h2>
         <p className="text-sm text-slate-500">For each floor, add blocks with rooms or standalone rooms directly on the floor.</p>
       </div>
 
@@ -420,7 +420,7 @@ function Step4Pricing({ data, onChange, isEditMode = false }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Pricing &amp; Rules Config</h2>
+        <h2 className="font-heading text-lg font-semibold text-slate-900 mb-1">Pricing &amp; Rules Config</h2>
         <p className="text-sm text-slate-500">Configure default prices for meals/add-ons and key business rules for this building.</p>
       </div>
 
@@ -516,7 +516,7 @@ function Step4({ building, floors }) {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Review &amp; Create</h2>
+        <h2 className="font-heading text-lg font-semibold text-slate-900 mb-1">Review &amp; Create</h2>
         <p className="text-sm text-slate-500">Confirm the configuration before creating the building.</p>
       </div>
 
@@ -1196,7 +1196,7 @@ export default function OwnerBuildingCreator() {
                         <Building2 className="w-4 h-4" />
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-800 text-sm">{b.name}</h3>
+                        <h3 className="font-heading font-semibold text-slate-900 text-sm">{b.name}</h3>
                         <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
                           <MapPin className="w-3.5 h-3.5" />
                           {b.address || 'No address added'}
@@ -1371,7 +1371,7 @@ export default function OwnerBuildingCreator() {
             {step === 6 && result && (
               <div className="text-center py-6">
                 <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
-                <h2 className="text-xl font-bold text-slate-800 mb-1">Building Created!</h2>
+                <h2 className="font-heading text-xl font-semibold text-slate-900 mb-1">Building Created!</h2>
                 <p className="text-slate-500 text-sm mb-6">"{result.buildingName}" is now ready to use</p>
                 <div className="grid grid-cols-4 gap-3 mb-6">
                   {[
@@ -1469,7 +1469,7 @@ export default function OwnerBuildingCreator() {
               {/* Left pane: Details and Floor Management */}
               <div className="col-span-1 flex flex-col gap-5">
                 <div className="card">
-                  <h3 className="font-bold text-slate-800 text-sm mb-3">Building Details</h3>
+                  <h3 className="font-heading text-sm font-semibold text-slate-900 mb-3">Building Details</h3>
                   <div className="form-group">
                     <label className="form-label">Building Name</label>
                     <input
@@ -1494,7 +1494,7 @@ export default function OwnerBuildingCreator() {
 
                 <div className="card">
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-bold text-slate-800 text-sm">Floors List</h3>
+                    <h3 className="font-heading text-sm font-semibold text-slate-900">Floors List</h3>
                     <button
                       className="btn btn-ghost py-1 px-2.5 text-xs flex items-center gap-1 shadow-none bg-transparent hover:bg-slate-100 font-semibold"
                       onClick={addEditFloor}

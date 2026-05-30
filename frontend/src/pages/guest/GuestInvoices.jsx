@@ -104,37 +104,37 @@ export default function GuestInvoices() {
       </div>
 
       {invoices.length === 0 ? (
-        <div className="card shadow-sm border border-slate-200 bg-white rounded-2xl p-10 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
+        <div className="card shadow-sm border border-slate-200 bg-white rounded-xl p-10 text-center text-slate-500 text-sm flex flex-col items-center justify-center">
           <FileText className="w-10 h-10 text-slate-300 mb-3" />
-          <h4 className="text-sm font-bold text-slate-800 mb-1">No Data Available</h4>
+          <h4 className="font-heading text-base font-semibold text-slate-900 mb-1">No Data Available</h4>
           <p className="text-xs text-slate-500 max-w-xs mx-auto">No invoices have been billed to your account yet.</p>
         </div>
       ) : (
-        <div className="card shadow-sm border border-slate-200 bg-white rounded-2xl overflow-hidden p-0">
+        <div className="card shadow-sm border border-slate-200 bg-white rounded-xl overflow-hidden p-0">
           <div className="table-wrap">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Period</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Rent</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">EB</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Food</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Laundry</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Total</th>
-                  <th className="py-3 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Action</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Period</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Rent</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">EB</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Food</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Laundry</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Total</th>
+                  <th className="py-3 px-4 text-xs font-medium uppercase tracking-wider text-slate-500">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {invoices.map((inv) => (
                   <tr key={inv.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-800 text-sm">
+                      <div className="font-semibold text-slate-900 text-sm">
                         {MONTHS[inv.month-1]} {inv.year}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`badge ${STATUS_COLORS[inv.status] || 'badge-info'}`}>{inv.status}</span>
                         {inv.dueDate && inv.status !== 'PAID' && (
-                          <span className="text-[10px] text-slate-400 font-medium">Due: {inv.dueDate}</span>
+                          <span className="text-xs font-medium text-slate-500">Due: {inv.dueDate}</span>
                         )}
                       </div>
                     </td>
@@ -174,13 +174,13 @@ export default function GuestInvoices() {
                             )}
                           </button>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2.5 py-0.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 border border-green-200 rounded-full px-2.5 py-0.5">
                             <Check className="w-3.5 h-3.5" />
                             <span>Paid</span>
                           </span>
                         )}
                         <button 
-                          className="btn btn-secondary py-1 px-3 text-xs flex items-center gap-1"
+                          className="btn btn-ghost py-1 px-3 text-xs flex items-center gap-1"
                           onClick={async () => {
                             try {
                               const res = await guestApi.downloadInvoicePdf(inv.id);

@@ -28,27 +28,44 @@ export default function ManagerMaintenance() {
           <p className="page-subtitle">{tickets.filter(t=>t.status!=='RESOLVED').length} open tickets</p>
         </div>
       </div>
-      <div className="card">
+      <div className="card" style={{ padding: '1.25rem' }}>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Location</th><th>Description</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead>
+            <thead>
+              <tr>
+                <th>Location</th>
+                <th>Description</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th className="text-right">Action</th>
+              </tr>
+            </thead>
             <tbody>
               {tickets.map(t => (
                 <tr key={t.id}>
-                  <td style={{fontWeight:600}}>{t.location}</td>
-                  <td style={{color:'var(--text-secondary)', maxWidth:240}}>{t.description}</td>
+                  <td className="font-semibold text-slate-900">{t.location}</td>
+                  <td className="text-slate-600 font-normal max-w-[240px] truncate" title={t.description}>{t.description}</td>
                   <td><span className={`badge ${priorityColors[t.priority]}`}>{t.priority}</span></td>
                   <td><span className={`badge ${statusColors[t.status]}`}>{t.status}</span></td>
                   <td>
-                    {t.status!=='RESOLVED' && (
-                      <button className="btn btn-success flex items-center gap-1" style={{fontSize:'0.8rem',padding:'0.3rem 0.7rem'}} onClick={()=>resolve(t.id)}>
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Resolve</span>
-                      </button>
-                    )}
+                    <div className="flex justify-end">
+                      {t.status!=='RESOLVED' && (
+                        <button className="btn btn-success flex items-center gap-1 py-1 px-2.5 text-xxs font-semibold" onClick={()=>resolve(t.id)}>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Resolve</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
+              {tickets.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="text-center text-slate-400 py-8 font-medium">
+                    No tickets found.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

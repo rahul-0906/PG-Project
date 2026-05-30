@@ -20,15 +20,15 @@ import { useQuery } from '@tanstack/react-query';
 
 function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200/80 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
+    <div className="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
       {Icon && (
         <div className={`p-2 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
           <Icon className="w-4 h-4" />
         </div>
       )}
       <div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</div>
-        <div className="text-xl font-black text-slate-900 tracking-tight mt-0.5">{value}</div>
+        <div className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</div>
+        <div className="text-xl font-bold text-slate-900 tracking-tight mt-0.5">{value}</div>
       </div>
     </div>
   );
@@ -96,7 +96,7 @@ export default function ManagerDashboard() {
 
       <div className="grid-2">
         <div className="card">
-          <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <ChartIcon className="w-5 h-5 text-slate-400" />
             <span>Bed Occupancy</span>
           </h3>
@@ -122,7 +122,7 @@ export default function ManagerDashboard() {
         </div>
 
         <div className="card">
-          <h3 className="text-slate-800 font-bold mb-4 flex items-center gap-2">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <Zap className="w-5 h-5 text-slate-400" />
             <span>Quick Actions</span>
           </h3>
@@ -133,7 +133,7 @@ export default function ManagerDashboard() {
           ].map(a => {
             const Icon = a.icon;
             return (
-              <a key={a.href} href={a.href} className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
+              <a key={a.href} href={a.href} className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
                 <Icon className={`w-4 h-4 ${a.color}`} />
                 <span>{a.label}</span>
                 <ArrowRight className="w-4 h-4 ml-auto text-slate-300" />
