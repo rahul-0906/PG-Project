@@ -19,35 +19,35 @@ public class SystemConfigProperties {
 
     @Data
     public static class Branding {
-        private String name;
-        private String shortTitle;
+        private String name = "PG CRM";
+        private String shortTitle = "PG";
     }
 
     @Data
     public static class Rules {
-        private boolean foodIncludedInRent;
-        private boolean allowMealCancellations;
-        private String ebSplitMethod;
-        private boolean hasWashingMachine;
-        private int paymentDueDayOfMonth;
-        private int noticePeriodDays;
-        private String invoiceWhatsappTemplate;
-        private String defaultWhatsAppTemplate;
-        private String defaultEmailTemplate;
-        private boolean breakfastEnabled;
-        private boolean lunchEnabled;
-        private boolean dinnerEnabled;
-        private java.time.LocalTime breakfastLockoutTime;
-        private java.time.LocalTime dinnerLockoutTime;
+        private boolean foodIncludedInRent = false;
+        private boolean allowMealCancellations = true;
+        private String ebSplitMethod = "EQUAL_SPLIT";
+        private boolean hasWashingMachine = true;
+        private int paymentDueDayOfMonth = 5;
+        private int noticePeriodDays = 30;
+        private String invoiceWhatsappTemplate = "Hi {guestName}, your invoice for {month} is ready. Rent: {rent}, EB: {eb}, Food: {food}, Laundry: {wm}. Total: {total}. Due by {dueDate}.";
+        private String defaultWhatsAppTemplate = "Hi {guestName}, this is a notification from PG CRM.";
+        private String defaultEmailTemplate = "Hi {guestName},\n\nThis is a notification from PG CRM.";
+        private boolean breakfastEnabled = true;
+        private boolean lunchEnabled = true;
+        private boolean dinnerEnabled = true;
+        private java.time.LocalTime breakfastLockoutTime = java.time.LocalTime.of(22, 0);
+        private java.time.LocalTime dinnerLockoutTime = java.time.LocalTime.of(17, 0);
     }
 
     @Data
     public static class Pricing {
-        private BigDecimal breakfast;
-        private BigDecimal lunch;
-        private BigDecimal dinner;
-        private BigDecimal washingMachine;
-        private BigDecimal omelette;
-        private BigDecimal boiledEgg;
+        private BigDecimal breakfast = new BigDecimal("60.00");
+        private BigDecimal lunch = new BigDecimal("65.00");
+        private BigDecimal dinner = new BigDecimal("60.00");
+        private BigDecimal washingMachine = new BigDecimal("50.00");
+        private BigDecimal omelette = new BigDecimal("18.00");
+        private BigDecimal boiledEgg = new BigDecimal("18.00");
     }
 }

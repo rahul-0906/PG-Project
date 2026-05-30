@@ -46,24 +46,24 @@ This package manages initialization parameters, JSON mapping overrides, and thir
 
 ### 1.1b DTO Package (`com.pgcrm.dto`)
 
-Exposes decoupled Request and Response DTO structures to prevent raw database entities from leaking into HTTP viewports.
+Exposes decoupled Request and Response DTO structures to prevent raw database entities from leaking into HTTP viewports, maintaining a strict boundary between relational schema layouts and public payload presentations.
 
-* `AuthRequest.java`: Binds credentials (email, password) during login operations.
-* `AuthResponse.java`: Yields access tokens, refresh tokens, role lists, full names, and initial login flags.
-* `GuestCheckInRequest.java`: Transports guest details, room assignments, advance deposits, and check-in preferences.
-* `GuestResponse.java`: Formats guest files, including layouts (room codes, bed labels) and check-in histories.
-* `InvoiceResponse.java`: Summarizes invoice values, payment methods, Razorpay credentials, and nested line items.
-* `SystemConfigResponse.java`: Groups system whitelabel config, including branding rules and baseline pricing.
-* `UserResponse.java`: Standardizes user profiles for managers and owners.
+* **`AuthRequest.java`**: Binds credentials (`email`, `password`) during login operations. It is validated at the controller boundary to prevent empty payloads from triggering processing chains.
+* **`AuthResponse.java`**: Yields session authentication results including the stateless `accessToken`, `refreshToken`, the user's role list, their `fullName`, `email`, and a flag indicating whether the user must change their password (`mustChangePassword`).
+* **`GuestCheckInRequest.java`**: Transports onboarding guest details such as name, email, phone, check-in date, security deposits, room identification coordinates, and initial meal preferences during checking-in workflows.
+* **`GuestResponse.java`**: Formats guest data for administration views, including check-in status, room number, bed label, active preferences, KYC validation state, check-out dates, and payment history logs.
+* **`InvoiceResponse.java`**: Summarizes invoice calculations, payment details, current payment status, due dates, the underlying building name, and nested arrays of `InvoiceLineItem` detail lists.
+* **`SystemConfigResponse.java`**: Groups system whitelabel configuration parameters, detailing name and short title branding keys alongside standard fallback rule arrays (e.g. food options, EB splits).
+* **`UserResponse.java`**: Standardizes user profile representations for managers and property owners.
 
 ### 1.1c Exception Package (`com.pgcrm.exception`)
 
-Handles custom business-level errors to manage operational exceptions.
+Handles custom business-level errors to manage operational exceptions and map them to explicit REST endpoints responses.
 
-* `ResourceNotFoundException.java`: Thrown when looking up a missing record (User, Guest, Invoice). Maps to HTTP status 404 (NOT_FOUND).
-* `BedUnavailableException.java`: Thrown when a bed assignment is requested for an occupied or notice bed. Maps to HTTP status 400 (BAD_REQUEST).
-* `InvalidLockoutException.java`: Thrown when a guest attempts to update breakfast, lunch, or dinner after their respective lockout times. Maps to HTTP status 400 (BAD_REQUEST).
-* `SignatureVerificationException.java`: Thrown when a payment gateway verification signature fails SHA-256 HMAC validation. Maps to HTTP status 400 (BAD_REQUEST).
+* **`ResourceNotFoundException.java`**: Thrown when a targeted record (e.g. User, Guest, Invoice, Bed) is missing from database tables. It maps directly to HTTP status **404 (NOT_FOUND)**.
+* **`BedUnavailableException.java`**: Thrown when an administrative check-in requests a bed that is already occupied or marked under notice. It maps directly to HTTP status **400 (BAD_REQUEST)**.
+* **`InvalidLockoutException.java`**: Thrown when a guest attempts to change meal preferences for a calendar slot after the respective lockout cut-off time has passed. It maps directly to HTTP status **400 (BAD_REQUEST)**.
+* **`SignatureVerificationException.java`**: Thrown when the Razorpay payment gateway verification webhook signature fails hash checks. It maps directly to HTTP status **400 (BAD_REQUEST)**.
 
 ---
 
@@ -185,7 +185,14 @@ Defines the relational mappings using JPA annotations, detailing table structure
 #### `Building.java`
 * **Purpose**: Root inventory node representing properties.
 * **Fields**: `id`, `name`, `address`, `createdAt`.
-* **Relationships**: `@OneToMany` with `Floor` (cascade = CascadeType.ALL, orphanRemoval = true).
+* **Relationships**: 
+  * `@OneToMany` with `Floor` (cascade = CascadeType.ALL, orphanRemoval = true).
+  * `@OneToOne` with `BuildingConfig` (mappedBy = "building", cascade = CascadeType.ALL).
+
+#### `BuildingConfig.java`
+* **Purpose**: Stores building-specific rules, prices, lockout timings, and configuration toggles.
+* **Fields**: `buildingId` (maps 1:1 using MapsId), `foodIncludedInRent` (boolean), `allowMealCancellations` (boolean), `breakfastPrice`, `lunchPrice`, `dinnerPrice`, `omelettePrice`, `boiledEggPrice`, `washingMachinePrice`, `ebSplitMethod` (`EbSplitMethod` Enum), `breakfastCutoffTime` (`LocalTime`), `dinnerCutoffTime` (`LocalTime`), `isPreviousDay` (boolean).
+* **Relationships**: `@OneToOne` association mapped to the corresponding `Building` entity.
 
 #### `Floor.java`
 * **Purpose**: Property floors.
@@ -453,6 +460,9 @@ The client interface is built as a single-page React application powered by Vite
 #### `guest/GuestInvoices.jsx`
 * **Purpose**: Lists invoices and provides a Razorpay payment modal integration.
 
+#### `guest/GuestMaintenance.jsx`
+* **Purpose**: Resident issue ticketing interface. Allows guests to create, prioritize, and track issue resolution tickets.
+
 #### `manager/ManagerDashboard.jsx`
 * **Purpose**: Operational dashboard displaying occupancy graphs, pending tasks, and collections data.
 
@@ -475,7 +485,7 @@ The client interface is built as a single-page React application powered by Vite
 * **Purpose**: Pricing override portal. Allows editing rents by sharing type building-wide.
 
 #### `owner/OwnerBuildingCreator.jsx`
-* **Purpose**: Step-by-step wizard for configuring properties. Prompts for floor, block, and room configuration details.
+* **Purpose**: Step-by-step wizard for configuring properties and editing existing layouts. Prompts for floor, block, and room configuration details during creation, and displays read-only building rules/pricing metrics in edit mode.
 
 #### `owner/OwnerDashboard.jsx`
 * **Purpose**: Manager registration page. Allows assigning managers to multiple buildings via checkbox toggles.

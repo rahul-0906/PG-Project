@@ -36,17 +36,35 @@ public class BuildingSetupService {
 
     @Getter @Setter @NoArgsConstructor
     public static class BuildingSetupRequest {
+        @com.fasterxml.jackson.annotation.JsonProperty("name")
         private String name;
+        @com.fasterxml.jackson.annotation.JsonProperty("address")
         private String address;
-        private boolean foodIncludedInRent;
-        private boolean allowMealCancellations;
+        @com.fasterxml.jackson.annotation.JsonProperty("foodIncludedInRent")
+        private Boolean foodIncludedInRent;
+        @com.fasterxml.jackson.annotation.JsonProperty("allowMealCancellations")
+        private Boolean allowMealCancellations;
+        @com.fasterxml.jackson.annotation.JsonProperty("breakfastPrice")
         private java.math.BigDecimal breakfastPrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("lunchPrice")
         private java.math.BigDecimal lunchPrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("dinnerPrice")
         private java.math.BigDecimal dinnerPrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("omelettePrice")
         private java.math.BigDecimal omelettePrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("boiledEggPrice")
         private java.math.BigDecimal boiledEggPrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("washingMachinePrice")
         private java.math.BigDecimal washingMachinePrice;
+        @com.fasterxml.jackson.annotation.JsonProperty("ebSplitMethod")
         private String ebSplitMethod;
+        @com.fasterxml.jackson.annotation.JsonProperty("breakfastCutoffTime")
+        private java.time.LocalTime breakfastCutoffTime;
+        @com.fasterxml.jackson.annotation.JsonProperty("dinnerCutoffTime")
+        private java.time.LocalTime dinnerCutoffTime;
+        @com.fasterxml.jackson.annotation.JsonProperty("isPreviousDay")
+        private Boolean isPreviousDay;
+        @com.fasterxml.jackson.annotation.JsonProperty("floors")
         private List<FloorSetup> floors = new ArrayList<>();
     }
 
@@ -117,8 +135,8 @@ public class BuildingSetupService {
 
         BuildingConfig config = BuildingConfig.builder()
                 .building(building)
-                .foodIncludedInRent(req.isFoodIncludedInRent())
-                .allowMealCancellations(req.isAllowMealCancellations())
+                .foodIncludedInRent(req.getFoodIncludedInRent() != null ? req.getFoodIncludedInRent() : false)
+                .allowMealCancellations(req.getAllowMealCancellations() != null ? req.getAllowMealCancellations() : true)
                 .breakfastPrice(req.getBreakfastPrice() != null ? req.getBreakfastPrice() : systemConfig.getPricing().getBreakfast())
                 .lunchPrice(req.getLunchPrice() != null ? req.getLunchPrice() : systemConfig.getPricing().getLunch())
                 .dinnerPrice(req.getDinnerPrice() != null ? req.getDinnerPrice() : systemConfig.getPricing().getDinner())
@@ -126,6 +144,9 @@ public class BuildingSetupService {
                 .boiledEggPrice(req.getBoiledEggPrice() != null ? req.getBoiledEggPrice() : systemConfig.getPricing().getBoiledEgg())
                 .washingMachinePrice(req.getWashingMachinePrice() != null ? req.getWashingMachinePrice() : systemConfig.getPricing().getWashingMachine())
                 .ebSplitMethod(splitMethod)
+                .breakfastCutoffTime(req.getBreakfastCutoffTime() != null ? req.getBreakfastCutoffTime() : java.time.LocalTime.of(22, 0))
+                .dinnerCutoffTime(req.getDinnerCutoffTime() != null ? req.getDinnerCutoffTime() : java.time.LocalTime.of(14, 0))
+                .isPreviousDay(req.getIsPreviousDay() != null ? req.getIsPreviousDay() : true)
                 .build();
         buildingConfigRepository.save(config);
 
@@ -255,6 +276,18 @@ public class BuildingSetupService {
     public static class BuildingEditRequest {
         private String name;
         private String address;
+        private Boolean foodIncludedInRent;
+        private Boolean allowMealCancellations;
+        private java.math.BigDecimal breakfastPrice;
+        private java.math.BigDecimal lunchPrice;
+        private java.math.BigDecimal dinnerPrice;
+        private java.math.BigDecimal omelettePrice;
+        private java.math.BigDecimal boiledEggPrice;
+        private java.math.BigDecimal washingMachinePrice;
+        private String ebSplitMethod;
+        private java.time.LocalTime breakfastCutoffTime;
+        private java.time.LocalTime dinnerCutoffTime;
+        private Boolean isPreviousDay;
         private List<FloorEdit> floors = new ArrayList<>();
     }
 
@@ -292,6 +325,23 @@ public class BuildingSetupService {
         BuildingEditRequest req = new BuildingEditRequest();
         req.setName(b.getName());
         req.setAddress(b.getAddress());
+
+        // Fetch and map BuildingConfig details
+        BuildingConfig config = buildingConfigRepository.findById(buildingId).orElse(null);
+        if (config != null) {
+            req.setFoodIncludedInRent(config.isFoodIncludedInRent());
+            req.setAllowMealCancellations(config.isAllowMealCancellations());
+            req.setBreakfastPrice(config.getBreakfastPrice());
+            req.setLunchPrice(config.getLunchPrice());
+            req.setDinnerPrice(config.getDinnerPrice());
+            req.setOmelettePrice(config.getOmelettePrice());
+            req.setBoiledEggPrice(config.getBoiledEggPrice());
+            req.setWashingMachinePrice(config.getWashingMachinePrice());
+            req.setEbSplitMethod(config.getEbSplitMethod() != null ? config.getEbSplitMethod().name() : null);
+            req.setBreakfastCutoffTime(config.getBreakfastCutoffTime());
+            req.setDinnerCutoffTime(config.getDinnerCutoffTime());
+            req.setIsPreviousDay(config.isPreviousDay());
+        }
 
         List<Floor> floors = floorRepository.findByBuildingId(buildingId);
         floors.sort(java.util.Comparator.comparingInt(Floor::getFloorNumber));
@@ -363,6 +413,29 @@ public class BuildingSetupService {
         building.setName(req.getName().trim());
         building.setAddress(req.getAddress() != null ? req.getAddress().trim() : "");
         buildingRepository.save(building);
+
+        // Update BuildingConfig
+        BuildingConfig config = buildingConfigRepository.findById(buildingId)
+                .orElseGet(() -> BuildingConfig.builder().building(building).build());
+
+        if (req.getFoodIncludedInRent() != null) config.setFoodIncludedInRent(req.getFoodIncludedInRent());
+        if (req.getAllowMealCancellations() != null) config.setAllowMealCancellations(req.getAllowMealCancellations());
+        if (req.getBreakfastPrice() != null) config.setBreakfastPrice(req.getBreakfastPrice());
+        if (req.getLunchPrice() != null) config.setLunchPrice(req.getLunchPrice());
+        if (req.getDinnerPrice() != null) config.setDinnerPrice(req.getDinnerPrice());
+        if (req.getOmelettePrice() != null) config.setOmelettePrice(req.getOmelettePrice());
+        if (req.getBoiledEggPrice() != null) config.setBoiledEggPrice(req.getBoiledEggPrice());
+        if (req.getWashingMachinePrice() != null) config.setWashingMachinePrice(req.getWashingMachinePrice());
+        if (req.getBreakfastCutoffTime() != null) config.setBreakfastCutoffTime(req.getBreakfastCutoffTime());
+        if (req.getDinnerCutoffTime() != null) config.setDinnerCutoffTime(req.getDinnerCutoffTime());
+        if (req.getIsPreviousDay() != null) config.setPreviousDay(req.getIsPreviousDay());
+
+        if (req.getEbSplitMethod() != null) {
+            try {
+                config.setEbSplitMethod(com.pgcrm.entity.enums.EbSplitMethod.valueOf(req.getEbSplitMethod()));
+            } catch (Exception ignored) {}
+        }
+        buildingConfigRepository.save(config);
 
         List<String> activeFloorIds = new ArrayList<>();
         List<String> activeBlockIds = new ArrayList<>();

@@ -23,10 +23,10 @@ public class DailyLogService {
 
     @Transactional
     public DailyLog upsertLog(String guestId, LocalDate logDate, DailyLog incoming) {
-        validateLockouts(logDate, incoming);
-
         Guest guest = guestRepository.findById(guestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
+
+        validateLockouts(guest, logDate, incoming);
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
                 .orElse(DailyLog.builder().guest(guest).logDate(logDate).build());
@@ -44,22 +44,51 @@ public class DailyLogService {
         return dailyLogRepository.save(log);
     }
 
-    private void validateLockouts(LocalDate logDate, DailyLog incoming) {
+    private void validateLockouts(Guest guest, LocalDate logDate, DailyLog incoming) {
         LocalDateTime now = LocalDateTime.now();
 
-        // Breakfast & Lunch: locked after previous night's lockout time
-        LocalDateTime breakfastLock = logDate.minusDays(1).atTime(systemConfig.getRules().getBreakfastLockoutTime());
-        if (now.isAfter(breakfastLock)) {
-            if (incoming.isBreakfastOpted() || incoming.isLunchOpted()) {
-                // Don't throw — just silently ignore if they're setting to false (cancellation)
-                // Only reject if they're trying to OPT IN after lockout
+        java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
+        java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
+        boolean isPreviousDay = true;
+
+        if (guest.getBed() != null && guest.getBed().getRoom() != null && guest.getBed().getRoom().getFloor() != null) {
+            Building building = guest.getBed().getRoom().getFloor().getBuilding();
+            if (building != null && building.getBuildingConfig() != null) {
+                BuildingConfig cfg = building.getBuildingConfig();
+                if (cfg.getBreakfastCutoffTime() != null) {
+                    breakfastCutoffTime = cfg.getBreakfastCutoffTime();
+                }
+                if (cfg.getDinnerCutoffTime() != null) {
+                    dinnerCutoffTime = cfg.getDinnerCutoffTime();
+                }
+                isPreviousDay = cfg.isPreviousDay();
             }
         }
 
-        // Dinner: locked after same day's lockout time
-        LocalDateTime dinnerLock = logDate.atTime(systemConfig.getRules().getDinnerLockoutTime());
-        if (now.isAfter(dinnerLock) && incoming.isDinnerOpted()) {
-            throw new InvalidLockoutException("Dinner selection is locked after " + systemConfig.getRules().getDinnerLockoutTime() + " on the same day.");
+        // Fetch existing opt statuses to compare changes
+        DailyLog existing = dailyLogRepository.findByGuestIdAndLogDate(guest.getId(), logDate).orElse(null);
+        boolean existingBreakfast = existing != null ? existing.isBreakfastOpted() : guest.isBreakfastPreference();
+        boolean existingLunch = existing != null ? existing.isLunchOpted() : guest.isLunchPreference();
+        boolean existingDinner = existing != null ? existing.isDinnerOpted() : guest.isDinnerPreference();
+
+        // Breakfast & Lunch lockout check
+        LocalDate breakfastLockDate = isPreviousDay ? logDate.minusDays(1) : logDate;
+        LocalDateTime breakfastLock = breakfastLockDate.atTime(breakfastCutoffTime);
+        if (now.isAfter(breakfastLock)) {
+            if (incoming.isBreakfastOpted() != existingBreakfast) {
+                throw new InvalidLockoutException("Breakfast selection is locked after " + breakfastCutoffTime + (isPreviousDay ? " on the previous day." : " on the same day."));
+            }
+            if (incoming.isLunchOpted() != existingLunch) {
+                throw new InvalidLockoutException("Lunch selection is locked after " + breakfastCutoffTime + (isPreviousDay ? " on the previous day." : " on the same day."));
+            }
+        }
+
+        // Dinner lockout check
+        LocalDateTime dinnerLock = logDate.atTime(dinnerCutoffTime);
+        if (now.isAfter(dinnerLock)) {
+            if (incoming.isDinnerOpted() != existingDinner) {
+                throw new InvalidLockoutException("Dinner selection is locked after " + dinnerCutoffTime + " on the same day.");
+            }
         }
     }
 

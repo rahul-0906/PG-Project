@@ -18,30 +18,61 @@ import {
 } from 'lucide-react';
 
 const MEAL_CONFIG = [
-  { key: 'breakfastOpted', label: 'Breakfast', icon: Coffee, lockKey: 'breakfast', cutoffText: '10:00 PM previous day' },
-  { key: 'lunchOpted',     label: 'Lunch',     icon: Sun,    lockKey: 'lunch',     cutoffText: '10:00 PM previous day' },
-  { key: 'dinnerOpted',    label: 'Dinner',    icon: Moon,   lockKey: 'dinner',    cutoffText: '02:00 PM same day' },
+  { key: 'breakfastOpted', label: 'Breakfast', icon: Coffee, lockKey: 'breakfast' },
+  { key: 'lunchOpted',     label: 'Lunch',     icon: Sun,    lockKey: 'lunch' },
+  { key: 'dinnerOpted',    label: 'Dinner',    icon: Moon,   lockKey: 'dinner' },
 ];
-
-function isLocked(mealKey, date) {
-  const now = new Date();
-  const logDate = new Date(date);
-  if (mealKey === 'dinner') {
-    const lock = new Date(logDate); lock.setHours(14, 0, 0, 0);
-    return now > lock;
-  } else {
-    const prevNight = new Date(logDate);
-    prevNight.setDate(prevNight.getDate() - 1);
-    prevNight.setHours(22, 0, 0, 0);
-    return now > prevNight;
-  }
-}
 
 export default function DailyLog() {
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const isLocked = (mealKey, date) => {
+    if (!config) return false;
+    const now = new Date();
+    const logDate = new Date(date);
+    if (mealKey === 'dinner') {
+      const dinnerTime = config.dinnerCutoffTime || '14:00';
+      const [hours, minutes] = dinnerTime.split(':').map(Number);
+      const lock = new Date(logDate);
+      lock.setHours(hours, minutes || 0, 0, 0);
+      return now > lock;
+    } else {
+      const breakfastTime = config.breakfastCutoffTime || '22:00';
+      const [hours, minutes] = breakfastTime.split(':').map(Number);
+      const lock = new Date(logDate);
+      if (config.isPreviousDay !== false) {
+        lock.setDate(lock.getDate() - 1);
+      }
+      lock.setHours(hours, minutes || 0, 0, 0);
+      return now > lock;
+    }
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '';
+    const parts = timeStr.split(':');
+    let hours = parseInt(parts[0], 10);
+    const minutes = parts[1] || '00';
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+  };
+
+  const getCutoffText = (mealKey) => {
+    if (!config) return 'Loading...';
+    if (mealKey === 'dinner') {
+      const dinnerTime = config.dinnerCutoffTime || '14:00';
+      return `${formatTime(dinnerTime)} same day`;
+    } else {
+      const breakfastTime = config.breakfastCutoffTime || '22:00';
+      const dayText = config.isPreviousDay !== false ? 'previous day' : 'same day';
+      return `${formatTime(breakfastTime)} ${dayText}`;
+    }
+  };
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -381,7 +412,7 @@ export default function DailyLog() {
                           <div>
                             <h4 className="font-bold text-slate-800 text-xs">{meal.label}</h4>
                             <span className="text-[9px] text-slate-400 mt-0.5 block font-bold uppercase tracking-wide">
-                              Cutoff: {meal.cutoffText}
+                              Cutoff: {getCutoffText(meal.lockKey)}
                             </span>
                           </div>
                         </div>

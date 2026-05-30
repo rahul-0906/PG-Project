@@ -32,10 +32,16 @@ public class EbBillService {
         Block block = blockRepository.findById(blockId)
                 .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
 
+        Building building = (block.getFloor() != null) ? block.getFloor().getBuilding() : null;
+        String splitMethod = systemConfig.getRules().getEbSplitMethod();
+        if (building != null && building.getBuildingConfig() != null && building.getBuildingConfig().getEbSplitMethod() != null) {
+            splitMethod = building.getBuildingConfig().getEbSplitMethod().name();
+        }
+
         EbBill bill = EbBill.builder()
                 .block(block)
                 .totalAmount(totalAmount)
-                .splitMethod(systemConfig.getRules().getEbSplitMethod())
+                .splitMethod(splitMethod)
                 .billingPeriodStart(periodStart)
                 .billingPeriodEnd(periodEnd)
                 .build();
@@ -45,8 +51,6 @@ public class EbBillService {
         if (activeGuests.isEmpty()) return bill;
 
         List<EbBillGuest> shares = new ArrayList<>();
-
-        String splitMethod = systemConfig.getRules().getEbSplitMethod();
         if ("EQUAL_SPLIT".equals(splitMethod) || "PER_BED".equals(splitMethod)) {
             BigDecimal perGuest = totalAmount.divide(
                     BigDecimal.valueOf(activeGuests.size()), 2, RoundingMode.HALF_UP);

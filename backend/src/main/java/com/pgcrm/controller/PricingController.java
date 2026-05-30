@@ -93,15 +93,26 @@ public class PricingController {
         boolean foodIncludedInRent = false;
         boolean allowMealCancellations = true;
         String ebSplitMethod = "EQUAL_SPLIT";
+        java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
+        java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
+        boolean isPreviousDay = true;
 
         if (effectiveBuildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(effectiveBuildingId);
             if (configOpt.isPresent()) {
-                foodIncludedInRent = configOpt.get().isFoodIncludedInRent();
-                allowMealCancellations = configOpt.get().isAllowMealCancellations();
-                if (configOpt.get().getEbSplitMethod() != null) {
-                    ebSplitMethod = configOpt.get().getEbSplitMethod().name();
+                BuildingConfig cfg = configOpt.get();
+                foodIncludedInRent = cfg.isFoodIncludedInRent();
+                allowMealCancellations = cfg.isAllowMealCancellations();
+                if (cfg.getEbSplitMethod() != null) {
+                    ebSplitMethod = cfg.getEbSplitMethod().name();
                 }
+                if (cfg.getBreakfastCutoffTime() != null) {
+                    breakfastCutoffTime = cfg.getBreakfastCutoffTime();
+                }
+                if (cfg.getDinnerCutoffTime() != null) {
+                    dinnerCutoffTime = cfg.getDinnerCutoffTime();
+                }
+                isPreviousDay = cfg.isPreviousDay();
             } else {
                 foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
                 allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
@@ -119,7 +130,10 @@ public class PricingController {
                 "billingSchedulerEnabled", schedulerEnabled,
                 "foodIncludedInRent", foodIncludedInRent,
                 "allowMealCancellations", allowMealCancellations,
-                "ebSplitMethod", ebSplitMethod
+                "ebSplitMethod", ebSplitMethod,
+                "breakfastCutoffTime", breakfastCutoffTime.toString(),
+                "dinnerCutoffTime", dinnerCutoffTime.toString(),
+                "isPreviousDay", isPreviousDay
         ));
     }
 
@@ -160,6 +174,7 @@ public class PricingController {
      * Updates building configurations (rules and split methods).
      */
     @PutMapping("/config")
+    @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> updateBuildingConfig(
             @RequestParam(required = false) String buildingId,
             @RequestAttribute(required = false) String branchId,
@@ -170,7 +185,13 @@ public class PricingController {
         }
 
         BuildingConfig cfg = buildingConfigRepository.findById(effectiveBuildingId)
-                .orElse(BuildingConfig.builder().buildingId(effectiveBuildingId).build());
+                .orElseGet(() -> {
+                    com.pgcrm.entity.Building building = buildingRepository.findById(effectiveBuildingId)
+                            .orElseThrow(() -> new IllegalArgumentException("Building not found: " + effectiveBuildingId));
+                    BuildingConfig newCfg = BuildingConfig.builder().building(building).build();
+                    building.setBuildingConfig(newCfg);
+                    return newCfg;
+                });
 
         if (body.containsKey("foodIncludedInRent")) {
             cfg.setFoodIncludedInRent(Boolean.parseBoolean(body.get("foodIncludedInRent").toString()));
@@ -181,10 +202,14 @@ public class PricingController {
         if (body.containsKey("ebSplitMethod")) {
             cfg.setEbSplitMethod(com.pgcrm.entity.enums.EbSplitMethod.valueOf(body.get("ebSplitMethod").toString()));
         }
-
-        // Make sure a reference to building is linked
-        if (cfg.getBuilding() == null) {
-            cfg.setBuilding(buildingRepository.findById(effectiveBuildingId).orElse(null));
+        if (body.containsKey("breakfastCutoffTime")) {
+            cfg.setBreakfastCutoffTime(java.time.LocalTime.parse(body.get("breakfastCutoffTime").toString()));
+        }
+        if (body.containsKey("dinnerCutoffTime")) {
+            cfg.setDinnerCutoffTime(java.time.LocalTime.parse(body.get("dinnerCutoffTime").toString()));
+        }
+        if (body.containsKey("isPreviousDay")) {
+            cfg.setPreviousDay(Boolean.parseBoolean(body.get("isPreviousDay").toString()));
         }
 
         return ResponseEntity.ok(buildingConfigRepository.save(cfg));

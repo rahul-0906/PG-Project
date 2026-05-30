@@ -55,4 +55,16 @@ public class BuildingConfig {
     @Enumerated(EnumType.STRING)
     @Column(name = "eb_split_method")
     private EbSplitMethod ebSplitMethod;
+
+    @Column(name = "breakfast_cutoff_time", nullable = false)
+    @Builder.Default
+    private java.time.LocalTime breakfastCutoffTime = java.time.LocalTime.of(22, 0);
+
+    @Column(name = "dinner_cutoff_time", nullable = false)
+    @Builder.Default
+    private java.time.LocalTime dinnerCutoffTime = java.time.LocalTime.of(14, 0);
+
+    @Column(name = "is_previous_day", nullable = false)
+    @Builder.Default
+    private boolean isPreviousDay = true;
 }

@@ -55,6 +55,8 @@ public class DailyLogServiceTest {
         LocalDate today = LocalDate.now();
         Guest guest = new Guest();
         guest.setId(guestId);
+        guest.setBreakfastPreference(true);
+        guest.setLunchPreference(true);
 
         DailyLog incoming = DailyLog.builder()
                 .breakfastOpted(true)

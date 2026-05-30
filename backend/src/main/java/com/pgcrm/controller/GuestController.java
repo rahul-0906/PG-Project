@@ -13,6 +13,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -174,12 +175,23 @@ public class GuestController {
 
         boolean foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
         boolean allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
+        java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
+        java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
+        boolean isPreviousDay = true;
 
         if (buildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(buildingId);
             if (configOpt.isPresent()) {
-                foodIncludedInRent = configOpt.get().isFoodIncludedInRent();
-                allowMealCancellations = configOpt.get().isAllowMealCancellations();
+                BuildingConfig cfg = configOpt.get();
+                foodIncludedInRent = cfg.isFoodIncludedInRent();
+                allowMealCancellations = cfg.isAllowMealCancellations();
+                if (cfg.getBreakfastCutoffTime() != null) {
+                    breakfastCutoffTime = cfg.getBreakfastCutoffTime();
+                }
+                if (cfg.getDinnerCutoffTime() != null) {
+                    dinnerCutoffTime = cfg.getDinnerCutoffTime();
+                }
+                isPreviousDay = cfg.isPreviousDay();
             }
         }
 
@@ -192,7 +204,10 @@ public class GuestController {
             Map.entry("breakfastPrice",         pricing.breakfast()),
             Map.entry("lunchPrice",             pricing.lunch()),
             Map.entry("dinnerPrice",            pricing.dinner()),
-            Map.entry("hasWashingMachine",      systemConfig.getRules().isHasWashingMachine())
+            Map.entry("hasWashingMachine",      systemConfig.getRules().isHasWashingMachine()),
+            Map.entry("breakfastCutoffTime",     breakfastCutoffTime.toString()),
+            Map.entry("dinnerCutoffTime",        dinnerCutoffTime.toString()),
+            Map.entry("isPreviousDay",          isPreviousDay)
         ));
     }
 

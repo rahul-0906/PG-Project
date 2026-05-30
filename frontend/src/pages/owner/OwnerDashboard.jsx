@@ -16,6 +16,7 @@ import {
   Plus, 
   UserPlus,
   Pencil,
+  Trash2,
   User as UserIcon
 } from 'lucide-react';
 
@@ -78,6 +79,22 @@ export default function OwnerDashboard() {
   });
 
   const savingManager = saveManagerMutation.isPending;
+
+  const deleteManagerMutation = useMutation({
+    mutationFn: (id) => ownerApi.deleteManager(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ownerManagers'] });
+    },
+    onError: () => {
+      alert('Failed to delete manager');
+    }
+  });
+
+  const handleDeleteManager = (m) => {
+    if (window.confirm(`Are you sure you want to delete manager "${m.fullName}"? This action cannot be undone.`)) {
+      deleteManagerMutation.mutate(m.id);
+    }
+  };
 
   const openEditManager = (mgr) => {
     setEditingManager(mgr);
@@ -213,6 +230,15 @@ export default function OwnerDashboard() {
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   <span>Edit</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteManager(m)}
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1 text-xs"
+                  title="Delete Manager"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete</span>
                 </button>
                 <span className="badge badge-info">Active</span>
               </div>

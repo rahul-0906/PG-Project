@@ -407,7 +407,7 @@ function Step3({ floors, onChange }) {
   );
 }
 
-function Step4Pricing({ data, onChange }) {
+function Step4Pricing({ data, onChange, isEditMode = false }) {
   const FOOD_ITEMS = [
     { key: 'breakfastPrice',      label: 'Breakfast Price (₹)',       placeholder: '60' },
     { key: 'lunchPrice',          label: 'Lunch Price (₹)',            placeholder: '65' },
@@ -428,18 +428,36 @@ function Step4Pricing({ data, onChange }) {
         <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
           <span>⚙️</span> Business Rules
         </h3>
-        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
+        <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
           <input
             type="checkbox"
             checked={data.foodIncludedInRent}
-            onChange={e => onChange({ ...data, foodIncludedInRent: e.target.checked })}
+            disabled={isEditMode}
+            onChange={e => {
+              const checked = e.target.checked;
+              if (checked) {
+                onChange({
+                  ...data,
+                  foodIncludedInRent: checked,
+                  breakfastPrice: '0',
+                  lunchPrice: '0',
+                  dinnerPrice: '0'
+                });
+              } else {
+                onChange({
+                  ...data,
+                  foodIncludedInRent: checked
+                });
+              }
+            }}
           />
           <span>Food Included in Rent (Guests won't be charged extra for daily meals)</span>
         </label>
-        <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-slate-700">
+        <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
           <input
             type="checkbox"
             checked={data.allowMealCancellations}
+            disabled={isEditMode}
             onChange={e => onChange({ ...data, allowMealCancellations: e.target.checked })}
           />
           <span>Allow Meal Cancellations (Guests can cancel meals up to lockout time)</span>
@@ -447,8 +465,9 @@ function Step4Pricing({ data, onChange }) {
         <div className="form-group mb-0">
           <label className="form-label text-xs">EB Split Method</label>
           <select
-            className="form-input text-xs py-1"
+            className={`form-input text-xs py-1 ${isEditMode ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
             value={data.ebSplitMethod || 'EQUAL_SPLIT'}
+            disabled={isEditMode}
             onChange={e => onChange({ ...data, ebSplitMethod: e.target.value })}
           >
             <option value="EQUAL_SPLIT">Equal Split</option>
@@ -460,14 +479,20 @@ function Step4Pricing({ data, onChange }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {FOOD_ITEMS.map(({ key, label, placeholder }) => (
+        {FOOD_ITEMS.filter(({ key }) => {
+          if (data.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(key)) {
+            return false;
+          }
+          return true;
+        }).map(({ key, label, placeholder }) => (
           <div key={key} className="form-group mb-0">
             <label className="form-label text-xs">{label}</label>
             <input
               type="text"
-              className="form-input text-xs py-1.5"
+              className={`form-input text-xs py-1.5 ${isEditMode ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
               placeholder={placeholder}
               value={data[key]}
+              disabled={isEditMode}
               onChange={e => {
                 const clean = e.target.value.replace(/[^0-9.]/g, '');
                 onChange({ ...data, [key]: clean });
@@ -596,12 +621,12 @@ export default function OwnerBuildingCreator() {
     address: '',
     foodIncludedInRent: false,
     allowMealCancellations: true,
-    breakfastPrice: '60',
-    lunchPrice: '65',
-    dinnerPrice: '60',
-    omelettePrice: '18',
-    boiledEggPrice: '18',
-    washingMachinePrice: '50',
+    breakfastPrice: '',
+    lunchPrice: '',
+    dinnerPrice: '',
+    omelettePrice: '',
+    boiledEggPrice: '',
+    washingMachinePrice: '',
     ebSplitMethod: 'EQUAL_SPLIT'
   });
   const [floors, setFloors] = useState([makeFloor(0)]);
@@ -724,6 +749,18 @@ export default function OwnerBuildingCreator() {
     try {
       const res = await ownerApi.getBuildingLayout(bldId);
       const data = res.data;
+      
+      // Ensure defaults for pricing/rules configs
+      data.foodIncludedInRent = data.foodIncludedInRent ?? false;
+      data.allowMealCancellations = data.allowMealCancellations ?? true;
+      data.breakfastPrice = data.breakfastPrice !== undefined && data.breakfastPrice !== null ? String(data.breakfastPrice) : '0';
+      data.lunchPrice = data.lunchPrice !== undefined && data.lunchPrice !== null ? String(data.lunchPrice) : '0';
+      data.dinnerPrice = data.dinnerPrice !== undefined && data.dinnerPrice !== null ? String(data.dinnerPrice) : '0';
+      data.omelettePrice = data.omelettePrice !== undefined && data.omelettePrice !== null ? String(data.omelettePrice) : '0';
+      data.boiledEggPrice = data.boiledEggPrice !== undefined && data.boiledEggPrice !== null ? String(data.boiledEggPrice) : '0';
+      data.washingMachinePrice = data.washingMachinePrice !== undefined && data.washingMachinePrice !== null ? String(data.washingMachinePrice) : '0';
+      data.ebSplitMethod = data.ebSplitMethod || 'EQUAL_SPLIT';
+
       data.floors = data.floors.map(f => ({
         ...f,
         _tempId: uid(),
@@ -946,9 +983,35 @@ export default function OwnerBuildingCreator() {
     setSavingEdit(true);
     setError('');
     try {
+      const pricingKeys = ['breakfastPrice', 'lunchPrice', 'dinnerPrice', 'omelettePrice', 'boiledEggPrice', 'washingMachinePrice'];
+      const hasInvalidPrice = pricingKeys.some(k => {
+        if (editData.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(k)) {
+          return false;
+        }
+        const val = editData[k];
+        return val === undefined || val === null || val.toString().trim() === '' || isNaN(parseFloat(val)) || parseFloat(val) < 0;
+      });
+      if (hasInvalidPrice) {
+        setError('Please enter valid, non-negative values for all enabled pricing fields.');
+        setSavingEdit(false);
+        return;
+      }
+
       const payload = {
         name: editData.name.trim(),
         address: editData.address.trim(),
+        foodIncludedInRent: editData.foodIncludedInRent,
+        allowMealCancellations: editData.allowMealCancellations,
+        breakfastPrice: parseFloat(editData.breakfastPrice) || 0,
+        lunchPrice: parseFloat(editData.lunchPrice) || 0,
+        dinnerPrice: parseFloat(editData.dinnerPrice) || 0,
+        omelettePrice: parseFloat(editData.omelettePrice) || 0,
+        boiledEggPrice: parseFloat(editData.boiledEggPrice) || 0,
+        washingMachinePrice: parseFloat(editData.washingMachinePrice) || 0,
+        ebSplitMethod: editData.ebSplitMethod,
+        breakfastCutoffTime: editData.breakfastCutoffTime,
+        dinnerCutoffTime: editData.dinnerCutoffTime,
+        isPreviousDay: editData.isPreviousDay,
         floors: editData.floors.map(f => ({
           id: f.id || null,
           number: f.number,
@@ -983,11 +1046,21 @@ export default function OwnerBuildingCreator() {
 
   // ── Creator Wizard Handlers ─────────────────────────────────────
   const canNext = () => {
-    if (step === 1) return building.name.trim().length > 0;
-    if (step === 2) {
+    if (step === 1) {
+      const pricingKeys = ['breakfastPrice', 'lunchPrice', 'dinnerPrice', 'omelettePrice', 'boiledEggPrice', 'washingMachinePrice'];
+      return pricingKeys.every(k => {
+        if (building.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(k)) {
+          return true;
+        }
+        const val = building[k];
+        return val !== undefined && val !== null && val.toString().trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
+      });
+    }
+    if (step === 2) return building.name.trim().length > 0;
+    if (step === 3) {
       return floors.length > 0 && floors.every(f => f.label && f.label.trim().length > 0);
     }
-    if (step === 3) {
+    if (step === 4) {
       let totalRooms = 0;
       let hasInvalidRoom = false;
       let hasInvalidBlock = false;
@@ -1017,13 +1090,6 @@ export default function OwnerBuildingCreator() {
         }
       }
       return totalRooms > 0 && !hasInvalidRoom && !hasInvalidBlock;
-    }
-    if (step === 4) {
-      const pricingKeys = ['breakfastPrice', 'lunchPrice', 'dinnerPrice', 'omelettePrice', 'boiledEggPrice', 'washingMachinePrice'];
-      return pricingKeys.every(k => {
-        const val = building[k];
-        return val !== undefined && val !== null && val.toString().trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
-      });
     }
     return true;
   };
@@ -1081,12 +1147,12 @@ export default function OwnerBuildingCreator() {
       address: '',
       foodIncludedInRent: false,
       allowMealCancellations: true,
-      breakfastPrice: '60',
-      lunchPrice: '65',
-      dinnerPrice: '60',
-      omelettePrice: '18',
-      boiledEggPrice: '18',
-      washingMachinePrice: '50',
+      breakfastPrice: '',
+      lunchPrice: '',
+      dinnerPrice: '',
+      omelettePrice: '',
+      boiledEggPrice: '',
+      washingMachinePrice: '',
       ebSplitMethod: 'EQUAL_SPLIT'
     });
     setFloors([makeFloor(0)]);
@@ -1094,7 +1160,7 @@ export default function OwnerBuildingCreator() {
     setError('');
   };
 
-  const STEPS = ['Building Info', 'Floors', 'Rooms', 'Pricing & Rules', 'Review'];
+  const STEPS = ['Pricing & Rules', 'Building Info', 'Floors', 'Rooms', 'Review'];
 
   return (
     <AppLayout>
@@ -1297,10 +1363,10 @@ export default function OwnerBuildingCreator() {
           )}
 
           <div className="card max-w-2xl mx-auto">
-            {step === 1 && <Step1 data={building} onChange={setBuilding} />}
-            {step === 2 && <Step2 floors={floors} onChange={setFloors} />}
-            {step === 3 && <Step3 floors={floors} onChange={setFloors} />}
-            {step === 4 && <Step4Pricing data={building} onChange={setBuilding} />}
+            {step === 1 && <Step4Pricing data={building} onChange={setBuilding} />}
+            {step === 2 && <Step1 data={building} onChange={setBuilding} />}
+            {step === 3 && <Step2 floors={floors} onChange={setFloors} />}
+            {step === 4 && <Step3 floors={floors} onChange={setFloors} />}
             {step === 5 && <Step4 building={building} floors={floors} />}
             {step === 6 && result && (
               <div className="text-center py-6">
@@ -1420,6 +1486,10 @@ export default function OwnerBuildingCreator() {
                       onChange={e => updateBuildingField('address', e.target.value)}
                     />
                   </div>
+                </div>
+
+                <div className="card">
+                  <Step4Pricing data={editData} onChange={setEditData} isEditMode={true} />
                 </div>
 
                 <div className="card">

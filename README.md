@@ -20,8 +20,8 @@ To ensure the highest standard of data privacy, compliance, and customizability,
 
 ### 1.2 Consolidated White-Labeling Engine
 The system supports full whitelabel configurations out of the box through a single externalized configuration file (`tenant-config.yml`). 
-* **Dynamic Assets**: Branding names, theme colors, dynamic logos, tax rates, support emails, and transaction configurations are loaded dynamically on boot.
-* **External Configuration**: The backend dynamically looks up `./tenant-config.yml` on the host filesystem before falling back to default configurations, permitting administrators to customize properties without rebuilding application JARs.
+* **Dynamic Branding**: Branding name and short title are loaded dynamically on boot from the YAML file.
+* **External Configuration**: The backend dynamically looks up `./tenant-config.yml` on the host filesystem before falling back to Java class defaults, permitting administrators to customize branding values without rebuilding application JARs.
 
 ```yaml
 # Example tenant-config.yml
@@ -29,30 +29,16 @@ pg:
   system:
     branding:
       name: "Sri Sai Luxury PG"
-      shortTitle: "Sri Sai"
-    rules:
-      foodIncludedInRent: false
-      allowMealCancellations: true
-      ebSplitMethod: "SUB_METER"
-      hasWashingMachine: true
-      paymentDueDayOfMonth: 5
-      noticePeriodDays: 30
-      breakfastEnabled: true
-      lunchEnabled: true
-      dinnerEnabled: true
-      breakfastLockoutTime: "22:00:00"
-      dinnerLockoutTime: "14:00:00"
-    pricing:
-      breakfast: 60.00
-      lunch: 70.00
-      dinner: 70.00
-      washingMachine: 50.00
-      omelette: 20.00
-      boiledEgg: 15.00
+      short-title: "Sri Sai"
 ```
 
 ### 1.3 Tenant Customization & Scope Separation
 Role-Based Access Control (RBAC) separates administrative capabilities from guest interactions. Owners configure global setups, managers oversee operational logs, and guests view invoices and request maintenance, keeping operational boundaries clean.
+
+### 1.4 Dynamic Rules Engine & Guest Maintenance Portal
+PG CRM incorporates a robust DB-backed configuration architecture:
+* **Dynamic Rules Engine**: Building-specific prices, food options, EB splits, cutoff hours, and automatic billing scheduler statuses are stored in the database via the `BuildingConfig` model and managed directly through the Owner/Manager UI.
+* **Guest Maintenance Portal**: Guests can report issues (Wi-Fi, plumbing, electrical) through their portal, selecting priority levels and viewing resolution state logs updated in real-time by the manager.
 
 ---
 
@@ -94,12 +80,16 @@ graph TD
 
 ### 2.1 Backend Platform
 * **Java 17 & Spring Boot 3.2.5**: Core runtime framework providing embedded Tomcat execution, dependency injection, and REST controllers.
-* **Spring Data JPA & Hibernate**: Object-relational mapping, automatic DDL updating, and transactional queries.
+* **Spring Data JPA & Hibernate**: Object-relational mapping, database transactions, and queries.
+* **Flyway (Database Migrations)**: Standardizes database versioning, executing automated schema migrations (`V1` through `V5`) cleanly on server start.
+* **MapStruct (DTO Mapping)**: Facilitates type-safe, high-performance object conversion between JPA entity objects and REST data transfer objects (DTOs).
 * **Spring Security & JSON Web Tokens (JWT)**: Secures REST endpoints and verifies request authenticity stateless.
 * **H2 / PostgreSQL**: In-memory H2 database for local development and PostgreSQL 15+ for production durability.
 
 ### 2.2 Frontend Client
 * **React 18 & Vite**: Component-driven UI framework with fast building compilation.
+* **TanStack React Query (Server State)**: Performs async cache synchronization, server data mutation, and automated cache invalidation logic for guest and manager dashboards.
+* **Vite PWA (Progressive Web App)**: Integrates client caching, background service worker installations (`sw.js`), updates notifications, offline rendering, and manifest configurations for mobile installations.
 * **Tailwind CSS**: Modern utility styling framework with a unified color token palette.
 * **Lucide React**: Premium icon package.
 * **Recharts**: Responsive SVG graphs for dashboard analytics.

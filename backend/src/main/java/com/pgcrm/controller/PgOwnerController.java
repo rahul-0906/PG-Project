@@ -147,6 +147,14 @@ public class PgOwnerController {
         return ResponseEntity.ok(userMapper.toResponse(userRepository.save(manager)));
     }
 
+    @DeleteMapping("/managers/{id}")
+    public ResponseEntity<?> deleteManager(@PathVariable String id) {
+        User manager = userRepository.findById(id)
+                .orElseThrow(() -> new com.pgcrm.exception.ResourceNotFoundException("Manager not found: " + id));
+        userRepository.delete(manager);
+        return ResponseEntity.ok(Map.of("message", "Manager deleted successfully"));
+    }
+
     @GetMapping("/config")
     public ResponseEntity<String> getConfig() {
         return ResponseEntity.ok("Use /api/system/config");

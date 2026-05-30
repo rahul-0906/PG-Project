@@ -101,6 +101,7 @@ export const ownerApi = {
   getManagers: () => cachedApi.get('/owner/managers'),
   createManager: (data) => cachedApi.post('/owner/managers', data),
   updateManager: (id, data) => cachedApi.put(`/owner/managers/${id}`, data),
+  deleteManager: (id) => cachedApi.delete(`/owner/managers/${id}`),
   getConfig: () => cachedApi.get('/owner/config'),
   // Building Creator
   createBuilding: (data) => cachedApi.post('/owner/buildings', data),
