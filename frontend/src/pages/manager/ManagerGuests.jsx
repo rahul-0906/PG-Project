@@ -320,21 +320,40 @@ export default function ManagerGuests() {
                                     }
 
                                     return (
-                                      <button
-                                        key={bed.id}
-                                        type="button"
-                                        disabled={isDisabled}
-                                        onClick={() => {
-                                          if (isVacant) {
-                                            setForm(f => ({ ...f, bedId: bed.id }));
-                                            setSelectedBedInfo(bed);
-                                          }
-                                        }}
-                                        className={btnClasses}
-                                        title={isNoticePeriod ? 'Notice Period (Leaving Soon)' : isOccupied ? 'Occupied' : 'Vacant (Available)'}
-                                      >
-                                        {bed.bedLabel}
-                                      </button>
+                                      <div key={bed.id} className="relative group">
+                                        <button
+                                          type="button"
+                                          disabled={isDisabled}
+                                          onClick={() => {
+                                            if (isVacant) {
+                                              setForm(f => ({ ...f, bedId: bed.id }));
+                                              setSelectedBedInfo(bed);
+                                            }
+                                          }}
+                                          className={btnClasses}
+                                        >
+                                          {bed.bedLabel}
+                                        </button>
+                                        {isNoticePeriod && occupant && (
+                                          <div className="absolute bottom-full mb-1.5 hidden group-hover:block bg-slate-900/95 backdrop-blur-sm text-white text-[10px] rounded-lg px-2.5 py-1.5 z-30 whitespace-nowrap border border-slate-700/50 shadow-lg shadow-slate-900/20 pointer-events-none left-1/2 -translate-x-1/2 text-left">
+                                            <div className="font-extrabold text-yellow-400 mb-0.5">Notice Period</div>
+                                            <div className="font-bold">{occupant.fullName}</div>
+                                            <div className="text-[9px] text-slate-300 mt-0.5">
+                                              Notice: {occupant.noticeDate || '—'}<br />
+                                              Exit: {occupant.exitDate || '—'}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {isOccupied && occupant && (
+                                          <div className="absolute bottom-full mb-1.5 hidden group-hover:block bg-slate-900/95 backdrop-blur-sm text-white text-[10px] rounded-lg px-2.5 py-1.5 z-30 whitespace-nowrap border border-slate-700/50 shadow-lg shadow-slate-900/20 pointer-events-none left-1/2 -translate-x-1/2 text-left">
+                                            <div className="font-extrabold text-slate-300 mb-0.5">Occupied</div>
+                                            <div className="font-bold">{occupant.fullName}</div>
+                                            <div className="text-[9px] text-slate-400 mt-0.5">
+                                              Checked In: {occupant.checkInDate || '—'}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
                                     );
                                   })}
                                 </div>
