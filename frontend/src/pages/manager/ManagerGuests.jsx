@@ -52,6 +52,10 @@ export default function ManagerGuests() {
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '', whatsappNumber: '', advanceDeposit: '', kycStatus: 'PENDING' });
   const [updating, setUpdating] = useState(false);
 
+  // Checkout notice states
+  const [confirmCheckoutGuest, setConfirmCheckoutGuest] = useState(null);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
   const startEdit = (g) => {
     setEditingGuest(g);
     setEditForm({
@@ -126,10 +130,22 @@ export default function ManagerGuests() {
     }
   };
 
-  const initiateCheckout = async (id) => {
-    if (!window.confirm('Initiate checkout notice?')) return;
-    await managerApi.initiateCheckout(id).catch(err => alert(err.response?.data?.error));
-    managerApi.getGuests().then(r => setGuests(r.data));
+  const initiateCheckout = (g) => {
+    setConfirmCheckoutGuest(g);
+  };
+
+  const handleConfirmCheckout = async () => {
+    if (!confirmCheckoutGuest) return;
+    setCheckoutLoading(true);
+    try {
+      await managerApi.initiateCheckout(confirmCheckoutGuest.id);
+      setConfirmCheckoutGuest(null);
+      managerApi.getGuests().then(r => setGuests(r.data));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to initiate checkout');
+    } finally {
+      setCheckoutLoading(false);
+    }
   };
 
   // Group vacant beds by Floor -> Block -> Room
@@ -480,7 +496,7 @@ export default function ManagerGuests() {
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit</span>
                       </button>
-                      <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g.id)}>
+                      <button className="btn btn-ghost flex items-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }} onClick={() => initiateCheckout(g)}>
                         <LogOut className="w-3.5 h-3.5 text-slate-400" />
                         <span>Notice</span>
                       </button>
@@ -542,6 +558,46 @@ export default function ManagerGuests() {
                 <button type="submit" className="btn btn-primary" disabled={updating}>{updating ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Checkout Confirmation Modal */}
+      {confirmCheckoutGuest && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
+            <h3 style={{ marginBottom: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div className="p-2 bg-amber-50 rounded-lg text-amber-500 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <span>Initiate Checkout Notice</span>
+            </h3>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.75rem', lineHeight: '1.5' }}>
+              Are you sure you want to initiate the checkout notice for <strong style={{ color: 'var(--text-primary)' }}>{confirmCheckoutGuest.fullName}</strong>?
+              <p style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                This will trigger the notice period sequence according to the configured building rules.
+              </p>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button 
+                type="button" 
+                className="btn btn-ghost" 
+                onClick={() => setConfirmCheckoutGuest(null)}
+                disabled={checkoutLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn btn-primary" 
+                style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white' }} 
+                onClick={handleConfirmCheckout} 
+                disabled={checkoutLoading}
+              >
+                {checkoutLoading ? 'Processing...' : 'Confirm Notice'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body
