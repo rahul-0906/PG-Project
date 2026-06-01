@@ -21,6 +21,7 @@ public class GuestCheckInRequest {
     private BigDecimal advanceDeposit;
     private LocalDate checkInDate;
     private String vehicleRegistration;
+    @com.fasterxml.jackson.annotation.JsonProperty("isVeg")
     private boolean isVeg;
     private boolean breakfastOpted;
     private boolean lunchOpted;

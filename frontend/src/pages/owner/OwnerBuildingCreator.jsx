@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { ownerApi } from '../../api';
 import {
@@ -275,9 +275,19 @@ function Step3({ floors, onChange }) {
 
       {floors.map(floor => (
         <div key={floor._id} className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
-          <div className="bg-indigo-600 px-4 py-2.5 flex items-center gap-2">
-            <Layers className="w-4 h-4 text-indigo-200" />
-            <span className="text-white font-semibold text-sm">{floor.label}</span>
+          <div className="bg-indigo-600 px-4 py-2.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Layers className="w-4 h-4 text-indigo-200" />
+              <span className="text-white font-semibold text-sm">{floor.label}</span>
+            </div>
+            <button
+              type="button"
+              className="p-1 rounded text-indigo-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              onClick={() => onChange(floors.filter(f => f._id !== floor._id))}
+              title="Delete Floor"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="p-4 flex flex-col gap-4">
@@ -601,6 +611,7 @@ function Step4({ building, floors }) {
 
 export default function OwnerBuildingCreator() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const editParam = searchParams.get('edit');
   const [mode, setMode] = useState('list'); // 'list' | 'create' | 'edit'
   const [buildings, setBuildings] = useState([]);
@@ -1056,7 +1067,7 @@ export default function OwnerBuildingCreator() {
         return val !== undefined && val !== null && val.toString().trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
       });
     }
-    if (step === 2) return building.name.trim().length > 0;
+    if (step === 2) return building.name.trim().length > 0 && building.address !== undefined && building.address !== null && building.address.trim().length > 0;
     if (step === 3) {
       return floors.length > 0 && floors.every(f => f.label && f.label.trim().length > 0);
     }
@@ -1386,8 +1397,11 @@ export default function OwnerBuildingCreator() {
                     </div>
                   ))}
                 </div>
-                <div className="flex gap-3 justify-center">
-                  <button className="btn btn-primary" onClick={resetWizard}>
+                <div className="flex gap-3 justify-center flex-wrap">
+                  <button className="btn btn-primary" onClick={() => navigate('/owner/dashboard', { state: { openAddManager: true, buildingId: result.buildingId } })}>
+                    Assign / Create Manager
+                  </button>
+                  <button className="btn btn-secondary border border-slate-200" onClick={resetWizard}>
                     <Plus className="w-4 h-4" /> Create Another
                   </button>
                   <button className="btn btn-ghost" onClick={() => setMode('list')}>Back to Buildings</button>

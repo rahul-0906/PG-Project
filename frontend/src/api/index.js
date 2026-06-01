@@ -141,7 +141,13 @@ export const managerApi = {
   generateAllInvoices: (month, year) => cachedApi.post('/manager/invoices/generate-all', { month, year }),
   getMonthlyMeals: (month, year) => cachedApi.get('/manager/monthly-meals', { params: { month, year } }),
   getAssignedBuildings: () => cachedApi.get('/manager/assigned-buildings'),
-  updateSharingRent: (sharingType, baseRent, buildingId) => cachedApi.put(`/manager/pricing/sharing/${sharingType}/rent`, { baseRent }, { params: buildingId ? { buildingId } : {} }),
+  getBlocksByBuilding: (buildingId) => cachedApi.get(`/inventory/buildings/${buildingId}/blocks`),
+  updateSharingRent: (sharingType, baseRent, buildingId, floorId) => {
+    const params = {};
+    if (buildingId) params.buildingId = buildingId;
+    if (floorId) params.floorId = floorId;
+    return cachedApi.put(`/manager/pricing/sharing/${sharingType}/rent`, { baseRent }, { params });
+  },
 };
 
 export const guestApi = {

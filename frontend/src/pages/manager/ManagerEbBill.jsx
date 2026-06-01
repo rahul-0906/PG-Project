@@ -25,6 +25,14 @@ export default function ManagerEbBill() {
   const [readings, setReadings] = useState([]);
   const [result, setResult] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [blocks, setBlocks] = useState([]);
+  const [loadingBlocks, setLoadingBlocks] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   useEffect(() => {
     const fetchBuildings = async () => {
@@ -74,6 +82,31 @@ export default function ManagerEbBill() {
     }
   }, [selectedBuildingId]);
 
+  useEffect(() => {
+    if (selectedBuildingId) {
+      const fetchBlocks = async () => {
+        setLoadingBlocks(true);
+        try {
+          const res = await managerApi.getBlocksByBuilding(selectedBuildingId);
+          const blocksList = res.data || [];
+          setBlocks(blocksList);
+          if (blocksList.length > 0) {
+            setForm(f => ({ ...f, blockId: blocksList[0].id.toString() }));
+          } else {
+            setForm(f => ({ ...f, blockId: '' }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch blocks', err);
+          setBlocks([]);
+          setForm(f => ({ ...f, blockId: '' }));
+        } finally {
+          setLoadingBlocks(false);
+        }
+      };
+      fetchBlocks();
+    }
+  }, [selectedBuildingId]);
+
   const addReadingRow = () => {
     setReadings([...readings, { guestId: '', previousReading: '', currentReading: '' }]);
   };
@@ -110,8 +143,9 @@ export default function ManagerEbBill() {
         });
       }
       setResult(res.data);
+      showToast('Electricity bill recorded and split successfully!');
     } catch(err) { 
-      alert(err.response?.data?.error || 'Failed to save electricity bill'); 
+      showToast(err.response?.data?.error || 'Failed to save electricity bill', 'error'); 
     }
     setSaving(false);
   };
@@ -120,6 +154,23 @@ export default function ManagerEbBill() {
 
   return (
     <AppLayout>
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 transition-all duration-300 animate-fade-in-up border ${
+          toast.type === 'error' 
+            ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-rose-100/50' 
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-100/50'
+        }`}>
+          {toast.type === 'error' ? (
+            <AlertCircle className="w-4 h-4 text-rose-600" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          )}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-80 focus:outline-none">
+            <X className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -184,16 +235,31 @@ export default function ManagerEbBill() {
             <form onSubmit={submit}>
               <div className="grid-2">
                 <div className="form-group">
-                  <label className="form-label">Block ID</label>
-                  <input 
-                    className="form-input" 
-                    value={form.blockId} 
-                    onChange={e => setForm(f => ({ ...f, blockId: e.target.value }))} 
-                    placeholder="Enter Block ID" 
-                    autoComplete="off" 
-                    name="eb-block-id" 
-                    required 
-                  />
+                  <label className="form-label">Block</label>
+                  {loadingBlocks ? (
+                    <div className="flex items-center gap-2 py-2.5 text-slate-400 text-xs font-semibold">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Loading blocks...</span>
+                    </div>
+                  ) : blocks.length === 0 ? (
+                    <div className="text-xs text-rose-500 font-semibold py-2.5">
+                      No blocks found
+                    </div>
+                  ) : (
+                    <select
+                      id="eb-block-select"
+                      className="form-input cursor-pointer"
+                      value={form.blockId}
+                      onChange={e => setForm(f => ({ ...f, blockId: e.target.value }))}
+                      required
+                    >
+                      {blocks.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name || `Block ${b.id}`}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 {mode === 'EQUAL_SPLIT' ? (
                   <div className="form-group">

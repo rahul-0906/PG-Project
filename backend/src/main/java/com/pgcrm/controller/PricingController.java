@@ -245,13 +245,14 @@ public class PricingController {
     }
 
     /**
-     * PUT /api/manager/pricing/sharing/{sharingType}/rent?buildingId=xxx
-     * Updates the base rent of all rooms in a building matching the sharingType.
+     * PUT /api/manager/pricing/sharing/{sharingType}/rent?buildingId=xxx&floorId=yyy
+     * Updates the base rent of all rooms in a building (or specific floor) matching the sharingType.
      */
     @PutMapping("/sharing/{sharingType}/rent")
     public ResponseEntity<?> updateSharingRent(
             @PathVariable int sharingType,
             @RequestParam(required = false) String buildingId,
+            @RequestParam(required = false) String floorId,
             @RequestAttribute(required = false) String branchId,
             @RequestBody Map<String, Object> body) {
 
@@ -272,7 +273,13 @@ public class PricingController {
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid numeric value"));
         }
 
-        List<Room> rooms = roomRepository.findByFloor_Building_Id(effectiveBuildingId);
+        List<Room> rooms;
+        if (floorId != null && !floorId.isBlank()) {
+            rooms = roomRepository.findByFloorId(floorId);
+        } else {
+            rooms = roomRepository.findByFloor_Building_Id(effectiveBuildingId);
+        }
+
         List<Room> updated = new ArrayList<>();
         for (Room r : rooms) {
             if (r.getSharingType() == sharingType) {

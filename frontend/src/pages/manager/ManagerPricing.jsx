@@ -176,12 +176,13 @@ export default function ManagerPricing() {
     finally { setSavingRoom(''); }
   };
 
-  const handleSharingRentUpdate = async (sharingType, baseRent) => {
-    setSavingSharing(sharingType);
+  const handleSharingRentUpdate = async (sharingType, baseRent, floorId) => {
+    const key = `${floorId}_${sharingType}`;
+    setSavingSharing(key);
     try {
-      await managerApi.updateSharingRent(sharingType, baseRent, selectedBuildingId);
+      await managerApi.updateSharingRent(sharingType, baseRent, selectedBuildingId, floorId);
       await loadPricing();
-      showToast('Sharing type rent updated');
+      showToast('Sharing type rent updated for floor');
     } catch { showToast('Failed to update sharing type rent'); }
     finally { setSavingSharing(''); }
   };
@@ -507,49 +508,70 @@ export default function ManagerPricing() {
             </div>
           </div>
 
-          {/* Room Rents by Sharing Type */}
+          {/* Room Rents by Sharing Type (Grouped by Floor) */}
           <div className="card" style={{ padding: '1.25rem' }}>
-            <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <h3 className="font-heading text-base font-semibold text-slate-900 mb-2 flex items-center gap-2">
               <Bed className="w-5 h-5 text-primary" />
-              Room Rents by Sharing Type (Global for Building)
+              Room Rents by Floor & Sharing Type
             </h3>
-            <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
-              {Object.keys(SHARING_LABELS).map(sharingType => {
+            <p className="text-sm text-slate-500 mb-4">
+              Manage room rents categorized by floor and sharing type.
+            </p>
+            <div className="flex flex-col gap-5">
+              {(() => {
                 const bldg = bldgData.find(b => b.id === selectedBuildingId);
-                const rooms = [];
-                bldg?.floors?.forEach(f => {
-                  f.blocks?.forEach(bl => {
-                    bl.rooms?.forEach(r => {
-                      if (r.sharingType === parseInt(sharingType)) rooms.push(r);
-                    });
+                if (!bldg || !bldg.floors || bldg.floors.length === 0) {
+                  return <p className="text-slate-400 text-xs font-medium">No floors configured for this building.</p>;
+                }
+                return bldg.floors.map(floor => {
+                  const floorRooms = [];
+                  floor.blocks?.forEach(bl => {
+                    bl.rooms?.forEach(r => floorRooms.push(r));
                   });
-                  f.standaloneRooms?.forEach(r => {
-                    if (r.sharingType === parseInt(sharingType)) rooms.push(r);
-                  });
-                });
-                
-                if (rooms.length === 0) return null;
-                const baseRent = rooms[0]?.baseRent ?? 0;
-                
-                return (
-                  <div key={sharingType} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">🛏️</span>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-slate-700">{SHARING_LABELS[sharingType]} Sharing</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{rooms.length} rooms</span>
+                  floor.standaloneRooms?.forEach(r => floorRooms.push(r));
+
+                  if (floorRooms.length === 0) return null;
+
+                  const sharingTypesOnFloor = [1, 2, 3, 4].filter(st =>
+                    floorRooms.some(r => r.sharingType === st)
+                  );
+
+                  return (
+                    <div key={floor.id} className="border border-slate-100 bg-slate-50/50 p-4 rounded-xl">
+                      <h4 className="font-heading text-xs font-bold text-slate-800 mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-3.5 bg-primary rounded-full"></span>
+                        <span>{floor.name || `Floor ${floor.id}`}</span>
+                      </h4>
+                      <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
+                        {sharingTypesOnFloor.map(sharingType => {
+                          const roomsOfSt = floorRooms.filter(r => r.sharingType === sharingType);
+                          const baseRent = roomsOfSt[0]?.baseRent ?? 0;
+                          const key = `${floor.id}_${sharingType}`;
+
+                          return (
+                            <div key={sharingType} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-white hover:shadow-sm hover:border-slate-200 transition-all">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xl">🛏️</span>
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-semibold text-slate-700">{SHARING_LABELS[sharingType]} Sharing</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">{roomsOfSt.length} rooms</span>
+                                </div>
+                              </div>
+                              <EditablePrice
+                                value={baseRent}
+                                onSave={(v) => handleSharingRentUpdate(sharingType, v, floor.id)}
+                                saving={savingSharing === key}
+                              />
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                    <EditablePrice
-                      value={baseRent}
-                      onSave={(v) => handleSharingRentUpdate(parseInt(sharingType), v)}
-                      saving={savingSharing === parseInt(sharingType)}
-                    />
-                  </div>
-                );
-              })}
+                  );
+                });
+              })()}
             </div>
-            <p className="text-xs text-slate-400 mt-3 font-medium">Click any price to edit. Changes apply building-wide immediately.</p>
+            <p className="text-xs text-slate-400 mt-4 font-medium">Click any price to edit. Changes apply only to the selected floor's rooms of that sharing type.</p>
           </div>
         </div>
       )}

@@ -22,6 +22,10 @@ import {
 export default function ManagerGuests() {
   const [guests, setGuests] = useState([]);
   const [showForm, setShowForm] = useState(false);
+  const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [sameAsPhone, setSameAsPhone] = useState(false);
+  const [toast, setToast] = useState(null);
+  
   const [form, setForm] = useState({ 
     bedId:'', 
     fullName:'', 
@@ -40,6 +44,28 @@ export default function ManagerGuests() {
   const [vacantBeds, setVacantBeds] = useState([]);
   const [selectedBedInfo, setSelectedBedInfo] = useState(null);
   const [loadingBeds, setLoadingBeds] = useState(false);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handlePhoneChange = (val) => {
+    setForm(f => {
+      const updated = { ...f, phone: val };
+      if (sameAsPhone) {
+        updated.whatsappNumber = val;
+      }
+      return updated;
+    });
+  };
+
+  const handleSameAsPhoneChange = (checked) => {
+    setSameAsPhone(checked);
+    if (checked) {
+      setForm(f => ({ ...f, whatsappNumber: f.phone }));
+    }
+  };
   
   // Search & Filter state for Guest Main Page
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,8 +107,9 @@ export default function ManagerGuests() {
       await managerApi.updateGuest(editingGuest.id, editForm);
       setEditingGuest(null);
       managerApi.getGuests().then(r => setGuests(r.data));
+      showToast('Guest details updated successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to update guest details');
+      showToast(err.response?.data?.error || 'Failed to update guest details', 'error');
     } finally {
       setUpdating(false);
     }
@@ -120,20 +147,28 @@ export default function ManagerGuests() {
       dinnerOpted: true
     });
     setSelectedBedInfo(null);
+    setSameAsPhone(false);
   };
 
   const checkIn = async (e) => {
     e.preventDefault(); setSaving(true);
     try {
       await managerApi.checkIn(form);
+      setShowCheckInModal(false);
       setShowForm(false);
       resetForm();
       managerApi.getGuests().then(r => setGuests(r.data));
+      showToast('Guest checked in successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed');
+      showToast(err.response?.data?.error || 'Failed to check in guest', 'error');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCloseCheckInModal = () => {
+    setShowCheckInModal(false);
+    resetForm();
   };
 
   const initiateCheckout = (g) => {
@@ -147,8 +182,9 @@ export default function ManagerGuests() {
       await managerApi.initiateCheckout(confirmCheckoutGuest.id);
       setConfirmCheckoutGuest(null);
       managerApi.getGuests().then(r => setGuests(r.data));
+      showToast('Checkout notice initiated successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to initiate checkout');
+      showToast(err.response?.data?.error || 'Failed to initiate checkout', 'error');
     } finally {
       setCheckoutLoading(false);
     }
@@ -174,8 +210,9 @@ export default function ManagerGuests() {
         settlementAmount: res.data.settlementAmount || 0
       });
       managerApi.getGuests().then(r => setGuests(r.data));
+      showToast('Checkout completed and accounts settled successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to complete checkout');
+      showToast(err.response?.data?.error || 'Failed to complete checkout', 'error');
     } finally {
       setFinalCheckoutLoading(false);
     }
@@ -218,6 +255,23 @@ export default function ManagerGuests() {
 
   return (
     <AppLayout>
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 transition-all duration-300 animate-fade-in-up border ${
+          toast.type === 'error' 
+            ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-rose-100/50' 
+            : 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-100/50'
+        }`}>
+          {toast.type === 'error' ? (
+            <AlertTriangle className="w-4 h-4 text-rose-600" />
+          ) : (
+            <Check className="w-4 h-4 text-emerald-600" />
+          )}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 hover:opacity-80 focus:outline-none">
+            <X className="w-3.5 h-3.5 text-slate-400" />
+          </button>
+        </div>
+      )}
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -360,6 +414,7 @@ export default function ManagerGuests() {
                                             if (isVacant) {
                                               setForm(f => ({ ...f, bedId: bed.id }));
                                               setSelectedBedInfo(bed);
+                                              setShowCheckInModal(true);
                                             }
                                           }}
                                           className={btnClasses}
@@ -401,98 +456,7 @@ export default function ManagerGuests() {
             )}
           </div>
           
-          {/* Step 2: Guest Details Form */}
-          {form.bedId && selectedBedInfo && (
-            <form onSubmit={checkIn} className="fade-in-up">
-              <h4 className="font-heading text-sm font-semibold text-slate-800 mb-4">
-                2. Guest Details for Bed <span className="text-primary font-bold">{selectedBedInfo.bedLabel}</span> (Room {selectedBedInfo.room?.roomNumber}, Rent: ₹{selectedBedInfo.room?.baseRent})
-              </h4>
-              <div className="grid-3">
-                {[['fullName','Full Name'],['email','Email ID'],['phone','Phone'],['whatsappNumber','WhatsApp Number'],['advanceDeposit','Advance Deposit (₹)']].map(([key, label]) => (
-                  <div key={key} className="form-group">
-                    <label className="form-label">{label}</label>
-                    <input className="form-input" value={form[key]} onChange={e => setForm(f=>({...f,[key]:e.target.value}))} required={key === 'fullName' || key === 'email' || key === 'phone'} />
-                  </div>
-                ))}
-                <div className="form-group">
-                  <label className="form-label">Check-In Date</label>
-                  <input type="date" className="form-input" value={form.checkInDate} onChange={e => setForm(f=>({...f,checkInDate:e.target.value}))} required />
-                </div>
-              </div>
 
-              {/* Meal Preferences & Selection */}
-              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-5">
-                <div className="flex items-center gap-1.5 font-bold text-[10px] text-primary mb-3 uppercase tracking-wider font-heading">
-                  <Utensils className="w-4 h-4" />
-                  <span>Meal Preferences &amp; Selections</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Veg / Non Veg */}
-                  <div className="form-group mb-0">
-                    <label className="form-label mb-1.5 block">Food Preference</label>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : '#94a3b8' }}>
-                        <Leaf className="w-3.5 h-3.5" />
-                        <span>Veg</span>
-                      </span>
-                      <label className="toggle">
-                        <input type="checkbox" checked={!form.isVeg} onChange={() => setForm(f => ({ ...f, isVeg: !f.isVeg }))} />
-                        <span className="toggle-slider" />
-                      </label>
-                      <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : '#94a3b8' }}>
-                        <Utensils className="w-3.5 h-3.5" />
-                        <span>Non-Veg</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Meal Choices */}
-                  <div className="form-group mb-0">
-                    <label className="form-label mb-1.5 flex items-center gap-1.5 cursor-pointer">
-                      <input 
-                        type="checkbox"
-                        id="opt-in-food-master"
-                        checked={form.foodOptedIn}
-                        onChange={e => {
-                          const checked = e.target.checked;
-                          setForm(f => ({
-                            ...f,
-                            foodOptedIn: checked,
-                            breakfastOpted: checked,
-                            lunchOpted: checked,
-                            dinnerOpted: checked
-                          }));
-                        }}
-                      />
-                      <span className="font-semibold text-slate-700">Opt-in for Food</span>
-                    </label>
-                    
-                    {form.foodOptedIn && (
-                      <div className="flex gap-4 mt-2 pl-5 animate-fade-in">
-                        {[
-                          { key: 'breakfastOpted', label: 'Breakfast', id: 'check-breakfast' },
-                          { key: 'lunchOpted',     label: 'Lunch', id: 'check-lunch' },
-                          { key: 'dinnerOpted',    label: 'Dinner', id: 'check-dinner' }
-                        ].map(m => (
-                          <label key={m.key} className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
-                            <input 
-                              type="checkbox" 
-                              id={m.id}
-                              checked={form[m.key]} 
-                              onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
-                            />
-                            <span>{m.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <button type="submit" className="btn btn-primary mt-2" disabled={saving}>{saving?'Saving...':'Confirm Check-In'}</button>
-            </form>
-          )}
         </div>
       )}
 
@@ -779,6 +743,210 @@ export default function ManagerGuests() {
                 Close Receipt
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {showCheckInModal && selectedBedInfo && createPortal(
+        <div className="modal-overlay">
+          <div className="modal-content card fade-in-up animate-fade-in" style={{ maxWidth: 650, width: '100%' }}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-heading text-base font-semibold text-slate-900">
+                New Guest Check-In
+              </h3>
+              <button 
+                type="button" 
+                className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" 
+                onClick={handleCloseCheckInModal}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={checkIn}>
+              <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 text-xs font-semibold text-slate-600 mb-4 flex justify-between items-center">
+                <div>
+                  <span className="text-slate-400">Selected Bed: </span>
+                  <span className="text-primary font-bold">{selectedBedInfo.bedLabel}</span>
+                  <span className="text-slate-300 mx-2">|</span>
+                  <span className="text-slate-400">Room: </span>
+                  <span className="text-slate-800">{selectedBedInfo.room?.roomNumber}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400">Base Rent: </span>
+                  <span className="text-slate-800">₹{selectedBedInfo.room?.baseRent}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Full Name *</label>
+                  <input 
+                    className="form-input" 
+                    value={form.fullName} 
+                    onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} 
+                    required 
+                  />
+                </div>
+                <div className="form-group mb-0">
+                  <label className="form-label">Email ID *</label>
+                  <input 
+                    type="email" 
+                    className="form-input" 
+                    value={form.email} 
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))} 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Phone *</label>
+                  <input 
+                    className="form-input" 
+                    value={form.phone} 
+                    onChange={e => handlePhoneChange(e.target.value)} 
+                    required 
+                  />
+                </div>
+                <div className="form-group mb-0">
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="form-label mb-0">WhatsApp Number</label>
+                    <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={sameAsPhone} 
+                        onChange={e => handleSameAsPhoneChange(e.target.checked)} 
+                        className="rounded border-slate-300 text-primary focus:ring-primary w-3 h-3"
+                      />
+                      <span>Same as Phone</span>
+                    </label>
+                  </div>
+                  <input 
+                    className="form-input" 
+                    value={form.whatsappNumber} 
+                    onChange={e => {
+                      if (!sameAsPhone) {
+                        setForm(f => ({ ...f, whatsappNumber: e.target.value }));
+                      }
+                    }} 
+                    disabled={sameAsPhone}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Advance Deposit (₹)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    value={form.advanceDeposit} 
+                    onChange={e => setForm(f => ({ ...f, advanceDeposit: e.target.value }))} 
+                  />
+                </div>
+                <div className="form-group mb-0">
+                  <label className="form-label">Check-In Date *</label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={form.checkInDate} 
+                    onChange={e => setForm(f => ({ ...f, checkInDate: e.target.value }))} 
+                    required 
+                  />
+                </div>
+              </div>
+
+              {/* Meal Preferences & Selection */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-5">
+                <div className="flex items-center gap-1.5 font-bold text-[10px] text-primary mb-3 uppercase tracking-wider font-heading">
+                  <Utensils className="w-4 h-4" />
+                  <span>Meal Preferences &amp; Selections</span>
+                </div>
+                
+                <div className="form-group mb-0">
+                  <label className="form-label flex items-center gap-1.5 cursor-pointer">
+                    <input 
+                      type="checkbox"
+                      id="opt-in-food-master"
+                      checked={form.foodOptedIn}
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        setForm(f => ({
+                          ...f,
+                          foodOptedIn: checked,
+                          breakfastOpted: checked,
+                          lunchOpted: checked,
+                          dinnerOpted: checked
+                        }));
+                      }}
+                      className="rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <span className="font-semibold text-slate-700">Opt-in for Food</span>
+                  </label>
+                </div>
+
+                {form.foodOptedIn && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200/60 pt-3 mt-3 animate-fade-in">
+                    {/* Veg / Non Veg */}
+                    <div className="form-group mb-0">
+                      <label className="form-label mb-1.5 block">Food Preference</label>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : '#94a3b8' }}>
+                          <Leaf className="w-3.5 h-3.5" />
+                          <span>Veg</span>
+                        </span>
+                        <label className="toggle">
+                          <input type="checkbox" checked={!form.isVeg} onChange={() => setForm(f => ({ ...f, isVeg: !f.isVeg }))} />
+                          <span className="toggle-slider" />
+                        </label>
+                        <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : '#94a3b8' }}>
+                          <Utensils className="w-3.5 h-3.5" />
+                          <span>Non-Veg</span>
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Meal Choices */}
+                    <div className="form-group mb-0">
+                      <label className="form-label mb-1.5 block text-slate-700 font-semibold">Select Meal Types</label>
+                      <div className="flex gap-4 mt-1">
+                        {[
+                          { key: 'breakfastOpted', label: 'Breakfast', id: 'check-breakfast' },
+                          { key: 'lunchOpted',     label: 'Lunch', id: 'check-lunch' },
+                          { key: 'dinnerOpted',    label: 'Dinner', id: 'check-dinner' }
+                        ].map(m => (
+                          <label key={m.key} className="flex items-center gap-1.5 text-xs font-medium text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
+                            <input 
+                              type="checkbox" 
+                              id={m.id}
+                              checked={form[m.key]} 
+                              onChange={e => setForm(f => ({ ...f, [m.key]: e.target.checked }))} 
+                              className="rounded border-slate-300 text-primary focus:ring-primary"
+                            />
+                            <span>{m.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6">
+                <button type="button" className="btn btn-ghost" onClick={handleCloseCheckInModal}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                      <span>Checking In...</span>
+                    </>
+                  ) : 'Confirm Check-In'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>,
         document.body

@@ -69,6 +69,11 @@ public class InventoryController {
         return ResponseEntity.ok(blockRepository.findByFloorId(floorId));
     }
 
+    @GetMapping("/buildings/{buildingId}/blocks")
+    public ResponseEntity<List<Block>> getBlocksByBuilding(@PathVariable String buildingId) {
+        return ResponseEntity.ok(blockRepository.findByFloor_Building_Id(buildingId));
+    }
+
     /** All blocks across the PG — used by EB Bill recording */
     @GetMapping("/blocks")
     public ResponseEntity<List<Block>> getAllBlocks() {

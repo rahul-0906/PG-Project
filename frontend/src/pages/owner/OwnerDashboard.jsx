@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { ownerApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
@@ -39,10 +39,26 @@ function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor 
 export default function OwnerDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   
   const [showManagerModal, setShowManagerModal] = useState(false);
   const [managerForm, setManagerForm] = useState({ fullName: '', email: '', branchIds: [] });
   const [editingManager, setEditingManager] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.openAddManager && location.state?.buildingId) {
+      setManagerForm({
+        fullName: '',
+        email: '',
+        branchIds: [location.state.buildingId]
+      });
+      setEditingManager(null);
+      setShowManagerModal(true);
+      // Clear the location state to prevent repeating on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   const { data } = useQuery({
     queryKey: ['ownerDashboard'],
