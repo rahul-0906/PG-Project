@@ -37,6 +37,11 @@ api.interceptors.response.use(
 const cache = new Map();
 const CACHE_TTL_MS = 5000; // 5 seconds Cache Time-to-Live
 
+export const clearApiCache = () => {
+  cache.clear();
+};
+
+
 const cachedApi = {
   get: (url, config) => {
     const cacheKey = JSON.stringify({ url, params: config?.params });
@@ -115,6 +120,8 @@ export const managerApi = {
   getGuests: () => cachedApi.get('/manager/guests'),
   checkIn: (data) => cachedApi.post('/manager/guests', data),
   updateGuest: (id, data) => cachedApi.put(`/manager/guests/${id}`, data),
+  switchBed: (guestId, newBedId) => cachedApi.put(`/manager/guests/${guestId}/switch-bed/${newBedId}`),
+  deleteGuest: (id) => cachedApi.delete(`/manager/guests/${id}`),
   initiateCheckout: (id) => cachedApi.post(`/manager/guests/${id}/initiate-checkout`),
   confirmCheckout: (id) => cachedApi.post(`/manager/guests/${id}/confirm-checkout`),
   recordEbBill: (data) => cachedApi.post('/manager/eb-bill', data),
@@ -142,6 +149,10 @@ export const managerApi = {
   getMonthlyMeals: (month, year) => cachedApi.get('/manager/monthly-meals', { params: { month, year } }),
   getAssignedBuildings: () => cachedApi.get('/manager/assigned-buildings'),
   getBlocksByBuilding: (buildingId) => cachedApi.get(`/inventory/buildings/${buildingId}/blocks`),
+  getFloorsByBuilding: (buildingId) => cachedApi.get(`/inventory/buildings/${buildingId}/floors`),
+  getBlocksByFloor: (floorId) => cachedApi.get(`/inventory/floors/${floorId}/blocks`),
+  verifyCash: (id) => cachedApi.post(`/manager/invoices/${id}/verify-cash`),
+  getPendingCashInvoices: () => cachedApi.get('/manager/invoices/pending-cash'),
   updateSharingRent: (sharingType, baseRent, buildingId, floorId) => {
     const params = {};
     if (buildingId) params.buildingId = buildingId;
@@ -153,11 +164,14 @@ export const managerApi = {
 export const guestApi = {
   getProfile: () => cachedApi.get('/guest/profile'),
   updateProfile: (data) => cachedApi.put('/guest/profile', data),
+  requestEmailChange: (newEmail) => cachedApi.post('/guest/profile/request-email-change', { newEmail }),
+  verifyEmailChange: (newEmail, code) => cachedApi.post('/guest/profile/verify-email-change', { newEmail, code }),
   getDashboard: () => cachedApi.get('/guest/dashboard'),
   getLog: (date) => cachedApi.get(`/guest/daily-log/${date}`),
   updateLog: (date, data) => cachedApi.put(`/guest/daily-log/${date}`, data),
   getInvoices: () => cachedApi.get('/guest/invoices'),
   downloadInvoicePdf: (id) => cachedApi.get(`/guest/invoices/${id}/pdf`, { responseType: 'blob' }),
+  payCash: (id) => cachedApi.post(`/guest/invoices/${id}/pay-cash`),
   getNotifications: () => cachedApi.get('/guest/notifications'),
   markRead: (id) => cachedApi.put(`/guest/notifications/${id}/read`),
   getConfig: () => cachedApi.get('/guest/tenant-config'),
@@ -165,6 +179,12 @@ export const guestApi = {
   getMonthlyLogs: (yearMonth) => cachedApi.get(`/guest/daily-log/month/${yearMonth}`),
   getMaintenanceTickets: () => cachedApi.get('/guest/maintenance'),
   createMaintenanceTicket: (data) => cachedApi.post('/guest/maintenance', data),
+};
+
+export const notificationsApi = {
+  getNotifications: () => cachedApi.get('/guest/notifications'),
+  markRead: (id) => cachedApi.put(`/guest/notifications/${id}/read`),
+  markAllRead: () => cachedApi.put('/guest/notifications/read-all'),
 };
 
 export default cachedApi;

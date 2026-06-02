@@ -19,11 +19,59 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final TwilioConfig twilioConfig;
+    private final com.pgcrm.repository.UserRepository userRepository;
+
+    @Transactional
+    public void alertManager(String buildingId, String messageText) {
+        log.info("ALERTING MANAGER for building {}: {}", buildingId, messageText);
+        
+        // Notify managers of the building
+        java.util.List<com.pgcrm.entity.User> managers = userRepository.findByRoleAndBranchId(com.pgcrm.entity.enums.Role.PG_MANAGER, buildingId);
+        for (com.pgcrm.entity.User manager : managers) {
+            Notification notification = Notification.builder()
+                    .user(manager)
+                    .channel(NotificationChannel.IN_APP)
+                    .message(messageText)
+                    .deliveryStatus("DELIVERED")
+                    .build();
+            notificationRepository.save(notification);
+
+            if (twilioConfig.isEnabled() && manager.getPhone() != null && !manager.getPhone().isBlank()) {
+                try {
+                    String cleanPhone = manager.getPhone().trim();
+                    String toNumber = "whatsapp:" + (cleanPhone.startsWith("+") ? cleanPhone : "+91" + cleanPhone);
+                    Message.creator(
+                            new PhoneNumber(toNumber),
+                            new PhoneNumber(twilioConfig.getWhatsappFrom()),
+                            messageText
+                    ).create();
+                    log.info("WhatsApp alert successfully sent to Manager {} ({})", manager.getFullName(), cleanPhone);
+                } catch (Exception e) {
+                    log.error("Failed to send WhatsApp alert to Manager {}: {}", manager.getFullName(), e.getMessage());
+                }
+            } else {
+                log.info("Manager alert skipped (no WhatsApp phone or Twilio disabled) for Manager: {}", manager.getFullName());
+            }
+        }
+
+        // Also notify owners
+        java.util.List<com.pgcrm.entity.User> owners = userRepository.findByRole(com.pgcrm.entity.enums.Role.PG_OWNER);
+        for (com.pgcrm.entity.User owner : owners) {
+            Notification notification = Notification.builder()
+                    .user(owner)
+                    .channel(NotificationChannel.IN_APP)
+                    .message(messageText)
+                    .deliveryStatus("DELIVERED")
+                    .build();
+            notificationRepository.save(notification);
+        }
+    }
 
     @Transactional
     public void sendInApp(Guest guest, String messageText) {
         Notification notification = Notification.builder()
                 .guest(guest)
+                .user(guest.getUser())
                 .channel(NotificationChannel.IN_APP)
                 .message(messageText)
                 .deliveryStatus("DELIVERED")
@@ -36,6 +84,7 @@ public class NotificationService {
         // Always save in-app record
         Notification notification = Notification.builder()
                 .guest(guest)
+                .user(guest.getUser())
                 .channel(NotificationChannel.WHATSAPP)
                 .message(messageText)
                 .build();

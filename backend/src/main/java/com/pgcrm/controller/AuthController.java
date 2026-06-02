@@ -41,6 +41,17 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+        authService.processForgotPassword(email.trim());
+        return ResponseEntity.ok(Map.of("message", "If the email is registered, password reset instructions have been sent."));
+    }
+
+
     /**
      * Forces a password change for the authenticated user.
      * Required when mustChangePassword = true (first login after check-in).

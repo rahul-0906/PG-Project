@@ -7,12 +7,26 @@ import {
   CreditCard, 
   Download, 
   Check, 
-  Loader2 
+  Loader2,
+  X,
+  IndianRupee
 } from 'lucide-react';
 import { useSystemConfig } from '../../context/SystemConfigContext';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const STATUS_COLORS = { GENERATED:'badge-info', PAID:'badge-success', OVERDUE:'badge-danger' };
+const STATUS_COLORS = { 
+  GENERATED: 'badge-info', 
+  PAID: 'badge-success', 
+  OVERDUE: 'badge-danger',
+  PENDING_CASH_VERIFICATION: 'badge-warning'
+};
+
+const STATUS_LABELS = {
+  GENERATED: 'Unpaid',
+  PAID: 'Paid',
+  OVERDUE: 'Overdue',
+  PENDING_CASH_VERIFICATION: 'Pending Cash Verification'
+};
 
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -29,11 +43,45 @@ export default function GuestInvoices() {
   const { config } = useSystemConfig();
   const [invoices, setInvoices] = useState([]);
   const [paying, setPaying] = useState(null);
+  const [allowedPaymentModes, setAllowedPaymentModes] = useState('BOTH');
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [cashView, setCashView] = useState(false);
 
   const refresh = () => guestApi.getInvoices().then(r => setInvoices(r.data)).catch(() => {});
-  useEffect(() => { refresh(); }, []);
+  
+  useEffect(() => { 
+    refresh(); 
+    guestApi.getConfig()
+      .then(res => {
+        setAllowedPaymentModes(res.data.allowedPaymentModes ?? 'BOTH');
+      })
+      .catch(() => {});
+  }, []);
 
   const getAmt = (inv, type) => inv.lineItems?.find(l => l.type === type)?.amount ?? 0;
+
+  const handlePayClick = (invoice) => {
+    setSelectedInvoice(invoice);
+    setCashView(false);
+    setShowPayModal(true);
+  };
+
+  const handleConfirmCashHandover = async () => {
+    if (!selectedInvoice) return;
+    setPaying(selectedInvoice.id);
+    try {
+      await guestApi.payCash(selectedInvoice.id);
+      alert('✅ Cash handover confirmation sent. Manager notified.');
+      setShowPayModal(false);
+      setSelectedInvoice(null);
+      refresh();
+    } catch (err) {
+      alert('Handover initiation failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setPaying(null);
+    }
+  };
 
   const handlePayNow = async (invoice) => {
     setPaying(invoice.id);
@@ -132,8 +180,10 @@ export default function GuestInvoices() {
                         {MONTHS[inv.month-1]} {inv.year}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`badge ${STATUS_COLORS[inv.status] || 'badge-info'}`}>{inv.status}</span>
-                        {inv.dueDate && inv.status !== 'PAID' && (
+                        <span className={`badge ${STATUS_COLORS[inv.status] || 'badge-info'}`}>
+                          {STATUS_LABELS[inv.status] || inv.status}
+                        </span>
+                        {inv.dueDate && inv.status !== 'PAID' && inv.status !== 'PENDING_CASH_VERIFICATION' && (
                           <span className="text-xs font-medium text-slate-500">Due: {inv.dueDate}</span>
                         )}
                       </div>
@@ -155,9 +205,39 @@ export default function GuestInvoices() {
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2">
-                        {inv.status !== 'PAID' ? (
+                        {inv.status === 'PAID' ? (
+                          <>
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 border border-green-200 rounded-full px-2.5 py-0.5">
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Paid</span>
+                            </span>
+                            <button 
+                              className="btn btn-ghost py-1 px-3 text-xs flex items-center gap-1"
+                              onClick={async () => {
+                                try {
+                                  const res = await guestApi.downloadInvoicePdf(inv.id);
+                                  const url = window.URL.createObjectURL(new Blob([res.data]));
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', `Invoice-${inv.id.slice(0,8)}.pdf`);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                } catch (err) { alert('Failed to download PDF'); }
+                              }}
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>PDF</span>
+                            </button>
+                          </>
+                        ) : inv.status === 'PENDING_CASH_VERIFICATION' ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-0.5">
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Pending Cash Approval</span>
+                          </span>
+                        ) : (
                           <button id={`btn-pay-${inv.id?.slice(0,8)}`}
-                            onClick={() => handlePayNow(inv)}
+                            onClick={() => handlePayClick(inv)}
                             disabled={paying === inv.id}
                             className="btn btn-primary py-1 px-3 text-xs flex items-center gap-1 shadow-sm"
                           >
@@ -173,36 +253,118 @@ export default function GuestInvoices() {
                               </>
                             )}
                           </button>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 border border-green-200 rounded-full px-2.5 py-0.5">
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Paid</span>
-                          </span>
                         )}
-                        <button 
-                          className="btn btn-ghost py-1 px-3 text-xs flex items-center gap-1"
-                          onClick={async () => {
-                            try {
-                              const res = await guestApi.downloadInvoicePdf(inv.id);
-                              const url = window.URL.createObjectURL(new Blob([res.data]));
-                              const link = document.createElement('a');
-                              link.href = url;
-                              link.setAttribute('download', `Invoice-${inv.id.slice(0,8)}.pdf`);
-                              document.body.appendChild(link);
-                              link.click();
-                              link.remove();
-                            } catch (err) { alert('Failed to download PDF'); }
-                          }}
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>PDF</span>
-                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {showPayModal && selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6 animate-scale-in relative animate-fade-in">
+            <button 
+              onClick={() => { setShowPayModal(false); setSelectedInvoice(null); }}
+              className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            
+            <div className="mb-5 pr-6">
+              <h3 className="font-heading text-lg font-bold text-slate-900">Choose Payment Method</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Invoice amount: <strong className="text-slate-950 font-semibold">₹{Number(selectedInvoice.totalAmount).toLocaleString('en-IN')}</strong> for {MONTHS[selectedInvoice.month-1]} {selectedInvoice.year}
+              </p>
+            </div>
+
+            {allowedPaymentModes === 'CASH_ONLY' ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex gap-2">
+                  <span className="flex-shrink-0">⚠️</span>
+                  <span>Online payment is disabled. Only Cash Handover is allowed for this building.</span>
+                </div>
+                <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 text-slate-600 text-xs space-y-2.5">
+                  <p className="font-semibold text-slate-800 text-sm">Cash Handover Instructions</p>
+                  <p>1. Hand over the physical cash amount of <strong>₹{Number(selectedInvoice.totalAmount).toLocaleString('en-IN')}</strong> to your manager.</p>
+                  <p>2. Once paid, click <strong>Confirm Cash Handover</strong> below to request manager verification.</p>
+                  <p>3. Your invoice status will be updated to <em>Pending Cash Verification</em> until the manager confirms receipt.</p>
+                </div>
+                <button
+                  onClick={handleConfirmCashHandover}
+                  disabled={paying}
+                  className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2 font-bold"
+                >
+                  {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Confirm Cash Handover
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 gap-3">
+                  {/* Pay Online Button */}
+                  <button
+                    onClick={() => {
+                      setShowPayModal(false);
+                      handlePayNow(selectedInvoice);
+                    }}
+                    className="flex items-center justify-between p-4 rounded-xl border border-slate-200 hover:border-primary hover:bg-indigo-50/10 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600">
+                        <CreditCard className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-800 text-sm block">Pay Online (UPI / Card)</span>
+                        <span className="text-[11px] text-slate-400">Instant activation via Razorpay gateway</span>
+                      </div>
+                    </div>
+                    <span className="text-slate-400">➔</span>
+                  </button>
+
+                  {/* Pay Cash Option */}
+                  <button
+                    onClick={() => {
+                      setCashView(prev => !prev);
+                    }}
+                    className={`flex items-center justify-between p-4 rounded-xl border transition-all text-left ${
+                      cashView ? 'border-emerald-500 bg-emerald-50/10' : 'border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
+                        <IndianRupee className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-800 text-sm block">Cash Handover</span>
+                        <span className="text-[11px] text-slate-400">Hand over physical cash to building manager</span>
+                      </div>
+                    </div>
+                    <span className="text-slate-400">➔</span>
+                  </button>
+                </div>
+
+                {cashView && (
+                  <div className="p-4 rounded-xl border border-emerald-100 bg-slate-50 text-slate-600 text-xs space-y-2.5 animate-fade-in">
+                    <p className="font-semibold text-slate-800 text-sm">Cash Handover Instructions</p>
+                    <p>1. Hand over the physical cash amount of <strong>₹{Number(selectedInvoice.totalAmount).toLocaleString('en-IN')}</strong> to your manager.</p>
+                    <p>2. Once paid, click <strong>Confirm Cash Handover</strong> below to request manager verification.</p>
+                    <p>3. Your invoice status will be updated to <em>Pending Cash Verification</em> until the manager confirms receipt.</p>
+                    <button
+                      onClick={handleConfirmCashHandover}
+                      disabled={paying}
+                      className="btn btn-emerald w-full py-2.5 mt-2 flex items-center justify-center gap-2 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+                    >
+                      {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      Confirm Cash Handover
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -25,6 +25,9 @@ export default function ManagerEbBill() {
   const [readings, setReadings] = useState([]);
   const [result, setResult] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [floors, setFloors] = useState([]);
+  const [selectedFloorId, setSelectedFloorId] = useState('');
+  const [loadingFloors, setLoadingFloors] = useState(false);
   const [blocks, setBlocks] = useState([]);
   const [loadingBlocks, setLoadingBlocks] = useState(false);
   const [toast, setToast] = useState(null);
@@ -84,10 +87,45 @@ export default function ManagerEbBill() {
 
   useEffect(() => {
     if (selectedBuildingId) {
+      const fetchFloors = async () => {
+        setLoadingFloors(true);
+        try {
+          const res = await managerApi.getFloorsByBuilding(selectedBuildingId);
+          const floorsList = res.data || [];
+          setFloors(floorsList);
+          if (floorsList.length > 0) {
+            setSelectedFloorId(floorsList[0].id.toString());
+          } else {
+            setSelectedFloorId('');
+            setFloors([]);
+            setBlocks([]);
+            setForm(f => ({ ...f, blockId: '' }));
+          }
+        } catch (err) {
+          console.error('Failed to fetch floors', err);
+          setFloors([]);
+          setSelectedFloorId('');
+          setBlocks([]);
+          setForm(f => ({ ...f, blockId: '' }));
+        } finally {
+          setLoadingFloors(false);
+        }
+      };
+      fetchFloors();
+    } else {
+      setFloors([]);
+      setSelectedFloorId('');
+      setBlocks([]);
+      setForm(f => ({ ...f, blockId: '' }));
+    }
+  }, [selectedBuildingId]);
+
+  useEffect(() => {
+    if (selectedFloorId) {
       const fetchBlocks = async () => {
         setLoadingBlocks(true);
         try {
-          const res = await managerApi.getBlocksByBuilding(selectedBuildingId);
+          const res = await managerApi.getBlocksByFloor(selectedFloorId);
           const blocksList = res.data || [];
           setBlocks(blocksList);
           if (blocksList.length > 0) {
@@ -104,8 +142,11 @@ export default function ManagerEbBill() {
         }
       };
       fetchBlocks();
+    } else {
+      setBlocks([]);
+      setForm(f => ({ ...f, blockId: '' }));
     }
-  }, [selectedBuildingId]);
+  }, [selectedFloorId]);
 
   const addReadingRow = () => {
     setReadings([...readings, { guestId: '', previousReading: '', currentReading: '' }]);
@@ -155,7 +196,7 @@ export default function ManagerEbBill() {
   return (
     <AppLayout>
       {toast && (
-        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 transition-all duration-300 animate-fade-in-up border ${
+        <div className={`fixed top-4 right-4 z-[9999] px-4 py-3 rounded-xl shadow-xl text-sm font-semibold flex items-center gap-2.5 transition-all duration-300 animate-fade-in-up border ${
           toast.type === 'error' 
             ? 'bg-rose-50 border-rose-200 text-rose-800 shadow-rose-100/50' 
             : 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-100/50'
@@ -233,12 +274,40 @@ export default function ManagerEbBill() {
 
           <div className="card max-w-3xl border border-slate-200 bg-white rounded-xl">
             <form onSubmit={submit}>
-              <div className="grid-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="form-group">
+                  <label className="form-label">Floor</label>
+                  {loadingFloors ? (
+                    <div className="flex items-center gap-2 py-2.5 text-slate-400 text-xs font-semibold">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
+                      <span>Loading floors...</span>
+                    </div>
+                  ) : floors.length === 0 ? (
+                    <div className="text-xs text-rose-500 font-semibold py-2.5">
+                      No floors found
+                    </div>
+                  ) : (
+                    <select
+                      id="eb-floor-select"
+                      className="form-input cursor-pointer"
+                      value={selectedFloorId}
+                      onChange={e => setSelectedFloorId(e.target.value)}
+                      required
+                    >
+                      {floors.map(fl => (
+                        <option key={fl.id} value={fl.id}>
+                          {fl.floorLabel || `Floor ${fl.floorNumber}`}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
                 <div className="form-group">
                   <label className="form-label">Block</label>
                   {loadingBlocks ? (
                     <div className="flex items-center gap-2 py-2.5 text-slate-400 text-xs font-semibold">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
                       <span>Loading blocks...</span>
                     </div>
                   ) : blocks.length === 0 ? (

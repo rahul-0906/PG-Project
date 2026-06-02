@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bed Assignment Updated</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f4f6fb; margin: 0; padding: 0; }
+    .wrapper { max-width: 560px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.1); }
+    .header { background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 36px 40px; text-align: center; }
+    .header h1 { color: #fff; margin: 0; font-size: 24px; font-weight: 800; }
+    .header p  { color: rgba(255,255,255,0.85); margin: 6px 0 0; font-size: 14px; }
+    .body { padding: 36px 40px; }
+    .body p { color: #374151; line-height: 1.6; font-size: 15px; margin-bottom: 16px; }
+    .info-grid { margin: 24px 0; }
+    .info-box { background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 16px 20px; margin-bottom: 16px; }
+    .info-box .label { font-size: 10px; font-weight: 700; color: #4f46e5; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .info-box .value { font-size: 16px; font-weight: 700; color: #1f2937; }
+    .footer { background: #f9fafb; padding: 20px 40px; text-align: center; color: #9ca3af; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>🔄 Bed Assignment Updated</h1>
+      <p th:text="${pgName}">PG CRM</p>
+    </div>
+    <div class="body">
+      <p>Hi <strong th:text="${guestName}">Guest</strong>,</p>
+      <p>This email is to notify you that your room/bed assignment has been updated by the manager.</p>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <div class="label">Previous Bed Assignment</div>
+          <div class="value" th:text="${oldBedLabel}">Bed Old</div>
+        </div>
+        <div class="info-box" style="background: #ecfdf5; border-color: #a7f3d0;">
+          <div class="label" style="color: #059669;">New Bed Assignment</div>
+          <div class="value" style="color: #065f46;" th:text="${newBedLabel}">Bed New</div>
+        </div>
+        <div class="info-box">
+          <div class="label">New Monthly Base Rent</div>
+          <div class="value" th:text="'₹' + ${newRent}">₹0.00</div>
+        </div>
+      </div>
+
+      <p>Please move your belongings to the new bed assignment. The adjusted monthly rent will automatically apply starting on your next billing cycle.</p>
+
+      <p style="color:#6b7280;font-size:13px;margin-top:28px;">If you have any questions or did not request this change, please reach out to your PG Manager immediately.</p>
+    </div>
+    <div class="footer">
+      &copy; 2026 <span th:text="${pgName}">PG CRM</span> &mdash; This is an automated email. Please do not reply.
+    </div>
+  </div>
+</body>
+</html>

@@ -40,6 +40,11 @@ public class GuestController {
     private final BuildingConfigRepository buildingConfigRepository;
     private final PricingService pricingService;
     private final MaintenanceTicketRepository maintenanceTicketRepository;
+    private final NotificationService notificationService;
+    private final AuditService auditService;
+    private final UserRepository userRepository;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
 
     @GetMapping("/profile")
     public ResponseEntity<GuestResponse> getProfile(Authentication auth) {
@@ -58,6 +63,70 @@ public class GuestController {
         if (body.containsKey("fullName") && body.get("fullName") != null && !body.get("fullName").isBlank())
             guest.setFullName(body.get("fullName"));
         guest = guestService.save(guest);
+        return ResponseEntity.ok(guestMapper.toResponse(guest));
+    }
+
+    @PostMapping("/profile/request-email-change")
+    public ResponseEntity<?> requestEmailChange(Authentication auth,
+                                                                 @RequestBody Map<String, String> body) {
+        String newEmail = body.get("newEmail");
+        if (newEmail == null || newEmail.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "New email is required"));
+        }
+        newEmail = newEmail.trim();
+
+        // Check if email is already in use by another user
+        Optional<User> existingUser = userRepository.findByEmailIgnoreCase(newEmail);
+        if (existingUser.isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is already in use by another account"));
+        }
+
+        Guest guest = guestService.getByUserId(auth.getName());
+        if (newEmail.equalsIgnoreCase(guest.getEmail())) {
+            return ResponseEntity.badRequest().body(Map.of("error", "New email is same as current email"));
+        }
+
+        // Generate 6-digit code
+        String code = String.format("%06d", new java.util.Random().nextInt(1000000));
+        emailVerificationService.storeCode(auth.getName(), newEmail, code);
+
+        // Send email
+        emailService.sendEmailVerificationCode(newEmail, code, guest.getFullName());
+
+        return ResponseEntity.ok(Map.of("message", "Verification code sent to " + newEmail));
+    }
+
+    @PostMapping("/profile/verify-email-change")
+    public ResponseEntity<?> verifyEmailChange(Authentication auth,
+                                                            @RequestBody Map<String, String> body) {
+        String newEmail = body.get("newEmail");
+        String code = body.get("code");
+        if (newEmail == null || newEmail.isBlank() || code == null || code.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and verification code are required"));
+        }
+        newEmail = newEmail.trim();
+        code = code.trim();
+
+        boolean verified = emailVerificationService.verifyCode(auth.getName(), newEmail, code);
+        if (!verified) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired verification code"));
+        }
+
+        Guest guest = guestService.getByUserId(auth.getName());
+        User user = guest.getUser();
+
+        // Update email in Guest and User
+        guest.setEmail(newEmail);
+        if (user != null) {
+            user.setEmail(newEmail);
+            userRepository.save(user);
+        }
+        guest = guestService.save(guest);
+
+        // Audit Log
+        auditService.log(com.pgcrm.entity.enums.AuditAction.GUEST_CHECKIN, "Guest", guest.getId(),
+            "Guest " + guest.getFullName() + " changed email to " + newEmail);
+
         return ResponseEntity.ok(guestMapper.toResponse(guest));
     }
 
@@ -115,8 +184,8 @@ public class GuestController {
 
     @GetMapping("/notifications")
     public ResponseEntity<List<Notification>> getNotifications(Authentication auth) {
-        Guest guest = guestService.getByUserId(auth.getName());
-        return ResponseEntity.ok(notificationRepository.findByGuestIdOrderBySentAtDesc(guest.getId()));
+        String userId = auth.getName();
+        return ResponseEntity.ok(notificationRepository.findByUserIdOrderBySentAtDesc(userId));
     }
 
     @PutMapping("/notifications/{id}/read")
@@ -125,6 +194,15 @@ public class GuestController {
             n.setRead(true);
             notificationRepository.save(n);
         });
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/notifications/read-all")
+    public ResponseEntity<Void> markAllRead(Authentication auth) {
+        String userId = auth.getName();
+        List<Notification> unread = notificationRepository.findByUserIdAndReadFalse(userId);
+        unread.forEach(n -> n.setRead(true));
+        notificationRepository.saveAll(unread);
         return ResponseEntity.ok().build();
     }
 
@@ -147,7 +225,7 @@ public class GuestController {
         }
 
         List<Invoice> invoices = invoiceRepository.findByGuestId(guest.getId());
-        long unread = notificationRepository.countByGuestIdAndReadFalse(guest.getId());
+        long unread = notificationRepository.countByUserIdAndReadFalse(guest.getUser().getId());
 
         return ResponseEntity.ok(Map.of(
                 "guestName", guest.getFullName(),
@@ -178,6 +256,7 @@ public class GuestController {
         java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
         java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
         boolean isPreviousDay = true;
+        String allowedPaymentModes = "BOTH";
 
         if (buildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(buildingId);
@@ -192,6 +271,9 @@ public class GuestController {
                     dinnerCutoffTime = cfg.getDinnerCutoffTime();
                 }
                 isPreviousDay = cfg.isPreviousDay();
+                if (cfg.getAllowedPaymentModes() != null) {
+                    allowedPaymentModes = cfg.getAllowedPaymentModes();
+                }
             }
         }
 
@@ -207,7 +289,8 @@ public class GuestController {
             Map.entry("hasWashingMachine",      systemConfig.getRules().isHasWashingMachine()),
             Map.entry("breakfastCutoffTime",     breakfastCutoffTime.toString()),
             Map.entry("dinnerCutoffTime",        dinnerCutoffTime.toString()),
-            Map.entry("isPreviousDay",          isPreviousDay)
+            Map.entry("isPreviousDay",          isPreviousDay),
+            Map.entry("allowedPaymentModes",     allowedPaymentModes)
         ));
     }
 
@@ -250,12 +333,49 @@ public class GuestController {
                 .priority(com.pgcrm.entity.enums.MaintenancePriority.valueOf(priorityStr.toUpperCase()))
                 .build();
                 
-        return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
+        MaintenanceTicket savedTicket = maintenanceTicketRepository.save(ticket);
+        if (buildingId != null) {
+            notificationService.alertManager(buildingId, 
+                "New maintenance ticket raised by Guest " + guest.getFullName() + ": " + title + " (Priority: " + priorityStr + ")");
+        }
+        return ResponseEntity.ok(savedTicket);
     }
 
     @GetMapping("/maintenance")
     public ResponseEntity<List<MaintenanceTicket>> getTickets(Authentication auth) {
         Guest guest = guestService.getByUserId(auth.getName());
         return ResponseEntity.ok(maintenanceTicketRepository.findByRaisedByGuestId(guest.getId()));
+    }
+
+    @PostMapping("/invoices/{id}/pay-cash")
+    public ResponseEntity<InvoiceResponse> payCash(Authentication auth, @PathVariable String id) {
+        Guest guest = guestService.getByUserId(auth.getName());
+        Invoice invoice = invoiceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + id));
+        if (!invoice.getGuest().getId().equals(guest.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+        if (invoice.getStatus() == com.pgcrm.entity.enums.InvoiceStatus.PAID) {
+            throw new RuntimeException("Invoice is already paid");
+        }
+        invoice.setStatus(com.pgcrm.entity.enums.InvoiceStatus.PENDING_CASH_VERIFICATION);
+        invoice = invoiceRepository.save(invoice);
+
+        // Audit Log
+        auditService.log(com.pgcrm.entity.enums.AuditAction.PAYMENT_RECEIVED, "Invoice", id,
+            "Guest requested cash payment verification for Invoice " + id + " amount: ₹" + invoice.getTotalAmount());
+
+        // Alert Manager
+        String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+        if (buildingId != null) {
+            notificationService.alertManager(buildingId, 
+                "Pending cash payment verification for Guest " + guest.getFullName() + 
+                ", Invoice Month: " + invoice.getMonth() + "/" + invoice.getYear() + 
+                ", Amount: ₹" + invoice.getTotalAmount());
+        }
+
+        return ResponseEntity.ok(invoiceMapper.toResponse(invoice));
     }
 }

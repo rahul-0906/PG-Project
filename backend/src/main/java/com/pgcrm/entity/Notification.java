@@ -18,6 +18,10 @@ public class Notification {
     @JoinColumn(name = "guest_id")
     private Guest guest;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationChannel channel;

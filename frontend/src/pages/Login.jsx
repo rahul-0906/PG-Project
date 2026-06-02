@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
 
@@ -93,7 +93,16 @@ export default function Login() {
             />
           </div>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="form-label mb-0">Password</label>
+              <Link 
+                id="link-forgot-password"
+                to="/forgot-password" 
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
             <input 
               id="login-password" 
               type="password" 

@@ -8,6 +8,8 @@ import com.pgcrm.entity.enums.Role;
 import com.pgcrm.repository.*;
 import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.exception.BedUnavailableException;
+import com.pgcrm.exception.DuplicateEmailException;
+import com.pgcrm.dto.GuestResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,7 @@ public class GuestService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     private static final String TEMP_PASS_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final SecureRandom RNG = new SecureRandom();
@@ -43,6 +46,85 @@ public class GuestService {
 
         if (bed.getStatus() != BedStatus.VACANT) {
             throw new BedUnavailableException("Bed is not vacant: " + bed.getBedLabel());
+        }
+
+        java.util.Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCase(email);
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            log.info("[DEBUG-CHECKIN] Found existing user: id={}, email={}, active={}", existingUser.getId(), existingUser.getEmail(), existingUser.isActive());
+            Guest guest = guestRepository.findByUserId(existingUser.getId()).orElse(null);
+            if (guest != null) {
+                log.info("[DEBUG-CHECKIN] Found guest for user: id={}, name={}, active={}", guest.getId(), guest.getFullName(), guest.isActive());
+            } else {
+                log.info("[DEBUG-CHECKIN] No guest profile found for user id: {}", existingUser.getId());
+            }
+
+            if (guest == null || !guest.isActive()) {
+                // Scenario A: Returning Guest
+                if (guest == null) {
+                    guest = Guest.builder()
+                            .user(existingUser)
+                            .bed(bed)
+                            .fullName(fullName)
+                            .email(email)
+                            .phone(phone)
+                            .whatsappNumber(whatsappNumber != null ? whatsappNumber : phone)
+                            .vehicleRegistration(vehicleRegistration)
+                            .kycStatus(KycStatus.PENDING)
+                            .checkInDate(checkInDate != null ? checkInDate : LocalDate.now())
+                            .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
+                            .build();
+                } else {
+                    // Update Guest details
+                    guest.setFullName(fullName);
+                    guest.setEmail(email);
+                    guest.setPhone(phone);
+                    guest.setWhatsappNumber(whatsappNumber != null ? whatsappNumber : phone);
+                    guest.setVehicleRegistration(vehicleRegistration);
+                    guest.setBed(bed);
+                    guest.setAdvanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO);
+                    guest.setCheckInDate(checkInDate != null ? checkInDate : LocalDate.now());
+                    guest.setExpectedCheckOutDate(null);
+                    guest.setNoticeDate(null);
+                    guest.setExitDate(null);
+                    guest.setActualCheckOutDate(null);
+                    guest.setActive(true);
+                }
+
+                // Update User details
+                String tempPassword = generateTempPassword(10);
+                existingUser.setFullName(fullName);
+                existingUser.setPhone(phone);
+                existingUser.setPassword(passwordEncoder.encode(tempPassword));
+                existingUser.setFirstLogin(true);
+                existingUser.setMustChangePassword(true);
+                existingUser.setActive(true);
+                userRepository.save(existingUser);
+
+                guest = guestRepository.save(guest);
+
+                // Update bed status
+                bed.setStatus(BedStatus.OCCUPIED);
+                bedRepository.save(bed);
+
+                // Send welcome back email (non-blocking)
+                final Guest finalGuest = guest;
+                try {
+                    emailService.sendReturningGuestWelcomeEmail(finalGuest, tempPassword);
+                } catch (Exception e) {
+                    log.warn("Welcome back email failed for {}: {}", email, e.getMessage());
+                }
+
+                // Audit log
+                auditService.log(AuditAction.GUEST_CHECKIN, "Guest", guest.getId(),
+                    String.format("Returning Guest '%s' checked back into bed '%s'", fullName, bed.getBedLabel()),
+                    String.format("{\"bedId\":\"%s\",\"checkInDate\":\"%s\"}", bedId, checkInDate));
+
+                return guest;
+            } else {
+                // Scenario B: Already Active Guest
+                throw new DuplicateEmailException("A guest with this email is already checked into the system.");
+            }
         }
 
         // Generate secure temp password
@@ -121,5 +203,63 @@ public class GuestService {
     @Transactional
     public Guest save(Guest guest) {
         return guestRepository.save(guest);
+    }
+
+    @Transactional
+    public GuestResponse switchBed(String guestId, String newBedId) {
+        Guest guest = guestRepository.findById(guestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
+        
+        if (!guest.isActive()) {
+            throw new IllegalArgumentException("Guest is not active: " + guest.getFullName());
+        }
+
+        Bed newBed = bedRepository.findById(newBedId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + newBedId));
+
+        if (newBed.getStatus() != BedStatus.VACANT) {
+            throw new BedUnavailableException("Bed is not vacant: " + newBed.getBedLabel());
+        }
+
+        Bed oldBed = guest.getBed();
+        String oldBedLabel = "None";
+        if (oldBed != null) {
+            oldBedLabel = oldBed.getBedLabel();
+            oldBed.setStatus(BedStatus.VACANT);
+            bedRepository.save(oldBed);
+        }
+
+        newBed.setStatus(BedStatus.OCCUPIED);
+        bedRepository.save(newBed);
+
+        guest.setBed(newBed);
+        Guest savedGuest = guestRepository.save(guest);
+
+        BigDecimal newRent = newBed.getRoom().getBaseRent();
+
+        // Audit Logging
+        auditService.log(AuditAction.GUEST_BED_SWITCH, "Guest", savedGuest.getId(),
+                String.format("Guest %s switched from Bed %s to Bed %s. Rent adjusted to ₹%s.",
+                        savedGuest.getFullName(), oldBedLabel, newBed.getBedLabel(), newRent),
+                String.format("{\"oldBedId\":\"%s\",\"newBedId\":\"%s\",\"newRent\":%s}",
+                        oldBed != null ? oldBed.getId() : null, newBed.getId(), newRent));
+
+        // Send email notification to guest
+        try {
+            emailService.sendBedSwitchEmail(savedGuest, oldBedLabel, newBed.getBedLabel(), newRent);
+        } catch (Exception e) {
+            log.warn("Failed to send bed switch email: {}", e.getMessage());
+        }
+
+        // Send in-app notification to guest
+        try {
+            notificationService.sendInApp(savedGuest, 
+                    String.format("Your room/bed assignment has been updated from Bed %s to Bed %s. Your new monthly base rent is ₹%s.",
+                            oldBedLabel, newBed.getBedLabel(), newRent));
+        } catch (Exception e) {
+            log.warn("Failed to send bed switch in-app notification: {}", e.getMessage());
+        }
+
+        return GuestResponse.fromEntity(savedGuest);
     }
 }

@@ -67,4 +67,8 @@ public class BuildingConfig {
     @Column(name = "is_previous_day", nullable = false)
     @Builder.Default
     private boolean isPreviousDay = true;
+
+    @Column(name = "allowed_payment_modes", nullable = false)
+    @Builder.Default
+    private String allowedPaymentModes = "BOTH";
 }

@@ -82,6 +82,7 @@ export default function ManagerPricing() {
   const [breakfastCutoffTime, setBreakfastCutoffTime] = useState('22:00');
   const [dinnerCutoffTime, setDinnerCutoffTime] = useState('14:00');
   const [isPreviousDay, setIsPreviousDay] = useState(true);
+  const [allowedPaymentModes, setAllowedPaymentModes] = useState('BOTH');
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Local state for configuration edits
@@ -91,6 +92,7 @@ export default function ManagerPricing() {
   const [localBreakfastTime, setLocalBreakfastTime] = useState('22:00');
   const [localDinnerTime, setLocalDinnerTime] = useState('14:00');
   const [localIsPreviousDay, setLocalIsPreviousDay] = useState(true);
+  const [localAllowedPaymentModes, setLocalAllowedPaymentModes] = useState('BOTH');
 
   // Sync local states when API data is loaded
   useEffect(() => {
@@ -100,7 +102,8 @@ export default function ManagerPricing() {
     setLocalBreakfastTime(breakfastCutoffTime);
     setLocalDinnerTime(dinnerCutoffTime);
     setLocalIsPreviousDay(isPreviousDay);
-  }, [foodIncludedInRent, allowMealCancellations, ebSplitMethod, breakfastCutoffTime, dinnerCutoffTime, isPreviousDay]);
+    setLocalAllowedPaymentModes(allowedPaymentModes);
+  }, [foodIncludedInRent, allowMealCancellations, ebSplitMethod, breakfastCutoffTime, dinnerCutoffTime, isPreviousDay, allowedPaymentModes]);
 
   const { user } = useAuth();
 
@@ -131,6 +134,7 @@ export default function ManagerPricing() {
       setBreakfastCutoffTime(res.data.breakfastCutoffTime ? res.data.breakfastCutoffTime.substring(0, 5) : '22:00');
       setDinnerCutoffTime(res.data.dinnerCutoffTime ? res.data.dinnerCutoffTime.substring(0, 5) : '14:00');
       setIsPreviousDay(res.data.isPreviousDay ?? true);
+      setAllowedPaymentModes(res.data.allowedPaymentModes ?? 'BOTH');
 
       if (user?.role === 'PG_MANAGER' && res.data?.buildings?.length > 0) {
         setBuildings(res.data.buildings);
@@ -210,7 +214,8 @@ export default function ManagerPricing() {
         ebSplitMethod: localEbSplitMethod,
         breakfastCutoffTime: localBreakfastTime,
         dinnerCutoffTime: localDinnerTime,
-        isPreviousDay: localIsPreviousDay
+        isPreviousDay: localIsPreviousDay,
+        allowedPaymentModes: localAllowedPaymentModes
       };
 
       await managerApi.updateBuildingConfig(payload, selectedBuildingId);
@@ -265,7 +270,7 @@ export default function ManagerPricing() {
       </div>
 
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-[9999] bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
           <Check className="w-4 h-4" /> {toast}
         </div>
       )}
@@ -285,7 +290,7 @@ export default function ManagerPricing() {
             <p className="text-sm text-slate-500 mb-4">
               Configure food inclusion rules, cancellation eligibility, and utility split methods specifically for this building.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Food Included */}
               <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                 <div className="mb-4">
@@ -355,6 +360,28 @@ export default function ManagerPricing() {
                     <option value="PER_BED">Fixed Rate Per Bed</option>
                     <option value="METER_BASED">Sub-meter Reading Based</option>
                     <option value="MANAGER_MANUAL">Manager Manual Entry</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Allowed Payment Modes */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">💳</span>
+                    <span className="text-sm font-semibold text-slate-700">Allowed Payment Modes</span>
+                  </div>
+                  <span className="text-xs text-slate-400">Set payment options allowed for guest monthly invoices.</span>
+                </div>
+                <div className="mt-auto pt-2">
+                  <select
+                    id="payment-mode-select"
+                    className="form-input w-full py-1.5 text-xs cursor-pointer text-slate-700 font-semibold bg-white border-slate-200 rounded-lg"
+                    value={localAllowedPaymentModes}
+                    onChange={(e) => setLocalAllowedPaymentModes(e.target.value)}
+                  >
+                    <option value="BOTH">Cash & Online (Both)</option>
+                    <option value="CASH_ONLY">Cash Only</option>
                   </select>
                 </div>
               </div>

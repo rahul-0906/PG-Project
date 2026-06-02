@@ -17,4 +17,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     boolean existsByEmail(String email);
 
     java.util.List<User> findByRole(com.pgcrm.entity.enums.Role role);
+
+    java.util.List<User> findByRoleAndBranchId(com.pgcrm.entity.enums.Role role, String branchId);
 }

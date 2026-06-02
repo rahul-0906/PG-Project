@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
 import { Bell } from 'lucide-react';
-import { managerApi } from '../api';
+import { managerApi, notificationsApi } from '../api';
 
 const ROLE_LABELS = {
   PG_OWNER: 'Owner',
@@ -30,6 +30,57 @@ export default function TopHeader() {
   const [assignedBuildings, setAssignedBuildings] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(() => localStorage.getItem('selectedBranchId') || '');
 
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const fetchNotifications = () => {
+    if (user) {
+      notificationsApi.getNotifications()
+        .then(res => {
+          setNotifications(res.data || []);
+        })
+        .catch(console.error);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return '';
+    try {
+      const date = new Date(timeStr);
+      const diffMs = Date.now() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    } catch (e) {
+      return '';
+    }
+  };
+
+  const handleMarkRead = (id) => {
+    notificationsApi.markRead(id)
+      .then(() => {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+      })
+      .catch(console.error);
+  };
+
+  const handleMarkAllRead = () => {
+    notificationsApi.markAllRead()
+      .then(() => {
+        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      })
+      .catch(console.error);
+  };
+
   useEffect(() => {
     if (user && (user.role === 'PG_MANAGER' || user.role === 'PG_OWNER')) {
       managerApi.getAssignedBuildings().then(res => {
@@ -56,12 +107,7 @@ export default function TopHeader() {
   const badgeClass = ROLE_CLASSES[user?.role] || 'bg-slate-50 text-slate-700 border-slate-200';
   const dotClass = ROLE_DOTS[user?.role] || 'bg-slate-500';
   const userInitial = (() => {
-    let name = user?.fullName?.trim() || '';
-    if (name.toUpperCase().startsWith('PG ')) {
-      name = name.substring(3).trim();
-    } else if (name.toUpperCase() === 'PG') {
-      name = '';
-    }
+    const name = user?.fullName?.trim() || '';
     if (name) {
       return name.charAt(0).toUpperCase();
     }
@@ -83,8 +129,8 @@ export default function TopHeader() {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* User Badge / Building Selector */}
-        {user?.role === 'PG_MANAGER' && assignedBuildings.length > 1 ? (
+        {/* Building Selector */}
+        {user?.role === 'PG_MANAGER' && assignedBuildings.length > 1 && (
           <select
             value={selectedBranch}
             onChange={handleBranchChange}
@@ -95,21 +141,78 @@ export default function TopHeader() {
               <option key={b.id} value={b.id}>🏢 {b.name}</option>
             ))}
           </select>
-        ) : (
-          <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
-            {user?.fullName || ROLE_LABELS[user?.role] || user?.role}
-          </div>
         )}
 
+        {/* User Badge / Pill */}
+        <div className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeClass}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`} />
+          {user?.fullName || ROLE_LABELS[user?.role] || 'User'}
+        </div>
+
         {/* Notification Bell */}
-        <button 
-          className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors" 
-          title="Notifications" 
-          aria-label="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button 
+            className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-50 transition-colors relative" 
+            title="Notifications" 
+            aria-label="Notifications"
+            onClick={() => setShowNotifications(!showNotifications)}
+          >
+            <Bell className="w-4 h-4" />
+            {notifications.filter(n => !n.read).length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-white animate-pulse">
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </button>
+
+          {showNotifications && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+              <div className="absolute right-0 mt-2 w-80 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200 shadow-xl z-50 overflow-hidden fade-in-up">
+                <div className="px-4 py-2.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <span className="text-xs font-bold text-slate-800">Notifications</span>
+                  {notifications.filter(n => !n.read).length > 0 && (
+                    <button 
+                      onClick={handleMarkAllRead}
+                      className="text-[10px] font-bold text-primary hover:text-primary-hover flex items-center gap-0.5 transition-colors bg-transparent border-0 cursor-pointer"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto divide-y divide-slate-100">
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-6 text-center text-slate-400 text-xs">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    notifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        onClick={() => {
+                          if (!n.read) handleMarkRead(n.id);
+                        }}
+                        className={`px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer flex items-start gap-2.5 ${!n.read ? 'bg-indigo-50/20' : ''}`}
+                      >
+                        <div className="flex-1">
+                          <p className={`text-slate-700 text-xs leading-relaxed ${!n.read ? 'font-semibold text-slate-900' : ''}`}>
+                            {n.message}
+                          </p>
+                          <span className="text-[9px] text-slate-400 font-medium mt-1 block">
+                            {formatTime(n.sentAt)}
+                          </span>
+                        </div>
+                        {!n.read && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 flex-shrink-0" />
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
         {/* User Avatar */}
         <div 

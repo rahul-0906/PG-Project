@@ -28,6 +28,7 @@ public class SettlementService {
     private final BedRepository bedRepository;
     private final BuildingConfigRepository buildingConfigRepository;
     private final PricingService pricingService;
+    private final UserRepository userRepository;
 
     @Transactional
     public Guest initiateCheckout(String guestId) {
@@ -104,6 +105,9 @@ public class SettlementService {
         // Update guest status
         guest.setActive(false);
         guest.setActualCheckOutDate(today);
+        guest.setExpectedCheckOutDate(null);
+        guest.setNoticeDate(null);
+        guest.setExitDate(null);
         if (guest.getBed() != null) {
             Bed bed = guest.getBed();
             bed.setStatus(BedStatus.VACANT);
@@ -111,6 +115,12 @@ public class SettlementService {
             guest.setBed(null);
         }
         guestRepository.save(guest);
+
+        User user = guest.getUser();
+        if (user != null) {
+            user.setActive(false);
+            userRepository.save(user);
+        }
 
         String msg = String.format(
             "Dear %s, your settlement summary:\n" +

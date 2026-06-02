@@ -13,7 +13,10 @@ import {
   Zap, 
   Users, 
   ArrowRight,
-  User as UserIcon
+  User as UserIcon,
+  IndianRupee,
+  Loader2,
+  Check
 } from 'lucide-react';
 
 import { useQuery } from '@tanstack/react-query';
@@ -36,11 +39,37 @@ function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor 
 
 export default function ManagerDashboard() {
   const { user } = useAuth();
+  const [verifyingId, setVerifyingId] = useState('');
+  const [toast, setToast] = useState('');
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
   
   const { data, isLoading } = useQuery({
     queryKey: ['managerDashboard'],
     queryFn: () => managerApi.getDashboard().then(r => r.data),
   });
+
+  const { data: pendingCash, refetch: refetchPendingCash } = useQuery({
+    queryKey: ['pendingCashInvoices'],
+    queryFn: () => managerApi.getPendingCashInvoices().then(r => r.data),
+    placeholderData: [],
+  });
+
+  const handleVerifyCash = async (invoiceId) => {
+    setVerifyingId(invoiceId);
+    try {
+      await managerApi.verifyCash(invoiceId);
+      showToast('Cash payment verified successfully!');
+      refetchPendingCash();
+    } catch (err) {
+      showToast('Failed to verify cash payment');
+    } finally {
+      setVerifyingId('');
+    }
+  };
 
   const pieData = data ? [
     { name: 'Occupied', value: data.occupiedBeds },
@@ -63,7 +92,7 @@ export default function ManagerDashboard() {
             <div>
               <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Manager Portal</span>
               <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
-                Welcome back, PG Manager for {data?.buildingName || '...'}
+                Welcome back, {user?.fullName || 'Manager'} for {data?.buildingName || '...'}
               </h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
@@ -142,6 +171,74 @@ export default function ManagerDashboard() {
           })}
         </div>
       </div>
+
+      {pendingCash && pendingCash.length > 0 && (
+        <div className="card mt-6" style={{ padding: '1.25rem' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
+              <IndianRupee className="w-5 h-5 text-emerald-500" />
+              <span>Pending Cash Verifications</span>
+            </h3>
+            <span className="badge badge-warning text-xs font-semibold px-2.5 py-1">
+              {pendingCash.length} approvals pending
+            </span>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Guest</th>
+                  <th>Room / Bed</th>
+                  <th>Invoice Period</th>
+                  <th className="text-right">Amount</th>
+                  <th className="text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingCash.map(inv => (
+                  <tr key={inv.id}>
+                    <td className="font-semibold text-slate-900">
+                      {inv.guest?.fullName || 'Unknown'}
+                    </td>
+                    <td className="text-slate-700">
+                      {inv.guest?.bed?.room?.roomNumber ? `Room ${inv.guest.bed.room.roomNumber}` : 'Unassigned'}
+                      {inv.guest?.bed?.bedLabel ? ` - Bed ${inv.guest.bed.bedLabel}` : ''}
+                    </td>
+                    <td className="text-slate-600 font-semibold">
+                      {inv.month}/{inv.year}
+                    </td>
+                    <td className="text-right font-bold text-slate-900">
+                      ₹{parseFloat(inv.totalAmount || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                    </td>
+                    <td>
+                      <div className="flex justify-end">
+                        <button
+                          className="btn btn-success text-xxs py-1.5 px-3 flex items-center gap-1.5 font-bold shadow-sm"
+                          onClick={() => handleVerifyCash(inv.id)}
+                          disabled={verifyingId === inv.id}
+                        >
+                          {verifyingId === inv.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          {verifyingId === inv.id ? 'Verifying...' : 'Verify Cash'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-4 right-4 z-[9999] bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
+          <Check className="w-4 h-4" /> {toast}
+        </div>
+      )}
     </AppLayout>
   );
 }

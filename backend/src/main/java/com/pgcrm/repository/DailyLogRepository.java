@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface DailyLogRepository extends JpaRepository<DailyLog, String> {
 
     Optional<DailyLog> findByGuestIdAndLogDate(String guestId, LocalDate logDate);
+    List<DailyLog> findByGuestId(String guestId);
 
     List<DailyLog> findByGuestIdAndLogDateBetween(String guestId, LocalDate start, LocalDate end);
 

@@ -46,7 +46,15 @@ export default function GuestDashboard() {
   const queryClient = useQueryClient();
 
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', whatsappNumber: '', vehicleRegistration: '' });
+  const [profileForm, setProfileForm] = useState({ fullName: '', email: '', phone: '', whatsappNumber: '', vehicleRegistration: '' });
+  const [profileData, setProfileData] = useState(null);
+  const [originalEmail, setOriginalEmail] = useState('');
+
+  const [showOtpView, setShowOtpView] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
+  const [isRequestingOtp, setIsRequestingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const { config } = useSystemConfig();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -83,19 +91,58 @@ export default function GuestDashboard() {
   const openProfile = async () => {
     try {
       const res = await guestApi.getProfile();
+      setProfileData(res.data);
       setProfileForm({
         fullName: res.data.fullName || '',
+        email: res.data.email || '',
         phone: res.data.phone || '',
         whatsappNumber: res.data.whatsappNumber || '',
         vehicleRegistration: res.data.vehicleRegistration || ''
       });
+      setOriginalEmail(res.data.email || '');
+      setShowOtpView(false);
+      setOtpCode('');
+      setOtpError('');
       setShowProfileModal(true);
     } catch (err) { alert('Failed to load profile'); }
   };
 
-  const saveProfile = (e) => {
+  const saveProfile = async (e) => {
     e.preventDefault();
-    saveProfileMutation.mutate(profileForm);
+    if (profileForm.email.trim().toLowerCase() !== originalEmail.trim().toLowerCase()) {
+      setIsRequestingOtp(true);
+      setOtpError('');
+      try {
+        await guestApi.requestEmailChange(profileForm.email);
+        setShowOtpView(true);
+      } catch (err) {
+        setOtpError(err.response?.data?.error || 'Failed to request verification code.');
+      } finally {
+        setIsRequestingOtp(false);
+      }
+    } else {
+      saveProfileMutation.mutate(profileForm);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    setIsVerifyingOtp(true);
+    setOtpError('');
+    try {
+      await guestApi.verifyEmailChange(profileForm.email, otpCode);
+      // Success. Now update other fields.
+      await guestApi.updateProfile(profileForm);
+      updateUser({ fullName: profileForm.fullName });
+      setShowProfileModal(false);
+      setShowOtpView(false);
+      setOtpCode('');
+      queryClient.invalidateQueries({ queryKey: ['guestDashboard'] });
+    } catch (err) {
+      setOtpError(err.response?.data?.error || 'Invalid verification code. Please try again.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   const chartData = invoices.slice(0, 6).reverse().map(inv => ({
@@ -179,35 +226,138 @@ export default function GuestDashboard() {
 
       {showProfileModal && createPortal(
         <div className="modal-overlay">
-          <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
+          <div className="modal-content card fade-in-up" style={{ maxWidth: showOtpView ? 480 : 720, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-primary" />
-              <span>Edit Profile</span>
+              <span>Edit Profile Details</span>
             </h3>
-            <form onSubmit={saveProfile}>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input className="form-input" value={profileForm.fullName} onChange={e => setProfileForm(f => ({...f, fullName: e.target.value}))} required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label className="form-label">Phone</label>
-                  <input className="form-input" value={profileForm.phone} onChange={e => setProfileForm(f => ({...f, phone: e.target.value}))} required />
+            {showOtpView ? (
+              <form onSubmit={handleVerifyOtp} className="flex flex-col">
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 mb-4 text-xs leading-relaxed text-indigo-700">
+                  We sent a 6-digit verification code to <strong>{profileForm.email}</strong>. Please enter the code below to confirm your new email address.
                 </div>
+                
                 <div className="form-group">
-                  <label className="form-label">WhatsApp Number</label>
-                  <input className="form-input" value={profileForm.whatsappNumber} onChange={e => setProfileForm(f => ({...f, whatsappNumber: e.target.value}))} />
+                  <label className="form-label">6-Digit Verification Code</label>
+                  <input 
+                    type="text" 
+                    className="form-input text-center text-lg font-black tracking-widest uppercase" 
+                    maxLength={6} 
+                    value={otpCode} 
+                    onChange={e => setOtpCode(e.target.value.replace(/\D/g, ''))} 
+                    required 
+                    placeholder="123456" 
+                  />
                 </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Vehicle Registration (2-Wheeler)</label>
-                <input className="form-input" value={profileForm.vehicleRegistration} onChange={e => setProfileForm(f => ({...f, vehicleRegistration: e.target.value}))} placeholder="e.g. TN-01-AB-1234" />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1.5rem' }}>
-                <button type="button" className="btn btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={savingProfile}>{savingProfile ? 'Saving...' : 'Save Changes'}</button>
-              </div>
-            </form>
+
+                {otpError && (
+                  <div className="text-rose-500 text-xs font-semibold mt-1 mb-3">
+                    ⚠️ {otpError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-6 pt-3 border-t border-slate-100">
+                  <button type="button" className="btn btn-ghost" onClick={() => { setShowOtpView(false); setOtpCode(''); }}>Back</button>
+                  <button type="submit" className="btn btn-primary" disabled={isVerifyingOtp}>
+                    {isVerifyingOtp ? 'Verifying...' : 'Verify & Save'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={saveProfile} className="flex flex-col flex-1 overflow-hidden">
+                <div className="overflow-y-auto flex-1 pr-1" style={{ maxHeight: 'calc(90vh - 150px)' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
+                    {/* Left Column: Account Profile Details */}
+                    <div className="space-y-4">
+                      <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Account Profile Details</h4>
+                      <div className="form-group">
+                        <label className="form-label">Full Name</label>
+                        <input className="form-input" value={profileForm.fullName} onChange={e => setProfileForm(f => ({...f, fullName: e.target.value}))} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Email ID</label>
+                        <input type="email" className="form-input" value={profileForm.email} onChange={e => setProfileForm(f => ({...f, email: e.target.value}))} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Phone</label>
+                        <input className="form-input" value={profileForm.phone} onChange={e => setProfileForm(f => ({...f, phone: e.target.value}))} required />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">WhatsApp Number</label>
+                        <input className="form-input" value={profileForm.whatsappNumber} onChange={e => setProfileForm(f => ({...f, whatsappNumber: e.target.value}))} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Vehicle Registration (2-Wheeler)</label>
+                        <input className="form-input" value={profileForm.vehicleRegistration} onChange={e => setProfileForm(f => ({...f, vehicleRegistration: e.target.value}))} placeholder="e.g. TN-01-AB-1234" />
+                      </div>
+                    </div>
+
+                    {/* Right Column: Stay Allocation & Meal Preferences */}
+                    <div className="space-y-4">
+                      {profileData && (
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Stay &amp; Allocation Info</h4>
+                          <div className="bg-slate-50 rounded-xl p-4 border border-slate-200/60 grid grid-cols-1 gap-3.5 text-xs">
+                            <div>
+                              <span className="text-slate-400 font-medium block">Room Assignment</span>
+                              <span className="font-semibold text-slate-700">
+                                Bed {profileData.bedLabel || '—'} (Room {profileData.roomNumber || '—'}, {profileData.floorName || '—'})
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Check-in Date</span>
+                              <span className="font-semibold text-slate-700">{profileData.checkInDate || '—'}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Advance Deposit</span>
+                              <span className="font-semibold text-slate-700">₹{profileData.advanceDeposit ?? 0}</span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">KYC Status</span>
+                              <span className="mt-1 block">
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  profileData.kycStatus === 'VERIFIED' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                                  profileData.kycStatus === 'REJECTED' ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                                  'bg-amber-50 text-amber-700 border border-amber-200'
+                                }`}>
+                                  {profileData.kycStatus || 'PENDING'}
+                                </span>
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-slate-400 font-medium block">Meal Plan Preferences</span>
+                              <span className="font-semibold text-slate-700 block mt-0.5">
+                                {profileData.vegPreference ? '🟢 Veg' : '🔴 Non-Veg'}
+                              </span>
+                              <span className="text-slate-500 font-medium mt-1 block">
+                                Opted: {[
+                                  profileData.breakfastPreference && 'Breakfast',
+                                  profileData.lunchPreference && 'Lunch',
+                                  profileData.dinnerPreference && 'Dinner'
+                                ].filter(Boolean).join(', ') || 'None'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {otpError && (
+                  <div className="text-rose-500 text-xs font-semibold mt-3 mb-1 px-1">
+                    ⚠️ {otpError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-slate-100 bg-white">
+                  <button type="button" className="btn btn-ghost" onClick={() => setShowProfileModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary" disabled={savingProfile || isRequestingOtp}>
+                    {isRequestingOtp ? 'Requesting code...' : (savingProfile ? 'Saving...' : 'Save Changes')}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>,
         document.body

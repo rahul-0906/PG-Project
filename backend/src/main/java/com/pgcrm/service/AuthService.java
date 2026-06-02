@@ -17,9 +17,11 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
     
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
@@ -73,5 +75,36 @@ public class AuthService {
                 .firstLogin(user.isFirstLogin())
                 .mustChangePassword(user.isMustChangePassword())
                 .build();
+    }
+
+    @Transactional
+    public void processForgotPassword(String email) {
+        java.util.Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (!user.isActive()) {
+                log.info("Password reset requested for inactive user: {}", email);
+                return;
+            }
+            String tempPassword = generateTempPassword(10);
+            user.setPassword(passwordEncoder.encode(tempPassword));
+            user.setMustChangePassword(true);
+            user.setFirstLogin(true);
+            userRepository.save(user);
+
+            emailService.sendPasswordResetEmail(user, tempPassword);
+        } else {
+            log.info("Password reset requested for unregistered email: {}", email);
+        }
+    }
+
+    private String generateTempPassword(int length) {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+        java.security.SecureRandom rng = new java.security.SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(chars.charAt(rng.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 }

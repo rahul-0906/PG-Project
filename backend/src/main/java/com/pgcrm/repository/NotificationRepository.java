@@ -12,4 +12,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
     List<Notification> findByGuestIdOrderBySentAtDesc(String guestId);
     List<Notification> findByGuestIdAndChannel(String guestId, NotificationChannel channel);
     long countByGuestIdAndReadFalse(String guestId);
+
+    List<Notification> findByUserIdOrderBySentAtDesc(String userId);
+    List<Notification> findByUserIdAndReadFalse(String userId);
+    long countByUserIdAndReadFalse(String userId);
 }

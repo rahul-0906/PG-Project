@@ -36,6 +36,9 @@ public class PgManagerController {
     private final BuildingRepository buildingRepository;
     private final DailyLogService dailyLogService;
     private final GuestMapper guestMapper;
+    private final InvoiceRepository invoiceRepository;
+    private final AuditService auditService;
+    private final NotificationService notificationService;
 
     @GetMapping("/assigned-buildings")
     public ResponseEntity<List<Building>> getAssignedBuildings(Authentication auth) {
@@ -139,7 +142,6 @@ public class PgManagerController {
                 .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
 
         if (body.containsKey("fullName")) guest.setFullName((String) body.get("fullName"));
-        if (body.containsKey("email")) guest.setEmail((String) body.get("email"));
         if (body.containsKey("phone")) guest.setPhone((String) body.get("phone"));
         if (body.containsKey("whatsappNumber")) guest.setWhatsappNumber((String) body.get("whatsappNumber"));
         if (body.containsKey("advanceDeposit")) {
@@ -150,14 +152,33 @@ public class PgManagerController {
         }
 
         User user = guest.getUser();
+        if (body.containsKey("email")) {
+            String newEmail = ((String) body.get("email")).trim();
+            if (!newEmail.equalsIgnoreCase(guest.getEmail())) {
+                java.util.Optional<User> existingUser = userRepository.findByEmailIgnoreCase(newEmail);
+                if (existingUser.isPresent() && (user == null || !existingUser.get().getId().equals(user.getId()))) {
+                    throw new IllegalArgumentException("Email is already in use by another account");
+                }
+                guest.setEmail(newEmail);
+                if (user != null) {
+                    user.setEmail(newEmail);
+                }
+            }
+        }
+
         if (user != null) {
             if (body.containsKey("fullName")) user.setFullName((String) body.get("fullName"));
-            if (body.containsKey("email")) user.setEmail((String) body.get("email"));
             if (body.containsKey("phone")) user.setPhone((String) body.get("phone"));
             userRepository.save(user);
         }
 
         return ResponseEntity.ok(guestMapper.toResponse(guestRepository.save(guest)));
+    }
+
+    @PutMapping("/guests/{guestId}/switch-bed/{newBedId}")
+    public ResponseEntity<GuestResponse> switchBed(@PathVariable String guestId,
+                                                    @PathVariable String newBedId) {
+        return ResponseEntity.ok(guestService.switchBed(guestId, newBedId));
     }
 
     @PostMapping("/guests/{guestId}/initiate-checkout")
@@ -295,13 +316,82 @@ public class PgManagerController {
         return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
     }
 
-    @PutMapping("/maintenance/{id}/resolve")
-    public ResponseEntity<MaintenanceTicket> resolveTicket(@PathVariable String id) {
-        MaintenanceTicket ticket = maintenanceTicketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    @PutMapping("/maintenance/{ticketId}/resolve")
+    public ResponseEntity<MaintenanceTicket> resolveTicket(@PathVariable String ticketId) {
+        MaintenanceTicket ticket = maintenanceTicketRepository.findById(ticketId)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
         ticket.setStatus(com.pgcrm.entity.enums.MaintenanceStatus.RESOLVED);
         ticket.setResolvedAt(java.time.LocalDateTime.now());
+        
+        // Audit
+        auditService.log(com.pgcrm.entity.enums.AuditAction.MAINTENANCE_RESOLVED, 
+                "MaintenanceTicket", 
+                ticketId, 
+                "Ticket status updated to RESOLVED");
+                 
         return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
+    }
+
+    @PostMapping("/invoices/{id}/verify-cash")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Invoice> verifyCash(Authentication auth, @PathVariable String id) {
+        User manager = userRepository.findByEmailIgnoreCase(auth.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+        
+        Invoice invoice = invoiceRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + id));
+        
+        if (invoice.getStatus() == com.pgcrm.entity.enums.InvoiceStatus.PAID) {
+            throw new RuntimeException("Invoice is already paid");
+        }
+        
+        Guest guest = invoice.getGuest();
+        String guestBuildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                && guest.getBed().getRoom().getFloor() != null)
+                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+        
+        if (manager.getRole() == com.pgcrm.entity.enums.Role.PG_MANAGER) {
+            if (guestBuildingId == null || !guestBuildingId.equals(manager.getBranchId())) {
+                throw new RuntimeException("Unauthorized: Manager not assigned to this guest's building");
+            }
+        }
+
+        invoice.setStatus(com.pgcrm.entity.enums.InvoiceStatus.PAID);
+        invoice.setPaymentMethod("CASH");
+        invoice.setPaidAt(java.time.LocalDateTime.now());
+        invoiceRepository.save(invoice);
+
+        // Audit Log
+        auditService.log(com.pgcrm.entity.enums.AuditAction.PAYMENT_RECEIVED, "Invoice", id,
+            "Cash payment verified by Manager " + manager.getFullName() + " for Invoice " + id + " amount: ₹" + invoice.getTotalAmount());
+
+        // Notify guest
+        notificationService.sendBoth(guest, "Your cash payment of ₹" + invoice.getTotalAmount() + " for invoice " + invoice.getMonth() + "/" + invoice.getYear() + " has been verified and received. Thank you!");
+
+        return ResponseEntity.ok(invoice);
+    }
+
+    @GetMapping("/invoices/pending-cash")
+    public ResponseEntity<List<Invoice>> getPendingCashInvoices(Authentication auth) {
+        User manager = userRepository.findByEmailIgnoreCase(auth.getName())
+                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+        
+        List<Invoice> pending = invoiceRepository.findByStatus(com.pgcrm.entity.enums.InvoiceStatus.PENDING_CASH_VERIFICATION);
+        
+        if (manager.getRole() == com.pgcrm.entity.enums.Role.PG_MANAGER) {
+            String branchId = manager.getBranchId();
+            pending = pending.stream()
+                .filter(inv -> {
+                    Guest guest = inv.getGuest();
+                    String guestBuildingId = (guest != null && guest.getBed() != null && guest.getBed().getRoom() != null
+                            && guest.getBed().getRoom().getFloor() != null)
+                            ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+                    return branchId != null && branchId.equals(guestBuildingId);
+                })
+                .collect(java.util.stream.Collectors.toList());
+        }
+        
+        return ResponseEntity.ok(pending);
     }
 
     // ── Vacancies ─────────────────────────────────────────────────

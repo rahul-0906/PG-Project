@@ -58,6 +58,78 @@ public class EmailService {
             log.error("Failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage());
         }
     }
+ 
+    /**
+     * Send welcome back email to a returning guest.
+     */
+    public void sendReturningGuestWelcomeEmail(Guest guest, String tempPassword) {
+        if (!mailEnabled) {
+            log.info("📧 [MAIL DISABLED] Welcome back email for {}", guest.getEmail());
+            return;
+        }
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("guestName", guest.getFullName());
+            ctx.setVariable("email", guest.getEmail());
+            ctx.setVariable("tempPassword", tempPassword);
+            ctx.setVariable("bedLabel", guest.getBed() != null ? guest.getBed().getBedLabel() : "Unassigned");
+            ctx.setVariable("loginUrl", "http://localhost:5173/login");
+
+            String html = templateEngine.process("welcome-back-email", ctx);
+            sendHtmlMail(guest.getEmail(), "🏠 Welcome Back to " + fromName + " — Check-in Confirmation", html);
+            log.info("📧 Welcome back email sent to {}", guest.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send welcome back email to {}: {}", guest.getEmail(), e.getMessage());
+        }
+    }
+
+    /**
+     * Send password reset email to a user with their new temporary password.
+     */
+    public void sendPasswordResetEmail(com.pgcrm.entity.User user, String tempPassword) {
+        if (!mailEnabled) {
+            log.info("📧 [MAIL DISABLED] Password reset email for {} — temp password: {}", user.getEmail(), tempPassword);
+            return;
+        }
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("guestName", user.getFullName() != null ? user.getFullName() : "User");
+            ctx.setVariable("email", user.getEmail());
+            ctx.setVariable("tempPassword", tempPassword);
+            ctx.setVariable("loginUrl", "http://localhost:5173/login");
+
+            String html = templateEngine.process("password-reset-email", ctx);
+            sendHtmlMail(user.getEmail(), "🔐 Password Reset Request — PG CRM", html);
+            log.info("📧 Password reset email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage());
+        }
+    }
+
+
+    /**
+     * Send email verification code for email change.
+     */
+    public void sendEmailVerificationCode(String toEmail, String code, String guestName) {
+        if (!mailEnabled) {
+            log.info("📧 [MAIL DISABLED] Email verification code for {} — code: {}", toEmail, code);
+            return;
+        }
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("guestName", guestName != null ? guestName : "User");
+            ctx.setVariable("email", toEmail);
+            ctx.setVariable("code", code);
+            ctx.setVariable("appName", fromName);
+
+            String html = templateEngine.process("email-verification", ctx);
+            sendHtmlMail(toEmail, "🔑 Confirm Your New Email Address — " + fromName, html);
+            log.info("📧 Email verification code sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send email verification to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
 
     /**
      * Send payment reminder email for an overdue/upcoming invoice.
@@ -84,6 +156,28 @@ public class EmailService {
             log.info("📧 Payment reminder sent to {}", guest.getEmail());
         } catch (Exception e) {
             log.error("Failed to send payment reminder to {}: {}", guest.getEmail(), e.getMessage());
+        }
+    }
+
+    public void sendBedSwitchEmail(Guest guest, String oldBedLabel, String newBedLabel, BigDecimal newRent) {
+        if (!mailEnabled) {
+            log.info("📧 [MAIL DISABLED] Bed switch email for {} — from {} to {}, new rent: {}", 
+                     guest.getEmail(), oldBedLabel, newBedLabel, newRent);
+            return;
+        }
+        try {
+            Context ctx = new Context();
+            ctx.setVariable("guestName", guest.getFullName());
+            ctx.setVariable("oldBedLabel", oldBedLabel);
+            ctx.setVariable("newBedLabel", newBedLabel);
+            ctx.setVariable("newRent", newRent);
+            ctx.setVariable("pgName", fromName);
+
+            String html = templateEngine.process("bed-switch-email", ctx);
+            sendHtmlMail(guest.getEmail(), "🔄 Bed Assignment Updated — " + fromName, html);
+            log.info("📧 Bed switch email sent to {}", guest.getEmail());
+        } catch (Exception e) {
+            log.error("Failed to send bed switch email to {}: {}", guest.getEmail(), e.getMessage());
         }
     }
 

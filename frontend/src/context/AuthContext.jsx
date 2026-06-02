@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authApi } from '../api';
+import { authApi, clearApiCache } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -28,7 +28,18 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await authApi.logout().catch(() => {});
+    try {
+      await authApi.logout();
+    } catch (e) {
+      // Ignore network failures for logout request
+    }
+    clearApiCache();
+    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('branchId');
+    localStorage.removeItem('selectedBranchId');
     localStorage.clear();
     setUser(null);
   };

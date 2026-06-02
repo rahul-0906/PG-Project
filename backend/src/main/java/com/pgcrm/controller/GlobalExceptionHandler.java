@@ -4,6 +4,7 @@ import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.exception.BedUnavailableException;
 import com.pgcrm.exception.InvalidLockoutException;
 import com.pgcrm.exception.SignatureVerificationException;
+import com.pgcrm.exception.DuplicateEmailException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,6 +34,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SignatureVerificationException.class)
     public ResponseEntity<Map<String, Object>> handleSignatureVerification(SignatureVerificationException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error(ex.getMessage(), 400));
+    }
+
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateEmail(DuplicateEmailException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error(ex.getMessage(), 400));
     }
 

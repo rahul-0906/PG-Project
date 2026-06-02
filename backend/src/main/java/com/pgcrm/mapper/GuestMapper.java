@@ -14,6 +14,7 @@ public interface GuestMapper {
     @Mapping(target = "bedLabel", source = "bed.bedLabel")
     @Mapping(target = "roomNumber", source = "bed.room.roomNumber")
     @Mapping(target = "floorName", source = "bed.room.floor.floorLabel")
+    @Mapping(target = "baseRent", source = "bed.room.baseRent")
     @Mapping(target = "kycStatus", expression = "java(guest.getKycStatus() != null ? guest.getKycStatus().name() : null)")
     GuestResponse toResponse(Guest guest);
 

@@ -3,5 +3,6 @@ package com.pgcrm.entity.enums;
 public enum InvoiceStatus {
     GENERATED,
     PAID,
-    OVERDUE
+    OVERDUE,
+    PENDING_CASH_VERIFICATION
 }

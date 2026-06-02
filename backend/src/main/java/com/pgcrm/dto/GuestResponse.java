@@ -20,6 +20,7 @@ public class GuestResponse {
     private String bedLabel;
     private String roomNumber;
     private String floorName;
+    private BigDecimal baseRent;
     private String fullName;
     private String email;
     private String phone;
@@ -44,8 +45,10 @@ public class GuestResponse {
         String bedLabel = guest.getBed() != null ? guest.getBed().getBedLabel() : null;
         String roomNumber = null;
         String floorName = null;
+        BigDecimal baseRent = null;
         if (guest.getBed() != null && guest.getBed().getRoom() != null) {
             roomNumber = guest.getBed().getRoom().getRoomNumber();
+            baseRent = guest.getBed().getRoom().getBaseRent();
             if (guest.getBed().getRoom().getFloor() != null) {
                 floorName = guest.getBed().getRoom().getFloor().getFloorLabel();
             }
@@ -57,6 +60,7 @@ public class GuestResponse {
                 .bedLabel(bedLabel)
                 .roomNumber(roomNumber)
                 .floorName(floorName)
+                .baseRent(baseRent)
                 .fullName(guest.getFullName())
                 .email(guest.getEmail())
                 .phone(guest.getPhone())

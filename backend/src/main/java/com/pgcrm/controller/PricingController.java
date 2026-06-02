@@ -96,6 +96,7 @@ public class PricingController {
         java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
         java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
         boolean isPreviousDay = true;
+        String allowedPaymentModes = "BOTH";
 
         if (effectiveBuildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(effectiveBuildingId);
@@ -113,6 +114,9 @@ public class PricingController {
                     dinnerCutoffTime = cfg.getDinnerCutoffTime();
                 }
                 isPreviousDay = cfg.isPreviousDay();
+                if (cfg.getAllowedPaymentModes() != null) {
+                    allowedPaymentModes = cfg.getAllowedPaymentModes();
+                }
             } else {
                 foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
                 allowMealCancellations = systemConfig.getRules().isAllowMealCancellations();
@@ -133,7 +137,8 @@ public class PricingController {
                 "ebSplitMethod", ebSplitMethod,
                 "breakfastCutoffTime", breakfastCutoffTime.toString(),
                 "dinnerCutoffTime", dinnerCutoffTime.toString(),
-                "isPreviousDay", isPreviousDay
+                "isPreviousDay", isPreviousDay,
+                "allowedPaymentModes", allowedPaymentModes
         ));
     }
 
@@ -210,6 +215,9 @@ public class PricingController {
         }
         if (body.containsKey("isPreviousDay")) {
             cfg.setPreviousDay(Boolean.parseBoolean(body.get("isPreviousDay").toString()));
+        }
+        if (body.containsKey("allowedPaymentModes")) {
+            cfg.setAllowedPaymentModes(body.get("allowedPaymentModes").toString());
         }
 
         return ResponseEntity.ok(buildingConfigRepository.save(cfg));

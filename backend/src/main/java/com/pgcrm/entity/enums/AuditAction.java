@@ -5,6 +5,7 @@ public enum AuditAction {
     GUEST_CHECKIN,
     GUEST_CHECKOUT_NOTICE,
     GUEST_CHECKOUT_CONFIRMED,
+    GUEST_BED_SWITCH,
 
     // Billing & Payments
     INVOICE_GENERATED,
