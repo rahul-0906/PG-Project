@@ -44,6 +44,12 @@ PG CRM incorporates a robust DB-backed configuration architecture:
 * **Dynamic Rules Engine**: Building-specific prices, food options, EB splits, cutoff hours, and automatic billing scheduler statuses are stored in the database via the `BuildingConfig` model and managed directly through the Owner/Manager UI.
 * **Guest Maintenance Portal**: Guests can report issues (Wi-Fi, plumbing, electrical) through their portal, selecting priority levels and viewing resolution state logs updated in real-time by the manager.
 
+### 1.5 Multi-Channel Notifications & Verification Core
+The platform incorporates secure self-service modules and automated messaging pipelines:
+* **In-App & Multi-Channel Notifications**: Real-time push updates logged directly to the PostgreSQL database and served via an interactive header bell notification dropdown menu. The backend also supports automated email and WhatsApp reminders.
+* **Secure Email verification OTPs**: Guest profile email updates require verification via a 6-digit code cached for 15 minutes in-memory using `EmailVerificationService`.
+* **Temporary Password Resets**: A clean password-recovery flow allows requesting a high-entropy temporary password, enforcing a mandatory change-password check (`mustChangePassword` = true) upon subsequent logins.
+
 ---
 
 ## 2. Core Tech Stack

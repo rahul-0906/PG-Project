@@ -64,6 +64,7 @@ Handles custom business-level errors to manage operational exceptions and map th
 * **`BedUnavailableException.java`**: Thrown when an administrative check-in requests a bed that is already occupied or marked under notice. It maps directly to HTTP status **400 (BAD_REQUEST)**.
 * **`InvalidLockoutException.java`**: Thrown when a guest attempts to change meal preferences for a calendar slot after the respective lockout cut-off time has passed. It maps directly to HTTP status **400 (BAD_REQUEST)**.
 * **`SignatureVerificationException.java`**: Thrown when the Razorpay payment gateway verification webhook signature fails hash checks. It maps directly to HTTP status **400 (BAD_REQUEST)**.
+* **`DuplicateEmailException.java`**: Thrown when a guest attempts to change their email to an address that is already associated with another active user account. It maps directly to HTTP status **400 (BAD_REQUEST)**.
 
 ---
 
@@ -79,6 +80,9 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 * **Operational Scope**: User Authentication & Session Management.
 * **Endpoints**:
   * `POST /api/auth/login`: Accepts `AuthRequest` DTO, validates credentials, and returns an `AuthResponse` DTO.
+  * `POST /api/auth/refresh`: Receives a refresh token, verifies validity, and yields a new short-lived access token.
+  * `POST /api/auth/logout`: Invalidates the user session (clearing tokens).
+  * `POST /api/auth/forgot-password`: Requests a password reset. If the email is registered, generates a temporary password, updates the user credentials record, marks `mustChangePassword` as true, and emails it.
   * `POST /api/auth/change-password`: Modifies user password after validating the current password.
   * `GET /api/auth/me`: Authenticates active requests via JWT and yields full session details.
 * **Access Control**: Public for login; authenticated for other endpoints.
@@ -92,12 +96,17 @@ HTTP Request ──► JwtAuthenticationFilter ──► Controller Endpoint ─
 * **Endpoints**:
   * `GET /api/guest/profile`: Retrieves guest details, returning a `GuestResponse` DTO.
   * `PUT /api/guest/profile`: Updates profile details and returns `GuestResponse` DTO.
-  * `GET /api/guest/dashboard`: Fetches check-in details, current bed assignments, and pending invoices.
+  * `POST /api/guest/profile/request-email-change`: Initiates secure email updates by generating and emailing a 6-digit OTP to the proposed address.
+  * `POST /api/guest/profile/verify-email-change`: Verifies the 6-digit OTP and commits the new email address to Guest and User tables.
+  * `GET /api/guest/dashboard`: Fetches check-in details, current bed assignments, and pending invoices count.
   * `GET /api/guest/daily-log/month/{yearMonth}`: Fetches all meal and service logs for the guest within a target calendar month.
   * `PUT /api/guest/daily-log`: Updates future date meal preferences.
   * `GET /api/guest/invoices`: Returns guest invoices mapped into `InvoiceResponse` DTOs.
   * `GET /api/guest/addons`: Returns chronological add-on logs.
   * `POST /api/guest/maintenance`: Files a maintenance ticket.
+  * `GET /api/guest/notifications`: Returns the chronological notifications feed for the authenticated user.
+  * `PUT /api/guest/notifications/{id}/read`: Marks a specific notification as read.
+  * `PUT /api/guest/notifications/read-all`: Marks all unread user notifications as read.
 * **Access Control**: Restricted to `GUEST` role.
 
 #### `InventoryController.java`
@@ -254,9 +263,9 @@ Defines the relational mappings using JPA annotations, detailing table structure
 * **Relationships**: `@ManyToOne` with `Guest`, `@ManyToOne` with `Building`.
 
 #### `Notification.java`
-* **Purpose**: System-wide notifications log.
-* **Fields**: `id`, `title`, `message`, `channel` (WhatsApp/Mail), `sentAt`, `isRead`.
-* **Relationships**: `@ManyToOne` with `User`.
+* **Purpose**: System-wide notifications ledger supporting in-app updates and dispatch tracking.
+* **Fields**: `id`, `title`, `message`, `channel` (EMAIL/WHATSAPP), `sentAt`, `isRead` (for in-app alerts).
+* **Relationships**: `@ManyToOne` association linking directly to `User` (supporting notification routing for Guests, Managers, or Owners). Mapped from table column `user_id`.
 
 #### `PricingConfig.java`
 * **Purpose**: Property-specific price adjustments.
@@ -341,7 +350,10 @@ Handles business computations, integrations, and reports.
     $$\text{Per Guest Bill} = (\text{Guest End Reading} - \text{Guest Start Reading}) \times \text{Rate Per Unit}$$
 
 #### `EmailService.java`
-* **Logic**: Resolves properties like `fromName` from system config configuration details and compiles HTML notification templates using Thymeleaf.
+* **Logic**: Resolves properties like `fromName` from system config configuration details and compiles HTML notification templates using Thymeleaf. Dispatches bed switch intimations, OTP codes, and password recovery emails.
+
+#### `EmailVerificationService.java`
+* **Logic**: Manages 6-digit email change OTP verification codes using an in-memory `ConcurrentHashMap` cache. Caches registration requests for up to 15 minutes before expiration.
 
 #### `GuestService.java`
 * **Logic**: Updates details and queries profile listings.
@@ -438,6 +450,9 @@ The client interface is built as a single-page React application powered by Vite
 #### `Login.jsx`
 * **Purpose**: Login portal. Features a glassmorphic login card and dynamically displays brand names and logos.
 
+#### `ForgotPassword.jsx`
+* **Purpose**: Password recovery page. Requests temporary credentials, presenting feedback instructions and redirect links upon completion.
+
 #### `Settings.jsx`
 * **Purpose**: User preferences and security configuration page.
 
@@ -489,3 +504,18 @@ The client interface is built as a single-page React application powered by Vite
 
 #### `owner/OwnerDashboard.jsx`
 * **Purpose**: Manager registration page. Allows assigning managers to multiple buildings via checkbox toggles.
+
+---
+
+## 3. Database Migrations & Email Templates
+
+### 3.1 Relational Migrations (`backend/src/main/resources/db/migration/`)
+* **`V6__add_payment_mode_config.sql`**: Alters the `building_configs` table to introduce the `allowed_payment_modes` setting (e.g. ONLINE, CASH, or BOTH), allowing granular control over tenant collection pipelines.
+* **`V7__add_user_to_notifications.sql`**: Introduces a foreign key `user_id` pointing to the `users` table on the `notifications` table, mapping existing guest entries to user accounts and enabling universal in-app notifications.
+* **`V8__add_bed_switch_audit_action.sql`**: Updates the `audit_logs` action check constraint to include `GUEST_BED_SWITCH`, ensuring formal administrative logging on room swaps.
+
+### 3.2 HTML Thymeleaf Templates (`backend/src/main/resources/templates/`)
+* **`email-verification.html`**: A stylized HTML email containing the 6-digit profile email change OTP.
+* **`password-reset-email.html`**: Sends temporary passwords generated during forgot-password workflows.
+* **`bed-switch-email.html`**: Alerts guests to room assignment updates, listing previous/new rents and room coordinates.
+* **`welcome-back-email.html`**: Welcome template for returning checked-in guests.

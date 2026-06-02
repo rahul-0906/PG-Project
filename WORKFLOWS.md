@@ -464,3 +464,145 @@ sequenceDiagram
         Notif->>DB: Log Notification entity
     end
 ```
+
+---
+
+## 16. Guest Email Profile Change OTP Verification Flow
+Secures the guest profile update pipeline, preventing unauthorized email modifications by using a 6-digit verification code.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest
+    participant Portal as Guest Settings Page
+    participant Controller as GuestController
+    participant EVService as EmailVerificationService
+    participant Mail as EmailService
+    participant DB as PostgreSQL DB
+
+    Note over Guest, DB: Phase 1: Request Email Change
+    Guest->>Portal: Enters new email & clicks "Send Code"
+    Portal->>Controller: POST /api/guest/profile/request-email-change (newEmail)
+    Controller->>DB: Check if email already exists in User table
+    alt Email is taken
+        DB->>Controller: Return duplicate record
+        Controller->>Portal: 400 Bad Request (Email in use)
+    else Email is free
+        Controller->>EVService: storeCode(userId, newEmail, 6-digit-code)
+        Note over EVService: Stores code & expiry (15 min) in ConcurrentHashMap cache
+        Controller->>Mail: sendEmailVerificationCode(newEmail, code, fullName)
+        Controller->>Portal: 200 OK (Verification code sent)
+        Portal->>Guest: Prompts for 6-digit OTP verification code
+    end
+
+    Note over Guest, DB: Phase 2: Verify & Commit Email Change
+    Guest->>Portal: Enters OTP & submits
+    Portal->>Controller: POST /api/guest/profile/verify-email-change (newEmail, code)
+    Controller->>EVService: verifyCode(userId, newEmail, code)
+    alt Invalid/Expired OTP
+        EVService->>Controller: Return false
+        Controller->>Portal: 400 Bad Request (Invalid/Expired code)
+    else Successful Verification
+        EVService->>Controller: Return true (Clears cached OTP)
+        Controller->>DB: Update Guest & User email fields
+        Controller->>DB: Save changes & write Audit Log
+        Controller->>Portal: Return updated GuestResponse
+        Portal->>Guest: Displays success toast & shows new email
+    end
+```
+
+---
+
+## 17. Forgot/Reset Password Temporary Credentials Flow
+Permits self-service password recovery, issuing a random temporary password and forcing users to change it on their subsequent login.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Guest / Manager
+    participant App as ForgotPassword Page
+    participant Controller as AuthController
+    participant Service as AuthService
+    participant DB as PostgreSQL DB
+    participant Mail as EmailService
+
+    User->>App: Enters email and submits
+    App->>Controller: POST /api/auth/forgot-password (email)
+    Controller->>Service: processForgotPassword(email)
+    Service->>DB: Search for active User by email
+    alt User Not Found / Inactive
+        Service->>Controller: Complete silently (No action logged)
+        Controller->>App: Return 200 OK (Generic success message)
+    else Active User Found
+        Service->>Service: Generate 10-char high-entropy tempPassword
+        Service->>DB: Update user: password = encode(tempPassword), mustChangePassword = true, firstLogin = true
+        Service->>Mail: sendPasswordResetEmail(user, tempPassword)
+        Service->>Controller: Done
+        Controller->>App: Return 200 OK
+    end
+    App->>User: Renders success checkmark & redirects to Login
+
+    Note over User, DB: Subsequent Login & Forced Password Change
+    User->>App: Logs in with temp password
+    App->>Controller: POST /api/auth/login
+    Controller->>DB: Verify credentials (matches encrypted tempPassword)
+    Controller->>User: Return AuthResponse (mustChangePassword = true)
+    Note over User: App routes user directly to ChangePassword view, locking navigation
+    User->>App: Enters new password & submits
+    App->>Controller: POST /api/auth/change-password (currentPassword, newPassword)
+    Controller->>DB: Validate currentPassword & update user: password = encode(newPassword), mustChangePassword = false
+    Controller->>DB: Log PASSWORD_CHANGED Audit Event
+    Controller->>User: Password change confirmed, grants dashboard access
+```
+
+---
+
+## 18. Room/Bed Switch & Multi-Channel Notification Flow
+Handles transferring checked-in guests between rooms/beds via an interactive grid, recording audit logs, sending confirmation emails, and publishing in-app alerts.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Manager
+    participant App as ManagerGuests Component
+    participant Controller as PgManagerController
+    participant Service as GuestService
+    participant DB as PostgreSQL DB
+    participant Mail as EmailService
+    participant Notif as NotificationService
+
+    Manager->>App: Selects Guest and clicks "Switch Bed"
+    App->>Controller: GET /api/inventory/buildings (fetches all layout structures)
+    Controller->>App: Return Building layout (all floors, blocks, rooms, beds)
+    Note over App: App groups beds by Floor/Block/Room and opens visual selector modal (2-column layout)
+    Manager->>App: Selects a VACANT bed (displays dynamic price impact preview) & clicks "Confirm"
+    App->>Controller: PUT /api/manager/guests/{id}/switch-bed?bedId={bedId}
+    Controller->>Service: switchBed(guestId, bedId)
+    
+    Note over Service, DB: Database Transaction
+    Service->>DB: Update old bed status to VACANT
+    Service->>DB: Update guest's assigned bed reference to new bed
+    Service->>DB: Update new bed status to OCCUPIED
+    Service->>DB: Write BED_SWITCH Audit Log entry
+    
+    Note over Service, Notif: Dispatch Notifications
+    Service->>Mail: sendBedSwitchEmail(guest, oldBedCode, newBedCode, newRent)
+    Service->>Notif: sendInAppNotification(guest.user, message)
+    Notif->>DB: Persist Notification entity (isRead = false)
+    
+    Service->>Controller: Return updated GuestResponse
+    Controller->>App: Return success status
+    App->>Manager: Displays success toast and refreshes guests list
+    
+    Note over Guest, DB: Guest receives In-App Alert
+    actor Guest
+    Guest->>App: Logs into Guest Portal
+    App->>Controller: GET /api/guest/dashboard / GET /api/guest/notifications
+    Controller->>DB: Count unread notifications & fetch feed
+    DB->>App: Returns notifications list & unread count
+    Note over App: Bell icon in header displays red count badge. Guest opens notifications menu and clicks "Mark Read"
+    Guest->>App: Clicks notification item / "Mark all read"
+    App->>Controller: PUT /api/guest/notifications/{id}/read
+    Controller->>DB: Set Notification isRead = true
+```
+
