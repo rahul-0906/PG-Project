@@ -10,6 +10,7 @@ export function AuthProvider({ children }) {
   });
 
   const login = async (email, password) => {
+    localStorage.removeItem('selectedBranchId');
     const res = await authApi.login(email, password);
     const data = res.data;
     localStorage.setItem('accessToken', data.accessToken);
@@ -23,6 +24,14 @@ export function AuthProvider({ children }) {
       firstLogin: data.firstLogin === 'true' || data.firstLogin === true,
     };
     localStorage.setItem('user', JSON.stringify(userData));
+
+    if (data.role === 'PG_MANAGER' && data.branchId) {
+      const branches = data.branchId.split(',');
+      if (branches.length > 0 && branches[0]) {
+        localStorage.setItem('selectedBranchId', branches[0]);
+      }
+    }
+
     setUser(userData);
     return data.role;
   };

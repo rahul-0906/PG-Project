@@ -50,6 +50,7 @@ public class AuthService {
                 .role(user.getRole().name())
                 .userId(user.getId())
                 .fullName(user.getFullName() != null ? user.getFullName() : "")
+                .branchId(user.getBranchId())
                 .firstLogin(user.isFirstLogin())
                 .mustChangePassword(user.isMustChangePassword())
                 .build();
@@ -72,6 +73,7 @@ public class AuthService {
                 .role(user.getRole().name())
                 .userId(user.getId())
                 .fullName(user.getFullName() != null ? user.getFullName() : "")
+                .branchId(user.getBranchId())
                 .firstLogin(user.isFirstLogin())
                 .mustChangePassword(user.isMustChangePassword())
                 .build();

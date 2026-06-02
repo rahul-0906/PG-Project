@@ -15,6 +15,7 @@ public class AuthResponse {
     private String role;
     private String userId;
     private String fullName;
+    private String branchId;
     private boolean firstLogin;
     private boolean mustChangePassword;
 }

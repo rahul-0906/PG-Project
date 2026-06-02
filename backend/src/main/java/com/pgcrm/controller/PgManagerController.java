@@ -351,7 +351,12 @@ public class PgManagerController {
                 ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
         
         if (manager.getRole() == com.pgcrm.entity.enums.Role.PG_MANAGER) {
-            if (guestBuildingId == null || !guestBuildingId.equals(manager.getBranchId())) {
+            String branchId = manager.getBranchId();
+            if (guestBuildingId == null || branchId == null) {
+                throw new RuntimeException("Unauthorized: Manager not assigned to this guest's building");
+            }
+            List<String> allowedBranches = java.util.Arrays.asList(branchId.split(","));
+            if (!allowedBranches.contains(guestBuildingId)) {
                 throw new RuntimeException("Unauthorized: Manager not assigned to this guest's building");
             }
         }
@@ -386,7 +391,9 @@ public class PgManagerController {
                     String guestBuildingId = (guest != null && guest.getBed() != null && guest.getBed().getRoom() != null
                             && guest.getBed().getRoom().getFloor() != null)
                             ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
-                    return branchId != null && branchId.equals(guestBuildingId);
+                    if (guestBuildingId == null || branchId == null) return false;
+                    List<String> allowedBranches = java.util.Arrays.asList(branchId.split(","));
+                    return allowedBranches.contains(guestBuildingId);
                 })
                 .collect(java.util.stream.Collectors.toList());
         }

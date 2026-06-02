@@ -6,7 +6,7 @@ api.interceptors.request.use(config => {
   const token = localStorage.getItem('accessToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   const selectedBranchId = localStorage.getItem('selectedBranchId');
-  if (selectedBranchId) {
+  if (selectedBranchId && !config.headers['X-Selected-Branch-Id']) {
     config.headers['X-Selected-Branch-Id'] = selectedBranchId;
   }
   return config;
@@ -116,7 +116,9 @@ export const ownerApi = {
 };
 
 export const managerApi = {
-  getDashboard: () => cachedApi.get('/manager/dashboard'),
+  getDashboard: (buildingId) => cachedApi.get('/manager/dashboard', {
+    headers: buildingId ? { 'X-Selected-Branch-Id': buildingId } : {}
+  }),
   getGuests: () => cachedApi.get('/manager/guests'),
   checkIn: (data) => cachedApi.post('/manager/guests', data),
   updateGuest: (id, data) => cachedApi.put(`/manager/guests/${id}`, data),

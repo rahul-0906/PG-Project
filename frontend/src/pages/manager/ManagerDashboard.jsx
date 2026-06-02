@@ -47,10 +47,21 @@ export default function ManagerDashboard() {
     setTimeout(() => setToast(''), 3000);
   };
   
+  const activeBuildingId = localStorage.getItem('selectedBranchId') || (user?.branchId ? user.branchId.split(',')[0] : null);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['managerDashboard'],
-    queryFn: () => managerApi.getDashboard().then(r => r.data),
+    queryKey: ['managerDashboard', activeBuildingId],
+    queryFn: () => managerApi.getDashboard(activeBuildingId).then(r => r.data),
   });
+
+  const { data: buildings } = useQuery({
+    queryKey: ['assignedBuildings'],
+    queryFn: () => managerApi.getAssignedBuildings().then(r => r.data),
+    enabled: !!user,
+  });
+
+  const activeBuilding = buildings?.find(b => b.id === activeBuildingId);
+  const activeBuildingName = activeBuilding?.name || data?.buildingName || 'Loading...';
 
   const { data: pendingCash, refetch: refetchPendingCash } = useQuery({
     queryKey: ['pendingCashInvoices'],
@@ -92,8 +103,11 @@ export default function ManagerDashboard() {
             <div>
               <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Manager Portal</span>
               <h1 className="text-lg sm:text-xl font-extrabold tracking-tight mt-0.5">
-                Welcome back, {user?.fullName || 'Manager'} for {data?.buildingName || '...'}
+                Welcome back, {user?.fullName || 'Manager'}
               </h1>
+              <p className="text-indigo-100 text-xs mt-1 font-semibold">
+                Managing: {activeBuildingName}
+              </p>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
                   Beds: {data?.occupiedBeds ?? 0} / {data?.totalBeds ?? 0} Occupied
