@@ -64,6 +64,14 @@ export default function GuestDashboard() {
     queryFn: () => guestApi.getDashboard().then(r => r.data)
   });
 
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['guestNotifications'],
+    queryFn: () => guestApi.getNotifications().then(r => r.data),
+    refetchInterval: 10000
+  });
+
+  const unreadNotificationsCount = notifications.filter(n => !n.read).length;
+
   const { data: invoices = [] } = useQuery({
     queryKey: ['guestInvoices'],
     queryFn: () => guestApi.getInvoices().then(r => r.data)
@@ -389,16 +397,18 @@ export default function GuestDashboard() {
 
         <StatCard 
           label="Unread Notifications" 
-          value={data?.unreadNotifications ?? '0'} 
+          value={unreadNotificationsCount} 
           icon={Bell} 
           iconBg="bg-rose-50" 
-          iconColor={data?.unreadNotifications > 0 ? "text-rose-500 animate-bounce" : "text-rose-400"}
+          iconColor={unreadNotificationsCount > 0 ? "text-rose-500 animate-bounce" : "text-rose-400"}
         >
           <div className="flex flex-col gap-1.5 mt-1">
             <div className="text-[10px] text-slate-400 font-medium">Important manager updates</div>
             <div className="flex items-center justify-between mt-auto pt-1 border-t border-slate-50/50">
               <span className="text-[10px] text-slate-400 font-medium">Status</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Up to date</span>
+              <span className={`text-[10px] font-bold uppercase tracking-wider ${unreadNotificationsCount > 0 ? 'text-rose-500 font-extrabold animate-pulse' : 'text-slate-400'}`}>
+                {unreadNotificationsCount > 0 ? 'New Updates' : 'Up to date'}
+              </span>
             </div>
           </div>
         </StatCard>

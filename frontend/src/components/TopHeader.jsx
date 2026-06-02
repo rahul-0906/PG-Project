@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSystemConfig } from '../context/SystemConfigContext';
 import { Bell } from 'lucide-react';
 import { managerApi, notificationsApi } from '../api';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ROLE_LABELS = {
   PG_OWNER: 'Owner',
@@ -30,24 +31,15 @@ export default function TopHeader() {
   const [assignedBuildings, setAssignedBuildings] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState(() => localStorage.getItem('selectedBranchId') || '');
 
-  const [notifications, setNotifications] = useState([]);
+  const queryClient = useQueryClient();
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const fetchNotifications = () => {
-    if (user) {
-      notificationsApi.getNotifications()
-        .then(res => {
-          setNotifications(res.data || []);
-        })
-        .catch(console.error);
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['guestNotifications'],
+    queryFn: () => notificationsApi.getNotifications().then(res => res.data || []),
+    enabled: !!user,
+    refetchInterval: 10000
+  });
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
@@ -68,7 +60,8 @@ export default function TopHeader() {
   const handleMarkRead = (id) => {
     notificationsApi.markRead(id)
       .then(() => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+        queryClient.invalidateQueries({ queryKey: ['guestNotifications'] });
+        queryClient.invalidateQueries({ queryKey: ['guestDashboard'] });
       })
       .catch(console.error);
   };
@@ -76,7 +69,8 @@ export default function TopHeader() {
   const handleMarkAllRead = () => {
     notificationsApi.markAllRead()
       .then(() => {
-        setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        queryClient.invalidateQueries({ queryKey: ['guestNotifications'] });
+        queryClient.invalidateQueries({ queryKey: ['guestDashboard'] });
       })
       .catch(console.error);
   };
