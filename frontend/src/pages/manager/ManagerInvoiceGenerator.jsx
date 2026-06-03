@@ -11,10 +11,24 @@ const MONTHS = [
   'July','August','September','October','November','December'
 ];
 
-function StatusBadge({ generated }) {
-  if (generated) {
+function StatusBadge({ generated, status }) {
+  if (status === 'PAID') {
     return (
       <span className="badge badge-success text-[10px]">
+        <CheckCircle2 className="w-3 h-3" /> Paid
+      </span>
+    );
+  }
+  if (status === 'PENDING_CASH_VERIFICATION') {
+    return (
+      <span className="badge bg-amber-100 text-amber-800 border border-amber-200 text-[10px] animate-pulse">
+        <Clock className="w-3 h-3" /> Pending Verification
+      </span>
+    );
+  }
+  if (generated) {
+    return (
+      <span className="badge badge-info text-[10px]">
         <CheckCircle2 className="w-3 h-3" /> Generated
       </span>
     );
@@ -44,6 +58,20 @@ export default function ManagerInvoiceGenerator() {
   const [filter, setFilter] = useState('all'); // 'all' | 'pending' | 'generated'
   const [rowStatus, setRowStatus] = useState({}); // guestId -> 'sending' | 'done' | 'error'
   const [schedulerEnabled, setSchedulerEnabled] = useState(false);
+  const [verifyingId, setVerifyingId] = useState('');
+
+  const handleVerifyCash = async (invoiceId) => {
+    setVerifyingId(invoiceId);
+    try {
+      await managerApi.verifyCash(invoiceId);
+      alert('✅ Cash payment verified successfully!');
+      loadPreviews();
+    } catch (err) {
+      alert('Failed to verify cash payment: ' + (err.response?.data?.error || err.response?.data?.message || err.message));
+    } finally {
+      setVerifyingId('');
+    }
+  };
 
   useEffect(() => {
     managerApi.getPricing()
@@ -311,11 +339,25 @@ export default function ManagerInvoiceGenerator() {
                           ? <span className="text-xs text-green-600 font-semibold">✅ Sent</span>
                           : rs === 'error'
                           ? <span className="text-xs text-red-600 font-semibold">❌ Error</span>
-                          : <StatusBadge generated={p.alreadyGenerated} />
+                          : <StatusBadge generated={p.alreadyGenerated} status={p.status} />
                         }
                       </td>
                       <td>
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-2">
+                          {p.status === 'PENDING_CASH_VERIFICATION' && (
+                            <button
+                              className="btn btn-success text-xxs py-1 px-2.5 flex items-center gap-1 min-w-[100px] justify-center shadow-sm font-bold text-white bg-green-600 hover:bg-green-700"
+                              onClick={() => handleVerifyCash(p.id)}
+                              disabled={verifyingId === p.id}
+                            >
+                              {verifyingId === p.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              )}
+                              {verifyingId === p.id ? 'Verifying...' : 'Verify Cash'}
+                            </button>
+                          )}
                           {!p.alreadyGenerated && rs !== 'done' && (
                             <button
                               className="btn btn-primary text-xxs py-1 px-2.5 flex items-center gap-1 min-w-[120px] justify-center"
@@ -328,7 +370,7 @@ export default function ManagerInvoiceGenerator() {
                               {generating === p.guestId ? 'Sending...' : 'Generate & Send'}
                             </button>
                           )}
-                          {p.alreadyGenerated && (
+                          {p.alreadyGenerated && p.status !== 'PENDING_CASH_VERIFICATION' && (
                             <button
                               className="btn btn-secondary text-xxs py-1 px-2.5 flex items-center gap-1 min-w-[75px] justify-center"
                               onClick={() => handleGenerateOne(p.guestId, p.guestName)}

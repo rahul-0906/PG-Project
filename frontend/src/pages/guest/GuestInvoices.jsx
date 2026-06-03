@@ -232,7 +232,7 @@ export default function GuestInvoices() {
                           </>
                         ) : inv.status === 'PENDING_CASH_VERIFICATION' ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-0.5">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
                             <span>Pending Cash Approval</span>
                           </span>
                         ) : (

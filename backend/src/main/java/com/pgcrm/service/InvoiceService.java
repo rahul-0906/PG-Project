@@ -36,6 +36,7 @@ public class InvoiceService {
     /** DTO returned by previewInvoice() — no DB writes */
     @Data
     public static class InvoicePreview {
+        public String id;
         public String guestId;
         public String guestName;
         public String bedLabel;
@@ -47,6 +48,7 @@ public class InvoiceService {
         public BigDecimal laundry;
         public BigDecimal total;
         public boolean alreadyGenerated;
+        public String status;
     }
 
     @Transactional
@@ -236,9 +238,13 @@ public class InvoiceService {
             laundry = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
         }
 
-        boolean alreadyGenerated = invoiceRepository.findByGuestIdAndMonthAndYear(guest.getId(), month, year).isPresent();
+        Optional<Invoice> existing = invoiceRepository.findByGuestIdAndMonthAndYear(guest.getId(), month, year);
+        boolean alreadyGenerated = existing.isPresent();
+        String invoiceId = existing.isPresent() ? existing.get().getId() : null;
+        String status = existing.isPresent() ? existing.get().getStatus().name() : null;
 
         InvoicePreview preview = new InvoicePreview();
+        preview.id        = invoiceId;
         preview.guestId   = guest.getId();
         preview.guestName = guest.getFullName();
         preview.bedLabel  = guest.getBed() != null ? guest.getBed().getBedLabel() : "—";
@@ -251,6 +257,7 @@ public class InvoiceService {
         preview.laundry   = laundry;
         preview.total     = rent.add(ebShare).add(food).add(laundry);
         preview.alreadyGenerated = alreadyGenerated;
+        preview.status    = status;
         return preview;
     }
 

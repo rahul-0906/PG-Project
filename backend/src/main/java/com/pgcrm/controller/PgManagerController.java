@@ -335,7 +335,7 @@ public class PgManagerController {
     @PostMapping("/invoices/{id}/verify-cash")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Invoice> verifyCash(Authentication auth, @PathVariable String id) {
-        User manager = userRepository.findByEmailIgnoreCase(auth.getName())
+        User manager = userRepository.findById(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
         
         Invoice invoice = invoiceRepository.findById(id)
@@ -378,7 +378,7 @@ public class PgManagerController {
 
     @GetMapping("/invoices/pending-cash")
     public ResponseEntity<List<Invoice>> getPendingCashInvoices(Authentication auth) {
-        User manager = userRepository.findByEmailIgnoreCase(auth.getName())
+        User manager = userRepository.findById(auth.getName())
                 .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
         
         List<Invoice> pending = invoiceRepository.findByStatus(com.pgcrm.entity.enums.InvoiceStatus.PENDING_CASH_VERIFICATION);
