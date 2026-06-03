@@ -49,7 +49,7 @@ export default function ForgotPassword() {
         {success ? (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-xl p-4 flex items-start gap-3">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" strokeWidth={1.5}/>
               <div>
                 <p className="font-bold text-[13px] mb-1">Check Your Email</p>
                 <p className="leading-relaxed">If this email is registered, we have sent a new temporary password. Please check your inbox and spam folder.</p>
@@ -77,13 +77,13 @@ export default function ForgotPassword() {
                   onChange={e => setEmail(e.target.value)}
                   required
                 />
-                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               </div>
             </div>
 
             {error && (
               <div className="bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold p-3 rounded-lg flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" strokeWidth={1.5}/>
                 <span>{error}</span>
               </div>
             )}
@@ -96,7 +96,7 @@ export default function ForgotPassword() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" strokeWidth={1.5}/>
                   <span>Sending temporary password...</span>
                 </>
               ) : '✉️ Send Temporary Password'}

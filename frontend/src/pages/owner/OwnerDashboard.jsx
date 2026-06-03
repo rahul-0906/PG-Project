@@ -20,12 +20,12 @@ import {
   User as UserIcon
 } from 'lucide-react';
 
-function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
+function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-500' }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
       {Icon && (
-        <div className={`p-2 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
-          <Icon className="w-4 h-4" />
+        <div className={`${iconColor} flex items-center justify-center`}>
+          <Icon className="w-5 h-5" strokeWidth={1.5} />
         </div>
       )}
       <div>
@@ -154,7 +154,7 @@ export default function OwnerDashboard() {
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
-              <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" />
+              <UserIcon className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" strokeWidth={1.5} />
             </div>
             <div>
               <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Owner Portal</span>
@@ -177,7 +177,7 @@ export default function OwnerDashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <LayoutGrid className="w-6 h-6 text-primary" />
+            <LayoutGrid className="w-6 h-6 text-primary" strokeWidth={1.5} />
             <span>Owner Dashboard</span>
           </h1>
           <p className="page-subtitle">Your property at a glance</p>
@@ -185,16 +185,16 @@ export default function OwnerDashboard() {
       </div>
 
       <div className="grid-4" style={{ marginBottom:'1.5rem' }}>
-        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconBg="bg-blue-50" iconColor="text-blue-500" />
-        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-500" />
-        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconBg="bg-slate-50" iconColor="text-slate-400" />
-        <StatCard label="Active Guests" value={data?.activeGuests ?? '—'} icon={Users} iconBg="bg-violet-50" iconColor="text-violet-500" />
+        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconColor="text-blue-500" />
+        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconColor="text-emerald-500" />
+        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconColor="text-slate-400" />
+        <StatCard label="Active Guests" value={data?.activeGuests ?? '—'} icon={Users} iconColor="text-violet-500" />
       </div>
       
       <div className="grid-2">
         <div className="card" style={{ padding: '1.25rem' }}>
           <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <GitBranch className="w-5 h-5 text-slate-400" />
+            <GitBranch className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
             <span>Branches ({branches.length})</span>
           </h3>
           {branches.map(b => (
@@ -206,10 +206,10 @@ export default function OwnerDashboard() {
               <div className="flex items-center gap-2">
                 <Link
                   to={`/owner/buildings?edit=${b.id}`}
-                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1 text-xs"
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-2 text-xs"
                   title="Edit Layout & Details"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
                   <span>Edit Layout</span>
                 </Link>
                 <span className="badge badge-success">Active</span>
@@ -222,11 +222,11 @@ export default function OwnerDashboard() {
         <div className="card" style={{ padding: '1.25rem' }}>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-slate-400" />
+              <UserCheck className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
               <span>Managers ({managers.length})</span>
             </h3>
-            <button className="btn btn-primary flex items-center gap-1 px-2.5 py-1 text-xs font-semibold" onClick={openCreateManager}>
-              <Plus className="w-3.5 h-3.5" />
+            <button className="btn btn-primary flex items-center gap-2 px-2.5 py-1 text-xs font-semibold" onClick={openCreateManager}>
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
               <span>Add Manager</span>
             </button>
           </div>
@@ -242,19 +242,19 @@ export default function OwnerDashboard() {
                 <button
                   type="button"
                   onClick={() => openEditManager(m)}
-                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-1 text-xs"
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-slate-200 text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-2 text-xs"
                   title="Edit Manager"
                 >
-                  <Pencil className="w-3.5 h-3.5" />
+                  <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
                   <span>Edit</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleDeleteManager(m)}
-                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-1 text-xs"
+                  className="btn btn-ghost p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors flex items-center gap-2 text-xs"
                   title="Delete Manager"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                   <span>Delete</span>
                 </button>
                 <span className="badge badge-info">Active</span>
@@ -269,7 +269,7 @@ export default function OwnerDashboard() {
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 500 }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
+              <UserPlus className="w-5 h-5 text-primary" strokeWidth={1.5} />
               <span>{editingManager ? 'Edit Manager' : 'Create Manager'}</span>
             </h3>
             <form onSubmit={saveManager}>

@@ -21,12 +21,12 @@ import {
 
 import { useQuery } from '@tanstack/react-query';
 
-function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-50', iconColor = 'text-slate-500' }) {
+function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-500' }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-3.5 flex items-center gap-3.5 shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-200">
       {Icon && (
-        <div className={`p-2 rounded-lg ${iconBg} ${iconColor} flex items-center justify-center`}>
-          <Icon className="w-4 h-4" />
+        <div className={`${iconColor} flex items-center justify-center`}>
+          <Icon className="w-5 h-5" strokeWidth={1.5} />
         </div>
       )}
       <div>
@@ -123,7 +123,7 @@ export default function ManagerDashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <LayoutGrid className="w-6 h-6 text-primary" />
+            <LayoutGrid className="w-6 h-6 text-primary" strokeWidth={1.5} />
             <span>Manager Dashboard</span>
           </h1>
           <p className="page-subtitle">Live occupancy and operations overview</p>
@@ -131,17 +131,17 @@ export default function ManagerDashboard() {
       </div>
 
       <div className="grid-4" style={{ marginBottom: '1.5rem' }}>
-        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconBg="bg-blue-50" iconColor="text-blue-500" />
-        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconBg="bg-emerald-50" iconColor="text-emerald-500" />
-        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconBg="bg-slate-50" iconColor="text-slate-400" />
-        <StatCard label="Open Tickets" value={data?.pendingMaintenanceTickets ?? '—'} icon={Wrench} iconBg="bg-rose-50" iconColor="text-rose-500" />
+        <StatCard label="Total Beds" value={data?.totalBeds ?? '—'} icon={Bed} iconColor="text-blue-500" />
+        <StatCard label="Occupied" value={data?.occupiedBeds ?? '—'} icon={CheckCircle2} iconColor="text-emerald-500" />
+        <StatCard label="Vacant" value={data?.vacantBeds ?? '—'} icon={Circle} iconColor="text-slate-400" />
+        <StatCard label="Open Tickets" value={data?.pendingMaintenanceTickets ?? '—'} icon={Wrench} iconColor="text-rose-500" />
       </div>
 
       {pendingCash && pendingCash.length > 0 && (
         <div className="card mb-6" style={{ padding: '1.25rem' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
-              <IndianRupee className="w-5 h-5 text-emerald-500" />
+              <IndianRupee className="w-5 h-5 text-emerald-500" strokeWidth={1.5} />
               <span>Pending Cash Verifications</span>
             </h3>
             <span className="badge badge-warning text-xs font-semibold px-2.5 py-1">
@@ -183,9 +183,9 @@ export default function ManagerDashboard() {
                           disabled={verifyingId === inv.id}
                         >
                           {verifyingId === inv.id ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
                           ) : (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5} />
                           )}
                           {verifyingId === inv.id ? 'Verifying...' : 'Verify Cash'}
                         </button>
@@ -202,7 +202,7 @@ export default function ManagerDashboard() {
       <div className="grid-2">
         <div className="card">
           <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <ChartIcon className="w-5 h-5 text-slate-400" />
+            <ChartIcon className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
             <span>Bed Occupancy</span>
           </h3>
           {data && (
@@ -228,7 +228,7 @@ export default function ManagerDashboard() {
 
         <div className="card">
           <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-slate-400" />
+            <Zap className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
             <span>Quick Actions</span>
           </h3>
           {[
@@ -238,10 +238,10 @@ export default function ManagerDashboard() {
           ].map(a => {
             const Icon = a.icon;
             return (
-              <a key={a.href} href={a.href} className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
-                <Icon className={`w-4 h-4 ${a.color}`} />
+              <a key={a.href} href={a.href} className="flex items-center gap-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
+                <Icon className={`w-5 h-5 ${a.color}`} strokeWidth={1.5} />
                 <span>{a.label}</span>
-                <ArrowRight className="w-4 h-4 ml-auto text-slate-300" />
+                <ArrowRight className="w-4 h-4 ml-auto text-slate-300" strokeWidth={1.5} />
               </a>
             );
           })}
@@ -250,7 +250,7 @@ export default function ManagerDashboard() {
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
-          <Check className="w-4 h-4" /> {toast}
+          <Check className="w-4 h-4" strokeWidth={1.5} /> {toast}
         </div>
       )}
     </AppLayout>

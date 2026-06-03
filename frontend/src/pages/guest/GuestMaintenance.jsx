@@ -99,7 +99,7 @@ export default function GuestMaintenance() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-primary" />
+            <Wrench className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Maintenance Portal</span>
           </h1>
           <p className="page-subtitle">Submit and track maintenance requests for your room</p>
@@ -108,7 +108,7 @@ export default function GuestMaintenance() {
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-indigo-400" /> {toast}
+          <AlertCircle className="w-4 h-4 text-indigo-400" strokeWidth={1.5}/> {toast}
         </div>
       )}
 
@@ -117,7 +117,7 @@ export default function GuestMaintenance() {
         <div className="lg:col-span-1">
           <div className="card shadow-sm border border-slate-200 bg-white rounded-xl p-6">
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Plus className="w-5 h-5 text-indigo-500" />
+              <Plus className="w-5 h-5 text-indigo-500" strokeWidth={1.5}/>
               New Request
             </h3>
             
@@ -171,7 +171,7 @@ export default function GuestMaintenance() {
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" strokeWidth={1.5}/>
                     <span>Submitting...</span>
                   </>
                 ) : (
@@ -187,7 +187,7 @@ export default function GuestMaintenance() {
           <div className="card shadow-sm border border-slate-200 bg-white rounded-xl overflow-hidden p-0">
             <div className="p-5 border-b border-slate-200 flex items-center justify-between">
               <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-indigo-500" />
+                <Clock className="w-5 h-5 text-indigo-500" strokeWidth={1.5}/>
                 Ticket History
               </h3>
               <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
@@ -197,11 +197,11 @@ export default function GuestMaintenance() {
 
             {loading ? (
               <div className="flex justify-center items-center py-20">
-                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" strokeWidth={1.5}/>
               </div>
             ) : tickets.length === 0 ? (
               <div className="text-center py-20 px-4">
-                <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" strokeWidth={1.5}/>
                 <h4 className="text-sm font-bold text-slate-800 mb-1">No requests found</h4>
                 <p className="text-xs text-slate-500 max-w-xs mx-auto">You haven't submitted any maintenance requests yet.</p>
               </div>

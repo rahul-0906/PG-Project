@@ -216,7 +216,7 @@ export default function DailyLog() {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-primary/10 text-primary rounded-xl">
-            <CalendarDays className="w-5 h-5" />
+            <CalendarDays className="w-5 h-5" strokeWidth={1.5}/>
           </div>
           <div>
             <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900">
@@ -238,7 +238,7 @@ export default function DailyLog() {
             <div className="flex items-center justify-between mb-4 border-b border-slate-200 pb-3">
               <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
                 <span>Monthly Calendar</span>
-                {loadingLogs && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
+                {loadingLogs && <Loader2 className="w-3 h-3 animate-spin text-slate-400" strokeWidth={1.5}/>}
               </h3>
 
               <div className="flex items-center gap-1.5 bg-slate-100 p-0.5 rounded-lg">
@@ -247,7 +247,7 @@ export default function DailyLog() {
                   onClick={handlePrevMonth} 
                   className="p-1 rounded hover:bg-white text-slate-600 transition-colors"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronLeft className="w-3.5 h-3.5" strokeWidth={1.5}/>
                 </button>
                 <span className="text-[11px] font-bold text-slate-700 min-w-[100px] text-center select-none">
                   {monthNames[month - 1]} {year}
@@ -257,7 +257,7 @@ export default function DailyLog() {
                   onClick={handleNextMonth} 
                   className="p-1 rounded hover:bg-white text-slate-600 transition-colors"
                 >
-                  <ChevronRight className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5}/>
                 </button>
               </div>
             </div>
@@ -358,7 +358,7 @@ export default function DailyLog() {
               {/* Food Info Message */}
               {foodIncluded ? (
                 <div className="bg-green-100 border border-green-200 text-green-800 rounded-xl p-3.5 mb-6 flex items-center gap-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" />
+                  <CheckCircle2 className="w-5 h-5 text-green-700 flex-shrink-0" strokeWidth={1.5}/>
                   <div>
                     <div className="font-bold text-green-900 text-xs">Food Included in Rent</div>
                     <div className="text-[10px] text-green-700 mt-0.5 leading-relaxed font-medium">
@@ -368,7 +368,7 @@ export default function DailyLog() {
                 </div>
               ) : (
                 <div className="bg-amber-100 border border-amber-200 text-amber-800 p-3.5 rounded-xl mb-4 flex items-start gap-2.5">
-                  <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <Info className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" strokeWidth={1.5}/>
                   <p className="text-amber-800 text-[10px] leading-relaxed font-semibold">
                     Set preferences below &amp; click save. Locked meals cannot be updated after their cutoff times.
                   </p>
@@ -419,7 +419,7 @@ export default function DailyLog() {
                         <div className="flex items-center gap-2">
                           {locked ? (
                             <span className="bg-slate-200 border border-slate-300/40 text-slate-600 px-2 py-0.5 rounded-full text-[9px] font-bold flex items-center gap-1">
-                              <Lock className="w-2.5 h-2.5" />
+                              <Lock className="w-2.5 h-2.5" strokeWidth={1.5}/>
                               <span>Locked</span>
                             </span>
                           ) : (
@@ -443,7 +443,7 @@ export default function DailyLog() {
               {/* Add-ons Log Grid */}
               <div className="border-t border-slate-200 pt-4">
                 <h4 className="font-heading text-xs font-semibold text-slate-900 mb-3 flex items-center gap-1.5">
-                  <Utensils className="w-3.5 h-3.5 text-indigo-500" />
+                  <Utensils className="w-3.5 h-3.5 text-indigo-500" strokeWidth={1.5}/>
                   <span>Add-ons Opted (Logged by Manager)</span>
                 </h4>
                 <div className="grid grid-cols-2 gap-3">
@@ -485,17 +485,17 @@ export default function DailyLog() {
               >
                 {saving ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5}/>
                     <span>Saving...</span>
                   </>
                 ) : saved ? (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3.5 h-3.5" strokeWidth={1.5}/>
                     <span>Saved Successfully!</span>
                   </>
                 ) : (
                   <>
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-3.5 h-3.5" strokeWidth={1.5}/>
                     <span>Save Meal Plan</span>
                   </>
                 )}

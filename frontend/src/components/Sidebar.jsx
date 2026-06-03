@@ -12,7 +12,7 @@ import {
   CalendarDays, 
   FileText, 
   LogOut,
-  Building2,
+  Building,
   Tag,
   Receipt,
   Settings as SettingsIcon
@@ -21,7 +21,7 @@ import {
 const navMap = {
   PG_OWNER: [
     { to: '/owner/dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { to: '/owner/buildings', label: 'Buildings', icon: Building2 },
+    { to: '/owner/buildings', label: 'Buildings', icon: Building },
     { to: '/manager/maintenance', label: 'Maintenance', icon: Wrench },
     { to: '/owner/reports', label: 'Reports', icon: BarChart3 },
     { to: '/owner/audit', label: 'Audit Log', icon: History },
@@ -72,7 +72,7 @@ export default function Sidebar() {
               key={item.to}
               to={item.to}
               className={({ isActive }) => 
-                `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                `flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
                   isActive 
                     ? 'bg-slate-50 text-primary font-semibold' 
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -81,7 +81,7 @@ export default function Sidebar() {
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-slate-400'}`} strokeWidth={1.5} />
                   <span>{item.label}</span>
                 </>
               )}
@@ -94,9 +94,9 @@ export default function Sidebar() {
         <button 
           id="btn-sidebar-logout" 
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50/50 transition-colors text-sm font-medium"
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50/50 transition-colors text-sm font-medium"
         >
-          <LogOut className="w-4 h-4 text-red-400" />
+          <LogOut className="w-4 h-4 text-red-400" strokeWidth={1.5} />
           <span>Logout</span>
         </button>
       </div>

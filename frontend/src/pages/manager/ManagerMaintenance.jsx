@@ -22,7 +22,7 @@ export default function ManagerMaintenance() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Wrench className="w-6 h-6 text-primary" />
+            <Wrench className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Maintenance Desk</span>
           </h1>
           <p className="page-subtitle">{tickets.filter(t=>t.status!=='RESOLVED').length} open tickets</p>
@@ -51,7 +51,7 @@ export default function ManagerMaintenance() {
                     <div className="flex justify-end">
                       {t.status!=='RESOLVED' && (
                         <button className="btn btn-success flex items-center gap-1 py-1 px-2.5 text-xxs font-semibold" onClick={()=>resolve(t.id)}>
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           <span>Resolve</span>
                         </button>
                       )}

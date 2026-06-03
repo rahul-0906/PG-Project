@@ -70,14 +70,14 @@ export default function AuditLog() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <History className="w-6 h-6 text-primary" />
+            <History className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Audit Log</span>
           </h1>
           <p className="page-subtitle">Complete trail of all business actions — {total} total entries</p>
         </div>
         <button id="btn-export-audit" onClick={handleExport} disabled={exporting}
           className="btn btn-primary flex items-center gap-2">
-          <Download className="w-4 h-4" />
+          <Download className="w-4 h-4" strokeWidth={1.5}/>
           <span>{exporting ? 'Exporting...' : 'Export CSV'}</span>
         </button>
       </div>
@@ -106,7 +106,7 @@ export default function AuditLog() {
               onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} />
           </div>
           <button type="submit" className="btn btn-primary flex items-center gap-2">
-            <Search className="w-4 h-4" />
+            <Search className="w-4 h-4" strokeWidth={1.5}/>
             <span>Search</span>
           </button>
         </div>

@@ -208,7 +208,7 @@ export default function ManagerGuestAddons() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <ChefHat className="w-6 h-6 text-primary" />
+            <ChefHat className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Meal &amp; Add-on Tracker</span>
           </h1>
           <p className="page-subtitle">Record and view meal opt-ins, eggs, omelettes, and washing machine services</p>
@@ -274,7 +274,7 @@ export default function ManagerGuestAddons() {
           {/* Guest Search bar */}
           <div className="card mb-6" style={{ padding: '1rem' }}>
             <div className="flex items-center gap-2 max-w-md">
-              <Search className="w-4 h-4 text-slate-400" />
+              <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <input 
                 type="text" 
                 placeholder="Search guest by name..." 
@@ -287,7 +287,7 @@ export default function ManagerGuestAddons() {
 
           {loading ? (
             <div className="card text-center py-12 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" strokeWidth={1.5}/>
               <span>Loading daily logs...</span>
             </div>
           ) : guests.length === 0 ? (
@@ -434,10 +434,10 @@ export default function ManagerGuestAddons() {
                             className={`btn text-xxs py-1 px-2.5 min-w-[65px] ${isSaved ? 'btn-success' : 'btn-primary'}`}
                           >
                             {isSaving ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
+                              <Loader2 className="w-3 h-3 animate-spin" strokeWidth={1.5}/>
                             ) : isSaved ? (
                               <>
-                                <Check className="w-3 h-3" />
+                                <Check className="w-3 h-3" strokeWidth={1.5}/>
                                 <span>Saved</span>
                               </>
                             ) : (
@@ -460,7 +460,7 @@ export default function ManagerGuestAddons() {
             <div className="flex flex-wrap gap-4 items-center justify-between">
               {/* Search Bar */}
               <div className="flex items-center gap-2 max-w-xs flex-1">
-                <Search className="w-4 h-4 text-slate-400" />
+                <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
                 <input 
                   type="text" 
                   placeholder="Filter by name..." 
@@ -474,13 +474,13 @@ export default function ManagerGuestAddons() {
               {/* Month Selector */}
               <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
                 <button onClick={handlePrevMonth} className="p-1 rounded hover:bg-white text-slate-600 transition-colors">
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4" strokeWidth={1.5}/>
                 </button>
                 <span className="text-xs font-bold text-slate-700 min-w-[120px] text-center">
                   {MONTHS[month - 1]} {year}
                 </span>
                 <button onClick={handleNextMonth} className="p-1 rounded hover:bg-white text-slate-600 transition-colors">
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4" strokeWidth={1.5}/>
                 </button>
               </div>
 
@@ -504,7 +504,7 @@ export default function ManagerGuestAddons() {
 
           {loadingMonthly ? (
             <div className="card text-center py-12 text-slate-400">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-slate-300 mb-2" strokeWidth={1.5}/>
               <span>Loading monthly roster...</span>
             </div>
           ) : monthlyData.length === 0 ? (
@@ -572,7 +572,7 @@ export default function ManagerGuestAddons() {
                               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-slate-100 pb-2">
                                   <h4 className="text-xs font-semibold text-slate-900 flex items-center gap-1.5 font-heading">
-                                    <Calendar className="w-3.5 h-3.5 text-primary" />
+                                    <Calendar className="w-3.5 h-3.5 text-primary" strokeWidth={1.5}/>
                                     <span>Daily Opt-in Breakdown for {row.guestName}</span>
                                   </h4>
                                   <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">

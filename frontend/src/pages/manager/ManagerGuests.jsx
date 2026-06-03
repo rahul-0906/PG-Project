@@ -402,26 +402,26 @@ export default function ManagerGuests() {
             : 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-100/50'
         }`}>
           {toast.type === 'error' ? (
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
+            <AlertTriangle className="w-4 h-4 text-rose-600" strokeWidth={1.5}/>
           ) : (
-            <Check className="w-4 h-4 text-emerald-600" />
+            <Check className="w-4 h-4 text-emerald-600" strokeWidth={1.5}/>
           )}
           <span>{toast.message}</span>
           <button onClick={() => setToast(null)} className="ml-2 hover:opacity-80 focus:outline-none">
-            <X className="w-3.5 h-3.5 text-slate-400" />
+            <X className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5}/>
           </button>
         </div>
       )}
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
+            <Users className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Guests</span>
           </h1>
           <p className="page-subtitle">{filteredGuests.length} showing ({guests.length} total active)</p>
         </div>
         <button className="btn btn-primary flex items-center gap-1.5" onClick={() => setShowForm(!showForm)}>
-          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? <X className="w-4 h-4" strokeWidth={1.5}/> : <Plus className="w-4 h-4" strokeWidth={1.5}/>}
           <span>{showForm ? 'Cancel' : 'Check In'}</span>
         </button>
       </div>
@@ -436,17 +436,17 @@ export default function ManagerGuests() {
             </h4>
             {loadingBeds ? (
               <div className="flex items-center gap-2 text-slate-400 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/>
                 <span>Loading available beds...</span>
               </div>
             ) : vacantBeds.length === 0 ? (
               <div className="flex items-center gap-1.5 text-red-500 text-sm font-semibold">
-                <AlertTriangle className="w-4 h-4" />
+                <AlertTriangle className="w-4 h-4" strokeWidth={1.5}/>
                 <span>No beds configured in the building.</span>
               </div>
             ) : !vacantBeds.some(bed => bed.status === 'VACANT') ? (
               <div className="flex items-center gap-1.5 text-red-500 text-sm font-semibold">
-                <AlertTriangle className="w-4 h-4" />
+                <AlertTriangle className="w-4 h-4" strokeWidth={1.5}/>
                 <span>No vacant beds available in the building.</span>
               </div>
             ) : (
@@ -467,7 +467,7 @@ export default function ManagerGuests() {
                               : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                           }`}
                         >
-                          <MapPin className="w-3.5 h-3.5" />
+                          <MapPin className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           <span>{f}</span>
                         </button>
                       );
@@ -494,7 +494,7 @@ export default function ManagerGuests() {
                 {currentFloor && groupedBeds[currentFloor] && (
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-1 font-bold text-sm text-primary mb-3 font-heading">
-                      <MapPin className="w-4 h-4" />
+                      <MapPin className="w-4 h-4" strokeWidth={1.5}/>
                       <span>{currentFloor}</span>
                     </div>
                     
@@ -502,7 +502,7 @@ export default function ManagerGuests() {
                       {Object.entries(groupedBeds[currentFloor]).map(([blockName, rooms]) => (
                         <div key={blockName} className="flex flex-col gap-2 pl-3 border-l-2 border-slate-200">
                           <div className="flex items-center gap-1 text-slate-400 font-bold text-[10px] uppercase tracking-wider mb-1">
-                            <Layers className="w-3.5 h-3.5" />
+                            <Layers className="w-3.5 h-3.5" strokeWidth={1.5}/>
                             <span>{blockName}</span>
                           </div>
                           
@@ -511,7 +511,7 @@ export default function ManagerGuests() {
                               <div key={roomNum} className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col gap-2 min-w-[220px] flex-grow md:flex-initial shadow-sm hover:border-slate-300 transition-colors">
                                 <div className="flex flex-col gap-0.5">
                                   <span className="flex items-center gap-1 font-semibold text-xs text-slate-700 font-heading">
-                                    <Home className="w-3.5 h-3.5 text-slate-400" />
+                                    <Home className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5}/>
                                     <span>Room {roomNum}</span>
                                   </span>
                                   <span className="text-[11px] text-slate-500 font-semibold" style={{ paddingLeft: '1.25rem' }}>
@@ -605,7 +605,7 @@ export default function ManagerGuests() {
         <div className="flex gap-4 flex-wrap items-center">
           <div className="form-group mb-0 flex-1 min-w-[200px]">
             <label className="form-label flex items-center gap-1.5">
-              <Search className="w-4 h-4 text-slate-400" />
+              <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <span>Search Guest (Name / Email / Phone)</span>
             </label>
             <input
@@ -618,7 +618,7 @@ export default function ManagerGuests() {
           </div>
           <div className="form-group mb-0 w-[200px]">
             <label className="form-label flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-slate-400" />
+              <MapPin className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <span>Filter by Floor</span>
             </label>
             <select
@@ -677,21 +677,21 @@ export default function ManagerGuests() {
                   <td>
                     <div className="flex justify-end gap-1.5">
                       <button className="btn btn-primary flex items-center justify-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '75px' }} onClick={() => startEdit(g)}>
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                         <span>Edit</span>
                       </button>
                       <button className="btn btn-secondary flex items-center justify-center gap-1" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '85px' }} onClick={() => startSwitchBed(g)}>
-                        <Shuffle className="w-3.5 h-3.5 text-slate-500" />
+                        <Shuffle className="w-3.5 h-3.5 text-slate-500" strokeWidth={1.5}/>
                         <span>Switch</span>
                       </button>
                       {g.noticeDate ? (
                         <button className="btn btn-ghost flex items-center justify-center gap-1 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '102px' }} onClick={() => handleConfirmCheckoutClick(g)}>
-                          <LogOut className="w-3.5 h-3.5 text-emerald-500" />
+                          <LogOut className="w-3.5 h-3.5 text-emerald-500" strokeWidth={1.5}/>
                           <span>Checkout</span>
                         </button>
                       ) : (
                         <button className="btn btn-ghost flex items-center justify-center gap-1 text-amber-600 hover:text-amber-700 hover:bg-amber-50" style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem', width: '102px' }} onClick={() => initiateCheckout(g)}>
-                          <LogOut className="w-3.5 h-3.5 text-amber-500" />
+                          <LogOut className="w-3.5 h-3.5 text-amber-500" strokeWidth={1.5}/>
                           <span>Notice</span>
                         </button>
                       )}
@@ -716,12 +716,12 @@ export default function ManagerGuests() {
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 720, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <Edit2 className="w-5 h-5 text-primary" />
+              <Edit2 className="w-5 h-5 text-primary" strokeWidth={1.5}/>
               <span>Edit Guest Details</span>
             </h3>
             {editError && (
               <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
-                <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" strokeWidth={1.5}/>
                 <span>{editError}</span>
               </div>
             )}
@@ -824,7 +824,7 @@ export default function ManagerGuests() {
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: 850, width: '100%' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Shuffle className="w-5 h-5 text-primary" />
+              <Shuffle className="w-5 h-5 text-primary" strokeWidth={1.5}/>
               <span>Switch Bed for {switchingGuest.fullName}</span>
             </h3>
 
@@ -907,7 +907,7 @@ export default function ManagerGuests() {
                     <label className="form-label font-bold text-slate-700 text-xs">Select Target Vacant Bed *</label>
                     {switchLoadingBeds ? (
                       <div className="flex items-center gap-2 text-slate-400 text-sm py-2">
-                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                        <Loader2 className="w-4 h-4 animate-spin text-primary" strokeWidth={1.5}/>
                         <span>Loading beds layout...</span>
                       </div>
                     ) : switchAllBeds.length === 0 ? (
@@ -932,7 +932,7 @@ export default function ManagerGuests() {
                                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                                   }`}
                                 >
-                                  <MapPin className="w-3 h-3" />
+                                  <MapPin className="w-3 h-3" strokeWidth={1.5}/>
                                   <span>{f}</span>
                                 </button>
                               );
@@ -966,7 +966,7 @@ export default function ManagerGuests() {
                               {Object.entries(groupedSwitchBeds[currentSwitchFloor]).map(([blockName, rooms]) => (
                                 <div key={blockName} className="flex flex-col gap-1.5 pl-1.5 border-l-2 border-slate-200">
                                   <div className="flex items-center gap-1 text-slate-400 font-bold text-[8px] uppercase tracking-wider">
-                                    <Layers className="w-2.5 h-2.5" />
+                                    <Layers className="w-2.5 h-2.5" strokeWidth={1.5}/>
                                     <span>{blockName}</span>
                                   </div>
                                   
@@ -975,7 +975,7 @@ export default function ManagerGuests() {
                                       <div key={roomNum} className="bg-white p-2 rounded-lg border border-slate-200 flex flex-col gap-1 min-w-[130px] flex-grow md:flex-initial shadow-sm hover:border-slate-300 transition-colors">
                                         <div className="flex flex-col gap-0.5">
                                           <span className="flex items-center gap-1 font-semibold text-[10px] text-slate-700 font-heading">
-                                            <Home className="w-2.5 h-2.5 text-slate-400" />
+                                            <Home className="w-2.5 h-2.5 text-slate-400" strokeWidth={1.5}/>
                                             <span>Room {roomNum}</span>
                                           </span>
                                           <span className="text-[9px] text-slate-500 font-medium pl-3.5">
@@ -1093,7 +1093,7 @@ export default function ManagerGuests() {
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <div className="p-2 bg-amber-50 rounded-lg text-amber-500 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5" />
+                <AlertTriangle className="w-5 h-5" strokeWidth={1.5}/>
               </div>
               <span>Initiate Checkout Notice</span>
             </h3>
@@ -1132,7 +1132,7 @@ export default function ManagerGuests() {
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <div className="p-2 bg-green-50 rounded-lg text-green-500 flex items-center justify-center">
-                <LogOut className="w-5 h-5" />
+                <LogOut className="w-5 h-5" strokeWidth={1.5}/>
               </div>
               <span>Complete Guest Checkout</span>
             </h3>
@@ -1171,7 +1171,7 @@ export default function ManagerGuests() {
           <div className="modal-content card fade-in-up" style={{ maxWidth: 450, width: '100%' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <div className="p-2 bg-indigo-50 rounded-lg text-indigo-500 flex items-center justify-center">
-                <Check className="w-5 h-5" />
+                <Check className="w-5 h-5" strokeWidth={1.5}/>
               </div>
               <span>Checkout Successful</span>
             </h3>
@@ -1233,7 +1233,7 @@ export default function ManagerGuests() {
                 className="p-1 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" 
                 onClick={handleCloseCheckInModal}
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" strokeWidth={1.5}/>
               </button>
             </div>
 
@@ -1337,7 +1337,7 @@ export default function ManagerGuests() {
               {/* Meal Preferences & Selection */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-4 mb-5">
                 <div className="flex items-center gap-1.5 font-bold text-[10px] text-primary mb-3 uppercase tracking-wider font-heading">
-                  <Utensils className="w-4 h-4" />
+                  <Utensils className="w-4 h-4" strokeWidth={1.5}/>
                   <span>Meal Preferences &amp; Selections</span>
                 </div>
                 
@@ -1370,7 +1370,7 @@ export default function ManagerGuests() {
                       <label className="form-label mb-1.5 block">Food Preference</label>
                       <div className="flex items-center gap-2 text-xs">
                         <span className="flex items-center gap-1 font-semibold" style={{ color: form.isVeg ? '#10b981' : '#94a3b8' }}>
-                          <Leaf className="w-3.5 h-3.5" />
+                          <Leaf className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           <span>Veg</span>
                         </span>
                         <label className="toggle">
@@ -1378,7 +1378,7 @@ export default function ManagerGuests() {
                           <span className="toggle-slider" />
                         </label>
                         <span className="flex items-center gap-1 font-semibold" style={{ color: !form.isVeg ? '#ef4444' : '#94a3b8' }}>
-                          <Utensils className="w-3.5 h-3.5" />
+                          <Utensils className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           <span>Non-Veg</span>
                         </span>
                       </div>
@@ -1420,7 +1420,7 @@ export default function ManagerGuests() {
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                      <Loader2 className="w-4 h-4 animate-spin mr-1.5" strokeWidth={1.5}/>
                       <span>Checking In...</span>
                     </>
                   ) : 'Confirm Check-In'}

@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import AppLayout from '../../components/AppLayout';
 import { ownerApi } from '../../api';
 import {
-  Building2, Plus, Trash2, ChevronRight, ChevronLeft,
+  Building, Plus, Trash2, ChevronRight, ChevronLeft,
   CheckCircle2, Layers, LayoutGrid, Bed, AlertCircle, Loader2,
   ArrowLeft, Save, MapPin, Pencil
 } from 'lucide-react';
@@ -103,7 +103,7 @@ function Step2({ floors, onChange }) {
               className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50"
               onClick={() => removeFloor(floor._id)}
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" strokeWidth={1.5}/>
             </button>
           </div>
         ))}
@@ -116,7 +116,7 @@ function Step2({ floors, onChange }) {
         className="btn btn-ghost border border-dashed border-slate-300 flex items-center gap-2 justify-center"
         onClick={addFloor}
       >
-        <Plus className="w-4 h-4" /> Add Floor
+        <Plus className="w-4 h-4" strokeWidth={1.5}/> Add Floor
       </button>
     </div>
   );
@@ -193,7 +193,7 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
           />
         </div>
         <button type="button" className="p-1 text-red-400 hover:text-red-600" onClick={onRemove}>
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
         </button>
       </div>
 
@@ -277,7 +277,7 @@ function Step3({ floors, onChange }) {
         <div key={floor._id} className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
           <div className="bg-indigo-600 px-4 py-2.5 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-indigo-200" />
+              <Layers className="w-4 h-4 text-indigo-200" strokeWidth={1.5}/>
               <span className="text-white font-semibold text-sm">{floor.label}</span>
             </div>
             <button
@@ -286,7 +286,7 @@ function Step3({ floors, onChange }) {
               onClick={() => onChange(floors.filter(f => f._id !== floor._id))}
               title="Delete Floor"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-4 h-4" strokeWidth={1.5}/>
             </button>
           </div>
 
@@ -302,7 +302,7 @@ function Step3({ floors, onChange }) {
                   />
                   <button type="button" className="text-red-400 hover:text-red-600 p-1"
                     onClick={() => removeBlock(floor._id, block._id)}>
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                   </button>
                 </div>
                 <div className="p-3 flex flex-col gap-2">
@@ -330,7 +330,7 @@ function Step3({ floors, onChange }) {
                     onClick={() => updateBlock(floor._id, block._id, {
                       ...block, roomConfigs: [...block.roomConfigs, makeRoomConfig()]
                     })}>
-                    <Plus className="w-3 h-3" /> Add room type
+                    <Plus className="w-3 h-3" strokeWidth={1.5}/> Add room type
                   </button>
                 </div>
               </div>
@@ -360,12 +360,12 @@ function Step3({ floors, onChange }) {
               <button type="button"
                 className="btn btn-ghost border border-dashed border-slate-300 text-xs flex items-center gap-1 py-1 px-3 shadow-none bg-transparent hover:bg-slate-100"
                 onClick={() => addBlock(floor._id)}>
-                <Plus className="w-3.5 h-3.5" /> Add Block
+                <Plus className="w-3.5 h-3.5" strokeWidth={1.5}/> Add Block
               </button>
               <button type="button"
                 className="btn btn-ghost border border-dashed border-slate-300 text-xs flex items-center gap-1 py-1 px-3 shadow-none bg-transparent hover:bg-slate-100"
                 onClick={() => addStandaloneRoom(floor._id)}>
-                <Plus className="w-3.5 h-3.5" /> Add Standalone Room
+                <Plus className="w-3.5 h-3.5" strokeWidth={1.5}/> Add Standalone Room
               </button>
             </div>
           </div>
@@ -532,7 +532,7 @@ function Step4({ building, floors }) {
 
       <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
         <div className="flex items-center gap-3 mb-4">
-          <Building2 className="w-6 h-6 text-indigo-600" />
+          <Building className="w-6 h-6 text-indigo-600" strokeWidth={1.5}/>
           <div>
             <div className="font-bold text-slate-800 text-base">{building.name}</div>
             {building.address && <div className="text-xs text-slate-500">{building.address}</div>}
@@ -575,7 +575,7 @@ function Step4({ building, floors }) {
         {floors.map(floor => (
           <div key={floor._id} className="rounded-xl border border-slate-200 p-3 bg-white">
             <div className="font-semibold text-slate-700 text-sm mb-2 flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-slate-400" /> {floor.label}
+              <Layers className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5}/> {floor.label}
             </div>
             {floor.blocks.map(block => (
               <div key={block._id} className="ml-4 mb-2">
@@ -1180,7 +1180,7 @@ export default function OwnerBuildingCreator() {
           <div className="page-header">
             <div>
               <h1 className="page-title flex items-center gap-2">
-                <Building2 className="w-6 h-6 text-primary" />
+                <Building className="w-6 h-6 text-primary" strokeWidth={1.5}/>
                 <span>Buildings Module</span>
               </h1>
               <p className="page-subtitle">Configure structures, floors, room types, and base rents</p>
@@ -1189,13 +1189,13 @@ export default function OwnerBuildingCreator() {
               className="btn btn-primary flex items-center gap-1"
               onClick={() => { resetWizard(); setMode('create'); }}
             >
-              <Plus className="w-4 h-4" /> Create Building
+              <Plus className="w-4 h-4" strokeWidth={1.5}/> Create Building
             </button>
           </div>
 
           {loadingList ? (
             <div className="flex justify-center items-center py-20">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" strokeWidth={1.5}/>
             </div>
           ) : (
             <div className="grid-2">
@@ -1204,12 +1204,12 @@ export default function OwnerBuildingCreator() {
                   <div>
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-4 h-4" />
+                        <Building className="w-4 h-4" strokeWidth={1.5}/>
                       </div>
                       <div>
                         <h3 className="font-heading font-semibold text-slate-900 text-sm">{b.name}</h3>
                         <p className="text-slate-400 text-xs flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3.5 h-3.5" />
+                          <MapPin className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           {b.address || 'No address added'}
                         </p>
                       </div>
@@ -1235,7 +1235,7 @@ export default function OwnerBuildingCreator() {
                       className="btn btn-ghost py-1.5 px-3 text-xs flex items-center gap-1.5 flex-1 justify-center"
                       onClick={() => setSearchParams({ edit: b.id })}
                     >
-                      <Pencil className="w-3.5 h-3.5" />
+                      <Pencil className="w-3.5 h-3.5" strokeWidth={1.5}/>
                       <span>Edit Layout</span>
                     </button>
                     <button
@@ -1245,7 +1245,7 @@ export default function OwnerBuildingCreator() {
                         setDeleteConfirmInput('');
                       }}
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <Trash2 className="w-3.5 h-3.5 text-red-500" strokeWidth={1.5}/>
                       <span>Delete</span>
                     </button>
                   </div>
@@ -1263,7 +1263,7 @@ export default function OwnerBuildingCreator() {
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-[2px] flex items-center justify-center z-50">
               <div className="bg-white rounded-2xl p-6 shadow-xl border border-slate-200 w-full max-w-md mx-4 animate-in fade-in zoom-in duration-200">
                 <h3 className="text-base font-extrabold text-rose-600 mb-2 flex items-center gap-2">
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-5 h-5" strokeWidth={1.5}/>
                   <span>Delete Building?</span>
                 </h3>
                 <div className="text-xs text-slate-500 mb-4 leading-relaxed">
@@ -1312,12 +1312,12 @@ export default function OwnerBuildingCreator() {
                   >
                     {deletingId ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5}/>
                         <span>Deleting...</span>
                       </>
                     ) : (
                       <>
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                         <span>Confirm Delete</span>
                       </>
                     )}
@@ -1334,11 +1334,11 @@ export default function OwnerBuildingCreator() {
           <div className="page-header">
             <div className="flex items-center gap-3">
               <button className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" onClick={() => setMode('list')}>
-                <ArrowLeft className="w-4 h-4 text-slate-500" />
+                <ArrowLeft className="w-4 h-4 text-slate-500" strokeWidth={1.5}/>
               </button>
               <div>
                 <h1 className="page-title flex items-center gap-2">
-                  <Building2 className="w-6 h-6 text-primary" />
+                  <Building className="w-6 h-6 text-primary" strokeWidth={1.5}/>
                   <span>Create New Building</span>
                 </h1>
                 <p className="page-subtitle">Configure new building layout structures</p>
@@ -1358,7 +1358,7 @@ export default function OwnerBuildingCreator() {
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
                         done ? 'bg-emerald-500 text-white' : active ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500'
                       }`}>
-                        {done ? <CheckCircle2 className="w-4 h-4" /> : num}
+                        {done ? <CheckCircle2 className="w-4 h-4" strokeWidth={1.5}/> : num}
                       </div>
                       <span className={`text-xs font-medium ${active ? 'text-indigo-700' : done ? 'text-emerald-700' : 'text-slate-400'}`}>
                         {label}
@@ -1381,7 +1381,7 @@ export default function OwnerBuildingCreator() {
             {step === 5 && <Step4 building={building} floors={floors} />}
             {step === 6 && result && (
               <div className="text-center py-6">
-                <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
+                <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-4" strokeWidth={1.5}/>
                 <h2 className="font-heading text-xl font-semibold text-slate-900 mb-1">Building Created!</h2>
                 <p className="text-slate-500 text-sm mb-6">"{result.buildingName}" is now ready to use</p>
                 <div className="grid grid-cols-4 gap-3 mb-6">
@@ -1402,7 +1402,7 @@ export default function OwnerBuildingCreator() {
                     Assign / Create Manager
                   </button>
                   <button className="btn btn-secondary border border-slate-200" onClick={resetWizard}>
-                    <Plus className="w-4 h-4" /> Create Another
+                    <Plus className="w-4 h-4" strokeWidth={1.5}/> Create Another
                   </button>
                   <button className="btn btn-ghost" onClick={() => setMode('list')}>Back to Buildings</button>
                 </div>
@@ -1411,7 +1411,7 @@ export default function OwnerBuildingCreator() {
 
             {error && (
               <div className="mt-4 flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5}/>
                 <span>{error}</span>
               </div>
             )}
@@ -1420,7 +1420,7 @@ export default function OwnerBuildingCreator() {
               <div className="flex justify-between mt-8 pt-5 border-t border-slate-100">
                 {step > 1 ? (
                   <button className="btn btn-ghost flex items-center gap-1" onClick={() => setStep(s => s - 1)}>
-                    <ChevronLeft className="w-4 h-4" /> Back
+                    <ChevronLeft className="w-4 h-4" strokeWidth={1.5}/> Back
                   </button>
                 ) : <div />}
                 {step < 5 ? (
@@ -1429,7 +1429,7 @@ export default function OwnerBuildingCreator() {
                     disabled={!canNext()}
                     onClick={() => setStep(s => s + 1)}
                   >
-                    Next <ChevronRight className="w-4 h-4" />
+                    Next <ChevronRight className="w-4 h-4" strokeWidth={1.5}/>
                   </button>
                 ) : (
                   <button
@@ -1437,7 +1437,7 @@ export default function OwnerBuildingCreator() {
                     disabled={saving}
                     onClick={handleCreate}
                   >
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Building2 className="w-4 h-4" />}
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/> : <Building className="w-4 h-4" strokeWidth={1.5}/>}
                     {saving ? 'Creating...' : 'Create Building'}
                   </button>
                 )}
@@ -1452,11 +1452,11 @@ export default function OwnerBuildingCreator() {
           <div className="page-header">
             <div className="flex items-center gap-3">
               <button className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50" onClick={() => setSearchParams({})}>
-                <ArrowLeft className="w-4 h-4 text-slate-500" />
+                <ArrowLeft className="w-4 h-4 text-slate-500" strokeWidth={1.5}/>
               </button>
               <div>
                 <h1 className="page-title flex items-center gap-2">
-                  <Building2 className="w-6 h-6 text-primary" />
+                  <Building className="w-6 h-6 text-primary" strokeWidth={1.5}/>
                   <span>Edit Layout: {editData?.name || 'Loading...'}</span>
                 </h1>
                 <p className="page-subtitle">Add or remove rooms/blocks, and update rent or bed structures</p>
@@ -1468,7 +1468,7 @@ export default function OwnerBuildingCreator() {
                 onClick={handleSaveEdit}
                 disabled={savingEdit}
               >
-                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/> : <Save className="w-4 h-4" strokeWidth={1.5}/>}
                 <span>{savingEdit ? 'Saving...' : 'Save Changes'}</span>
               </button>
             )}
@@ -1476,7 +1476,7 @@ export default function OwnerBuildingCreator() {
 
           {loadingEdit ? (
             <div className="flex justify-center items-center py-20">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" strokeWidth={1.5}/>
             </div>
           ) : editData ? (
             <div className="grid grid-cols-3 gap-6">
@@ -1513,7 +1513,7 @@ export default function OwnerBuildingCreator() {
                       className="btn btn-ghost py-1 px-2.5 text-xs flex items-center gap-1 shadow-none bg-transparent hover:bg-slate-100 font-semibold"
                       onClick={addEditFloor}
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Floor
+                      <Plus className="w-3.5 h-3.5" strokeWidth={1.5}/> Add Floor
                     </button>
                   </div>
                   <div className="flex flex-col gap-2">
@@ -1545,7 +1545,7 @@ export default function OwnerBuildingCreator() {
                             className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded"
                             onClick={() => deleteEditFloor(floor.id, floor._tempId)}
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                           </button>
                         </div>
                       );
@@ -1560,7 +1560,7 @@ export default function OwnerBuildingCreator() {
                   <div key={floor.id || floor._tempId} className="rounded-2xl border border-slate-200 bg-slate-50 overflow-hidden">
                     <div className="bg-indigo-600 px-4 py-2.5 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-indigo-200" />
+                        <Layers className="w-4 h-4 text-indigo-200" strokeWidth={1.5}/>
                         <span className="text-white font-semibold text-sm">{floor.label}</span>
                       </div>
                       <div className="flex gap-2">
@@ -1569,14 +1569,14 @@ export default function OwnerBuildingCreator() {
                           className="text-xs bg-indigo-700/80 text-indigo-100 hover:bg-indigo-700 py-1 px-2.5 rounded font-semibold border border-indigo-500/50 flex items-center gap-1"
                           onClick={() => addEditBlock(floor.id, floor._tempId)}
                         >
-                          <Plus className="w-3.5 h-3.5" /> Add Block
+                          <Plus className="w-3.5 h-3.5" strokeWidth={1.5}/> Add Block
                         </button>
                         <button
                           type="button"
                           className="text-xs bg-indigo-700/80 text-indigo-100 hover:bg-indigo-700 py-1 px-2.5 rounded font-semibold border border-indigo-500/50 flex items-center gap-1"
                           onClick={() => addEditRoom(floor.id, floor._tempId, null, null)}
                         >
-                          <Plus className="w-3.5 h-3.5" /> Standalone Room
+                          <Plus className="w-3.5 h-3.5" strokeWidth={1.5}/> Standalone Room
                         </button>
                       </div>
                     </div>
@@ -1606,7 +1606,7 @@ export default function OwnerBuildingCreator() {
                             />
                             <button type="button" className="text-red-400 hover:text-red-600 p-1"
                               onClick={() => deleteEditBlock(floor.id, floor._tempId, block.id, block._tempId)}>
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                             </button>
                           </div>
 
@@ -1667,7 +1667,7 @@ export default function OwnerBuildingCreator() {
                                     disabled={room.occupiedBedsCount > 0}
                                     title={room.occupiedBedsCount > 0 ? 'Cannot delete occupied room' : ''}
                                   >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                                   </button>
                                 </div>
                               </div>
@@ -1678,7 +1678,7 @@ export default function OwnerBuildingCreator() {
                               className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mt-1 font-semibold"
                               onClick={() => addEditRoom(floor.id, floor._tempId, block.id, block._tempId)}
                             >
-                              <Plus className="w-3 h-3" /> Add Room to Block
+                              <Plus className="w-3 h-3" strokeWidth={1.5}/> Add Room to Block
                             </button>
                           </div>
                         </div>
@@ -1744,7 +1744,7 @@ export default function OwnerBuildingCreator() {
                                   disabled={room.occupiedBedsCount > 0}
                                   title={room.occupiedBedsCount > 0 ? 'Cannot delete occupied room' : ''}
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                                 </button>
                               </div>
                             </div>
@@ -1766,7 +1766,7 @@ export default function OwnerBuildingCreator() {
 
           {error && (
             <div className="mt-5 flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm max-w-2xl mx-auto">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={1.5}/>
               <span>{error}</span>
             </div>
           )}

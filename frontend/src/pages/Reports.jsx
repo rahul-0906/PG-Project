@@ -220,7 +220,7 @@ export default function Reports() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-primary" />
+            <BarChart3 className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Reports &amp; Analytics</span>
           </h1>
           <p className="page-subtitle">Business performance overview for {year}</p>
@@ -265,7 +265,7 @@ export default function Reports() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Revenue Breakdown</h3>
                 <button onClick={handleExportRevenue} className="btn btn-ghost flex items-center gap-2 py-1.5 px-3 text-xs">
-                  <Download className="w-4 h-4 text-slate-500" />
+                  <Download className="w-4 h-4 text-slate-500" strokeWidth={1.5}/>
                   <span>Export CSV</span>
                 </button>
               </div>
@@ -286,7 +286,7 @@ export default function Reports() {
                   <div className="card mt-8 bg-slate-50 border border-slate-200 rounded-xl p-6">
                     <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
                       <div className="flex items-center gap-2">
-                        <Coins className="w-5 h-5 text-indigo-500" />
+                        <Coins className="w-5 h-5 text-indigo-500" strokeWidth={1.5}/>
                         <h4 className="font-heading text-sm font-semibold text-slate-900">
                           {selectedMonthName} {year} Revenue Details
                         </h4>
@@ -332,7 +332,7 @@ export default function Reports() {
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Occupancy Rate</h3>
                 <button onClick={handleExportOccupancy} className="btn btn-ghost flex items-center gap-2 py-1.5 px-3 text-xs">
-                  <Download className="w-4 h-4 text-slate-500" />
+                  <Download className="w-4 h-4 text-slate-500" strokeWidth={1.5}/>
                   <span>Export CSV</span>
                 </button>
               </div>
@@ -355,7 +355,7 @@ export default function Reports() {
                   <div className="card mt-8 bg-slate-50 border border-slate-200 rounded-xl p-6">
                     <div className="flex justify-between items-center mb-4 border-b border-slate-200 pb-3">
                       <div className="flex items-center gap-2">
-                        <Bed className="w-5 h-5 text-emerald-500" />
+                        <Bed className="w-5 h-5 text-emerald-500" strokeWidth={1.5}/>
                         <h4 className="font-heading text-sm font-semibold text-slate-900">
                           {selectedMonthName} {year} Occupancy Details
                         </h4>

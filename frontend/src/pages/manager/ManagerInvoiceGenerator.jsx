@@ -15,27 +15,27 @@ function StatusBadge({ generated, status }) {
   if (status === 'PAID') {
     return (
       <span className="badge badge-success text-[10px]">
-        <CheckCircle2 className="w-3 h-3" /> Paid
+        <CheckCircle2 className="w-3 h-3" strokeWidth={1.5}/> Paid
       </span>
     );
   }
   if (status === 'PENDING_CASH_VERIFICATION') {
     return (
       <span className="badge bg-amber-100 text-amber-800 border border-amber-200 text-[10px] animate-pulse">
-        <Clock className="w-3 h-3" /> Pending Verification
+        <Clock className="w-3 h-3" strokeWidth={1.5}/> Pending Verification
       </span>
     );
   }
   if (generated) {
     return (
       <span className="badge badge-info text-[10px]">
-        <CheckCircle2 className="w-3 h-3" /> Generated
+        <CheckCircle2 className="w-3 h-3" strokeWidth={1.5}/> Generated
       </span>
     );
   }
   return (
     <span className="badge badge-warning text-[10px]">
-      <Clock className="w-3 h-3" /> Pending
+      <Clock className="w-3 h-3" strokeWidth={1.5}/> Pending
     </span>
   );
 }
@@ -155,7 +155,7 @@ export default function ManagerInvoiceGenerator() {
       <div className="page-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <Receipt className="w-6 h-6 text-primary" />
+            <Receipt className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Invoice Generator</span>
           </h1>
           <p className="page-subtitle">Preview and generate monthly invoices for all guests</p>
@@ -210,7 +210,7 @@ export default function ManagerInvoiceGenerator() {
             onClick={loadPreviews}
             disabled={loading}
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/> : <RefreshCcw className="w-4 h-4" strokeWidth={1.5}/>}
             {loading ? 'Loading...' : 'Preview Invoices'}
           </button>
 
@@ -222,8 +222,8 @@ export default function ManagerInvoiceGenerator() {
               disabled={generatingAll}
             >
               {generatingAll
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <Zap className="w-4 h-4" />}
+                ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/>
+                : <Zap className="w-4 h-4" strokeWidth={1.5}/>}
               {generatingAll ? 'Generating...' : `Generate All (${pendingCount} Pending)`}
             </button>
           )}
@@ -233,7 +233,7 @@ export default function ManagerInvoiceGenerator() {
       {/* Result banner */}
       {result && (
         <div className="mb-4 p-4 rounded-xl bg-green-50 border border-green-200 flex flex-wrap gap-4 items-center">
-          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0" strokeWidth={1.5}/>
           <div className="flex gap-4 text-sm font-semibold">
             <span className="text-green-800">✅ {result.generated} generated</span>
             <span className="text-slate-500">⏭ {result.skipped} already existed</span>
@@ -292,7 +292,7 @@ export default function ManagerInvoiceGenerator() {
               ))}
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <input
                 className="form-input pl-9 py-1.5 text-sm w-48"
                 placeholder="Search guest or room..."
@@ -360,9 +360,9 @@ export default function ManagerInvoiceGenerator() {
                               disabled={verifyingId === p.id}
                             >
                               {verifyingId === p.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5}/>
                               ) : (
-                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <CheckCircle2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
                               )}
                               {verifyingId === p.id ? 'Verifying...' : 'Verify Cash'}
                             </button>
@@ -374,8 +374,8 @@ export default function ManagerInvoiceGenerator() {
                               disabled={generating === p.guestId}
                             >
                               {generating === p.guestId
-                                ? <Loader2 className="w-3 h-3 animate-spin" />
-                                : <Send className="w-3 h-3" />}
+                                ? <Loader2 className="w-3 h-3 animate-spin" strokeWidth={1.5}/>
+                                : <Send className="w-3 h-3" strokeWidth={1.5}/>}
                               {generating === p.guestId ? 'Sending...' : 'Generate & Send'}
                             </button>
                           )}
@@ -385,7 +385,7 @@ export default function ManagerInvoiceGenerator() {
                               onClick={() => handleGenerateOne(p.guestId, p.guestName)}
                               disabled={generating === p.guestId}
                             >
-                              <RefreshCcw className="w-3 h-3" /> Resend
+                              <RefreshCcw className="w-3 h-3" strokeWidth={1.5}/> Resend
                             </button>
                           )}
                         </div>
@@ -404,7 +404,7 @@ export default function ManagerInvoiceGenerator() {
 
       {previews.length === 0 && !loading && (
         <div className="card text-center py-12">
-          <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+          <Receipt className="w-10 h-10 text-slate-300 mx-auto mb-3" strokeWidth={1.5}/>
           <p className="text-slate-500 text-sm">Select a month & year, then click <strong>Preview Invoices</strong> to load guest data.</p>
         </div>
       )}

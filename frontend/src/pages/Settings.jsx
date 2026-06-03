@@ -47,7 +47,7 @@ export default function Settings() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-primary" />
+            <ShieldCheck className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Account Settings</span>
           </h1>
           <p className="page-subtitle">Manage your credentials and security preferences</p>
@@ -57,7 +57,7 @@ export default function Settings() {
       <div className="max-w-xl">
         <div className="card shadow-md border border-slate-200 p-6 bg-white rounded-xl">
           <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2 border-b border-slate-200 pb-3">
-            <Lock className="w-4 h-4 text-indigo-500" />
+            <Lock className="w-4 h-4 text-indigo-500" strokeWidth={1.5}/>
             <span>Change Password</span>
           </h3>
 
@@ -100,14 +100,14 @@ export default function Settings() {
 
             {error && (
               <div className="flex items-center gap-2 text-red-800 text-xs font-semibold bg-red-100 border border-red-200 px-3 py-2.5 rounded-lg">
-                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" strokeWidth={1.5}/>
                 <span>{error}</span>
               </div>
             )}
 
             {success && (
               <div className="flex items-center gap-2 text-green-800 text-xs font-semibold bg-green-100 border border-green-200 px-3 py-2.5 rounded-lg">
-                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" strokeWidth={1.5}/>
                 <span>{success}</span>
               </div>
             )}
@@ -120,7 +120,7 @@ export default function Settings() {
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/>
                     <span>Updating...</span>
                   </>
                 ) : (

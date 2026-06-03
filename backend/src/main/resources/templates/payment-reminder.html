@@ -22,7 +22,7 @@
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>⚠️ Payment Reminder</h1>
+      <h1><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Payment Reminder</h1>
       <p>Your invoice payment is due soon</p>
     </div>
     <div class="body">
@@ -35,11 +35,11 @@
       </div>
 
       <div class="due-box">
-        📅 Due Date: <span th:text="${dueDate}">2026-05-10</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 6px;"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Due Date: <span th:text="${dueDate}">2026-05-10</span>
       </div>
 
       <div style="text-align:center; margin-top:28px;">
-        <a th:href="${loginUrl}" class="btn">💳 Pay Now Online</a>
+        <a th:href="${loginUrl}" class="btn"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Pay Now Online</a>
       </div>
 
       <p style="color:#6b7280;font-size:13px;margin-top:24px;">

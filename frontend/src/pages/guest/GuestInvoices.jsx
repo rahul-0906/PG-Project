@@ -145,7 +145,7 @@ export default function GuestInvoices() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
-            <FileText className="w-6 h-6 text-primary" />
+            <FileText className="w-6 h-6 text-primary" strokeWidth={1.5}/>
             <span>Invoices</span>
           </h1>
           <p className="page-subtitle">{invoices.length} invoice{invoices.length !== 1 ? 's' : ''} found</p>
@@ -154,7 +154,7 @@ export default function GuestInvoices() {
 
       {invoices.length === 0 ? (
         <div className="card shadow-sm border border-slate-200 bg-white rounded-xl p-10 text-center text-slate-500 text-sm flex flex-col items-center justify-center">
-          <FileText className="w-10 h-10 text-slate-300 mb-3" />
+          <FileText className="w-10 h-10 text-slate-300 mb-3" strokeWidth={1.5}/>
           <h4 className="font-heading text-base font-semibold text-slate-900 mb-1">No Data Available</h4>
           <p className="text-xs text-slate-500 max-w-xs mx-auto">No invoices have been billed to your account yet.</p>
         </div>
@@ -209,7 +209,7 @@ export default function GuestInvoices() {
                         {inv.status === 'PAID' ? (
                           <>
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-800 bg-green-100 border border-green-200 rounded-full px-2.5 py-0.5">
-                              <Check className="w-3.5 h-3.5" />
+                              <Check className="w-3.5 h-3.5" strokeWidth={1.5}/>
                               <span>Paid</span>
                             </span>
                             <button 
@@ -227,13 +227,13 @@ export default function GuestInvoices() {
                                 } catch (err) { alert('Failed to download PDF'); }
                               }}
                             >
-                              <Download className="w-3.5 h-3.5" />
+                              <Download className="w-3.5 h-3.5" strokeWidth={1.5}/>
                               <span>PDF</span>
                             </button>
                           </>
                         ) : inv.status === 'PENDING_CASH_VERIFICATION' ? (
                           <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-0.5">
-                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <Clock className="w-3.5 h-3.5 text-amber-600" strokeWidth={1.5}/>
                             <span>Pending Cash Approval</span>
                           </span>
                         ) : (
@@ -244,12 +244,12 @@ export default function GuestInvoices() {
                           >
                             {paying === inv.id ? (
                               <>
-                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <Loader2 className="w-3 h-3 animate-spin" strokeWidth={1.5}/>
                                 <span>Paying...</span>
                               </>
                             ) : (
                               <>
-                                <CreditCard className="w-3 h-3" />
+                                <CreditCard className="w-3 h-3" strokeWidth={1.5}/>
                                 <span>Pay Now</span>
                               </>
                             )}
@@ -272,7 +272,7 @@ export default function GuestInvoices() {
               onClick={() => { setShowPayModal(false); setSelectedInvoice(null); }}
               className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" strokeWidth={1.5}/>
             </button>
             
             <div className="mb-5 pr-6">
@@ -299,7 +299,7 @@ export default function GuestInvoices() {
                   disabled={paying}
                   className="btn btn-primary w-full py-2.5 flex items-center justify-center gap-2 font-bold"
                 >
-                  {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {paying ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/> : <Check className="w-4 h-4" strokeWidth={1.5}/>}
                   Confirm Cash Handover
                 </button>
               </div>
@@ -316,7 +316,7 @@ export default function GuestInvoices() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600">
-                        <CreditCard className="w-5 h-5" />
+                        <CreditCard className="w-5 h-5" strokeWidth={1.5}/>
                       </div>
                       <div>
                         <span className="font-semibold text-slate-800 text-sm block">Pay Online (UPI / Card)</span>
@@ -337,7 +337,7 @@ export default function GuestInvoices() {
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2.5 rounded-lg bg-emerald-50 text-emerald-600">
-                        <IndianRupee className="w-5 h-5" />
+                        <IndianRupee className="w-5 h-5" strokeWidth={1.5}/>
                       </div>
                       <div>
                         <span className="font-semibold text-slate-800 text-sm block">Cash Handover</span>
@@ -359,7 +359,7 @@ export default function GuestInvoices() {
                       disabled={paying}
                       className="btn btn-emerald w-full py-2.5 mt-2 flex items-center justify-center gap-2 font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl"
                     >
-                      {paying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      {paying ? <Loader2 className="w-4 h-4 animate-spin" strokeWidth={1.5}/> : <Check className="w-4 h-4" strokeWidth={1.5}/>}
                       Confirm Cash Handover
                     </button>
                   </div>

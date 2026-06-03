@@ -21,15 +21,15 @@ import {
   CreditCard
 } from 'lucide-react';
 
-function StatCard({ label, value, icon: Icon, iconBg = 'bg-slate-100', iconColor = 'text-slate-505', children }) {
+function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-500', children }) {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col justify-between transition-all duration-200 hover:border-primary/40 hover:shadow-md min-h-[140px]">
       <div>
         <div className="flex items-center justify-between w-full mb-1">
           <span className="text-xs font-medium uppercase tracking-wider text-slate-500">{label}</span>
           {Icon && (
-            <div className={`p-1.5 rounded-lg ${iconBg} ${iconColor}`}>
-              <Icon className="w-3.5 h-3.5" />
+            <div className={iconColor}>
+              <Icon className="w-5 h-5" strokeWidth={1.5} />
             </div>
           )}
         </div>
@@ -204,7 +204,7 @@ export default function GuestDashboard() {
         <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-3 sm:gap-4">
             <div className="p-2 sm:p-2.5 bg-white/10 backdrop-blur-md rounded-xl border border-white/10 shadow-inner">
-              <User className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" />
+              <User className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-100" strokeWidth={1.5}/>
             </div>
             <div>
               <span className="text-indigo-200 text-[10px] sm:text-xs font-semibold tracking-wide uppercase">Guest Portal</span>
@@ -226,7 +226,7 @@ export default function GuestDashboard() {
             className="bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/10 px-3.5 py-1.5 rounded-xl text-xxs font-bold transition-all duration-200 flex items-center gap-1.5 hover:-translate-y-0.5"
             onClick={openProfile}
           >
-            <Edit2 className="w-3 h-3" />
+            <Edit2 className="w-3 h-3" strokeWidth={1.5}/>
             <span>Edit Profile</span>
           </button>
         </div>
@@ -236,7 +236,7 @@ export default function GuestDashboard() {
         <div className="modal-overlay">
           <div className="modal-content card fade-in-up" style={{ maxWidth: showOtpView ? 480 : 720, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
             <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-primary" />
+              <ShieldAlert className="w-5 h-5 text-primary" strokeWidth={1.5}/>
               <span>Edit Profile Details</span>
             </h3>
             {showOtpView ? (
@@ -377,7 +377,6 @@ export default function GuestDashboard() {
           label="Total Invoices" 
           value={data?.totalInvoices ?? '0'} 
           icon={FileText} 
-          iconBg="bg-blue-50" 
           iconColor="text-blue-500"
         >
           <div className="flex flex-col gap-1.5 mt-1">
@@ -389,7 +388,7 @@ export default function GuestDashboard() {
                 onClick={() => navigate('/guest/invoices')}
               >
                 <span>My Invoices</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" strokeWidth={1.5}/>
               </button>
             </div>
           </div>
@@ -399,7 +398,6 @@ export default function GuestDashboard() {
           label="Unread Notifications" 
           value={unreadNotificationsCount} 
           icon={Bell} 
-          iconBg="bg-rose-50" 
           iconColor={unreadNotificationsCount > 0 ? "text-rose-500 animate-bounce" : "text-rose-400"}
         >
           <div className="flex flex-col gap-1.5 mt-1">
@@ -416,7 +414,6 @@ export default function GuestDashboard() {
         <StatCard 
           label="Food Plan" 
           icon={ChefHat} 
-          iconBg="bg-emerald-50" 
           iconColor="text-emerald-500"
         >
           <div className="flex flex-col gap-2 mt-1">
@@ -426,7 +423,7 @@ export default function GuestDashboard() {
               </span>
               {data?.allowMealCancellations && (
                 <span className="badge badge-accent flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
+                  <CheckCircle2 className="w-3 h-3" strokeWidth={1.5}/>
                   <span>Cancellations Allowed</span>
                 </span>
               )}
@@ -438,7 +435,7 @@ export default function GuestDashboard() {
                 onClick={() => navigate('/guest/daily-log')}
               >
                 <span>Meal Planner</span>
-                <ArrowRight className="w-3 h-3" />
+                <ArrowRight className="w-3 h-3" strokeWidth={1.5}/>
               </button>
             </div>
           </div>
@@ -459,48 +456,42 @@ export default function GuestDashboard() {
               className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
               onClick={() => navigate('/guest/daily-log')}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                  <Utensils className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <Utensils className="w-5 h-5 text-indigo-600" strokeWidth={1.5}/>
                 <div>
                   <div className="font-bold text-slate-800 text-sm">Meal Planner</div>
                   <div className="text-slate-400 text-xxs mt-0.5">Opt in/out of meals</div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" strokeWidth={1.5}/>
             </button>
 
             <button 
               className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 group text-left"
               onClick={() => navigate('/guest/invoices')}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-blue-100 transition-colors">
-                  <CreditCard className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-blue-600" strokeWidth={1.5}/>
                 <div>
                   <div className="font-bold text-slate-800 text-sm">My Invoices</div>
                   <div className="text-slate-500 text-xxs mt-0.5">View & clear invoices</div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" strokeWidth={1.5}/>
             </button>
 
             <button 
               className="w-full flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-200 transition-all duration-200 group text-left"
               onClick={openProfile}
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-violet-50 text-violet-600 rounded-lg group-hover:bg-violet-100 transition-colors">
-                  <User className="w-4 h-4" />
-                </div>
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-violet-600" strokeWidth={1.5}/>
                 <div>
                   <div className="font-bold text-slate-800 text-sm">Edit Profile</div>
                   <div className="text-slate-400 text-xxs mt-0.5">Change phone & vehicle details</div>
                 </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" strokeWidth={1.5}/>
             </button>
           </div>
         </div>
@@ -510,7 +501,7 @@ export default function GuestDashboard() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                <TrendingUp className="w-4 h-4" />
+                <TrendingUp className="w-4 h-4" strokeWidth={1.5}/>
               </div>
               <div>
                 <h3 className="font-heading text-base font-semibold text-slate-900">Monthly Spending Trend</h3>
@@ -562,7 +553,7 @@ export default function GuestDashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="flex flex-col items-center justify-center h-[260px] text-slate-400 text-sm">
-              <TrendingUp className="w-8 h-8 text-slate-300 mb-2" />
+              <TrendingUp className="w-8 h-8 text-slate-300 mb-2" strokeWidth={1.5}/>
               <span>No invoice billing history available yet.</span>
             </div>
           )}
@@ -574,7 +565,7 @@ export default function GuestDashboard() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
           <div className="flex items-center gap-2">
             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <ChefHat className="w-4 h-4" />
+              <ChefHat className="w-4 h-4" strokeWidth={1.5}/>
             </div>
             <div>
               <h3 className="font-heading text-base font-semibold text-slate-900">Add-on &amp; Service Log</h3>
@@ -644,7 +635,7 @@ export default function GuestDashboard() {
         {/* Compact Service Log Feed */}
         {filteredAddons.filter(a => ((a.omeletteCount || 0) + (a.boiledEggCount || 0) + (a.washingMachineCount || 0)) > 0).length === 0 ? (
           <div className="text-center py-8 text-slate-400 text-sm flex flex-col items-center justify-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-            <ChefHat className="w-8 h-8 text-slate-300 mb-2" />
+            <ChefHat className="w-8 h-8 text-slate-300 mb-2" strokeWidth={1.5}/>
             <span>No service usage logged for this month.</span>
           </div>
         ) : (
