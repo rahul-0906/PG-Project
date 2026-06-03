@@ -645,3 +645,27 @@ sequenceDiagram
     Dashboard->>Manager: Triggers green success toast & refreshes pending queue
 ```
 
+---
+
+## 20. Guest Profile Modification & Constraint Validation Flow
+Secures the guest profile update pipeline in the manager view, preventing duplicate email assignments using an in-modal validation error alert.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Manager
+    participant App as ManagerGuests Component
+    participant Controller as PgManagerController
+    participant DB as PostgreSQL DB
+
+    Manager->>App: Clicks "Edit" on a Guest row
+    App->>Manager: Opens "Edit Guest Details" Modal
+    Manager->>App: Modifies Email ID field to an existing email & clicks "Save"
+    App->>Controller: PUT /api/manager/guests/{id} (editForm payload)
+    Controller->>DB: Check if email is in use by another user account
+    DB->>Controller: Email matches an existing active account
+    Controller->>App: Return 400 Bad Request ("Email is already in use by another account")
+    Note over App: App catches error, sets editError state, and renders red warning banner inside the modal
+    App->>Manager: Displays warning banner: "Email is already in use by another account"
+```
+
