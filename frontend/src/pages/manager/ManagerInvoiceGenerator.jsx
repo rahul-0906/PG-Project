@@ -46,9 +46,18 @@ function MoneyCell({ amount }) {
 }
 
 export default function ManagerInvoiceGenerator() {
-  const today = new Date();
-  const [month, setMonth] = useState(today.getMonth() + 1);
-  const [year, setYear] = useState(today.getFullYear());
+  const getDefaultBillingPeriod = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return {
+      month: d.getMonth() + 1, // 1-indexed (Jan is 1, Dec is 12)
+      year: d.getFullYear()
+    };
+  };
+
+  const initialPeriod = getDefaultBillingPeriod();
+  const [month, setMonth] = useState(initialPeriod.month);
+  const [year, setYear] = useState(initialPeriod.year);
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState('');
