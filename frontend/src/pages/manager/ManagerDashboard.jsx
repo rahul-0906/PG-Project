@@ -137,57 +137,8 @@ export default function ManagerDashboard() {
         <StatCard label="Open Tickets" value={data?.pendingMaintenanceTickets ?? '—'} icon={Wrench} iconBg="bg-rose-50" iconColor="text-rose-500" />
       </div>
 
-      <div className="grid-2">
-        <div className="card">
-          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <ChartIcon className="w-5 h-5 text-slate-400" />
-            <span>Bed Occupancy</span>
-          </h3>
-          {data && (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
-                  dataKey="value" paddingAngle={3}>
-                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-                </Pie>
-                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '0.5rem' }}>
-            {pieData.map((d, i) => (
-              <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS[i], display: 'inline-block' }} />
-                {d.name}: <strong>{d.value}</strong>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-slate-400" />
-            <span>Quick Actions</span>
-          </h3>
-          {[
-            { href: '/manager/guests', icon: Users, label: 'Manage Guests', color: 'text-violet-500' },
-            { href: '/manager/eb-bill', icon: Zap, label: 'Record EB Bill', color: 'text-amber-500' },
-            { href: '/manager/maintenance', icon: Wrench, label: 'View Maintenance', color: 'text-rose-500' },
-          ].map(a => {
-            const Icon = a.icon;
-            return (
-              <a key={a.href} href={a.href} className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
-                <Icon className={`w-4 h-4 ${a.color}`} />
-                <span>{a.label}</span>
-                <ArrowRight className="w-4 h-4 ml-auto text-slate-300" />
-              </a>
-            );
-          })}
-        </div>
-      </div>
-
       {pendingCash && pendingCash.length > 0 && (
-        <div className="card mt-6" style={{ padding: '1.25rem' }}>
+        <div className="card mb-6" style={{ padding: '1.25rem' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
               <IndianRupee className="w-5 h-5 text-emerald-500" />
@@ -247,6 +198,55 @@ export default function ManagerDashboard() {
           </div>
         </div>
       )}
+
+      <div className="grid-2">
+        <div className="card">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <ChartIcon className="w-5 h-5 text-slate-400" />
+            <span>Bed Occupancy</span>
+          </h3>
+          {data && (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90}
+                  dataKey="value" paddingAngle={3}>
+                  {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                </Pie>
+                <Tooltip contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', color: '#0f172a' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '0.5rem' }}>
+            {pieData.map((d, i) => (
+              <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: COLORS[i], display: 'inline-block' }} />
+                {d.name}: <strong>{d.value}</strong>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-slate-400" />
+            <span>Quick Actions</span>
+          </h3>
+          {[
+            { href: '/manager/guests', icon: Users, label: 'Manage Guests', color: 'text-violet-500' },
+            { href: '/manager/eb-bill', icon: Zap, label: 'Record EB Bill', color: 'text-amber-500' },
+            { href: '/manager/maintenance', icon: Wrench, label: 'View Maintenance', color: 'text-rose-500' },
+          ].map(a => {
+            const Icon = a.icon;
+            return (
+              <a key={a.href} href={a.href} className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 mb-2 hover:bg-slate-100/50 transition-colors text-slate-700 hover:text-slate-900 font-semibold text-sm">
+                <Icon className={`w-4 h-4 ${a.color}`} />
+                <span>{a.label}</span>
+                <ArrowRight className="w-4 h-4 ml-auto text-slate-300" />
+              </a>
+            );
+          })}
+        </div>
+      </div>
 
       {toast && (
         <div className="fixed top-4 right-4 z-[9999] bg-green-600 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
