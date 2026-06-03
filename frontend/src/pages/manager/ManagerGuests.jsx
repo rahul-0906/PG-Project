@@ -81,6 +81,7 @@ export default function ManagerGuests() {
   const [editingGuest, setEditingGuest] = useState(null);
   const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '', whatsappNumber: '', advanceDeposit: '', kycStatus: 'PENDING' });
   const [updating, setUpdating] = useState(false);
+  const [editError, setEditError] = useState('');
 
   // Checkout notice states
   const [confirmCheckoutGuest, setConfirmCheckoutGuest] = useState(null);
@@ -101,6 +102,7 @@ export default function ManagerGuests() {
 
   const startEdit = (g) => {
     setEditingGuest(g);
+    setEditError('');
     setEditForm({
       fullName: g.fullName || '',
       email: g.email || '',
@@ -114,13 +116,16 @@ export default function ManagerGuests() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     setUpdating(true);
+    setEditError('');
     try {
       await managerApi.updateGuest(editingGuest.id, editForm);
       setEditingGuest(null);
       managerApi.getGuests().then(r => setGuests(r.data));
       showToast('Guest details updated successfully!');
     } catch (err) {
-      showToast(err.response?.data?.error || 'Failed to update guest details', 'error');
+      const errMsg = err.response?.data?.error || err.response?.data?.message || err.message || 'Failed to update guest details';
+      setEditError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setUpdating(false);
     }
@@ -714,6 +719,12 @@ export default function ManagerGuests() {
               <Edit2 className="w-5 h-5 text-primary" />
               <span>Edit Guest Details</span>
             </h3>
+            {editError && (
+              <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                <span>{editError}</span>
+              </div>
+            )}
             <form onSubmit={handleUpdate} className="flex flex-col flex-1 overflow-hidden">
               <div className="overflow-y-auto flex-1 pr-1" style={{ maxHeight: 'calc(90vh - 150px)' }}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-2">
