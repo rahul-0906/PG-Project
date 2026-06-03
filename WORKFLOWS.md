@@ -606,3 +606,42 @@ sequenceDiagram
     Controller->>DB: Set Notification isRead = true
 ```
 
+---
+
+## 19. Guest Cash Handover & Manager Verification Flow
+Enables guests to request rent verification for offline cash handovers, placing verification cards at high priority on the manager's dashboard workspace.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Guest
+    participant Portal as GuestInvoices Page
+    participant Controller as PgManagerController
+    participant Service as InvoiceService
+    participant DB as PostgreSQL DB
+    actor Manager
+    participant Dashboard as ManagerDashboard
+
+    Guest->>Portal: Clicks "Cash Handover" on Invoice
+    Portal->>Controller: POST /api/guest/invoices/{id}/pay-cash
+    Controller->>Service: initiateCashHandover(invoiceId)
+    Service->>DB: Set Invoice status = PENDING_CASH_VERIFICATION
+    Service->>Portal: Success payload
+    Note over Portal: Renders a static Clock icon indicating pending approval status
+
+    Note over Manager, DB: Manager Verification Dashboard Notification
+    Manager->>Dashboard: Navigates to Dashboard / Logs In
+    Dashboard->>Controller: GET /api/manager/invoices/pending-cash
+    Controller->>DB: Query invoices with status = PENDING_CASH_VERIFICATION for manager's authorized branches
+    DB->>Dashboard: Yields pending cash handover list
+    Note over Dashboard: Renders high-priority "Pending Cash Verifications" card directly under stats grid
+    
+    Manager->>Dashboard: Clicks "Verify Cash" button
+    Dashboard->>Controller: POST /api/manager/invoices/{id}/verify-cash
+    Controller->>Service: verifyCashHandover(invoiceId)
+    Service->>DB: Set Invoice status = PAID, paymentMode = CASH, paymentDate = today
+    Service->>DB: Write CASH_VERIFICATION Audit Log entry
+    Service->>Dashboard: Returns success confirmation
+    Dashboard->>Manager: Triggers green success toast & refreshes pending queue
+```
+

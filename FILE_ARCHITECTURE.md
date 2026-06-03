@@ -513,6 +513,7 @@ The client interface is built as a single-page React application powered by Vite
 * **`V6__add_payment_mode_config.sql`**: Alters the `building_configs` table to introduce the `allowed_payment_modes` setting (e.g. ONLINE, CASH, or BOTH), allowing granular control over tenant collection pipelines.
 * **`V7__add_user_to_notifications.sql`**: Introduces a foreign key `user_id` pointing to the `users` table on the `notifications` table, mapping existing guest entries to user accounts and enabling universal in-app notifications.
 * **`V8__add_bed_switch_audit_action.sql`**: Updates the `audit_logs` action check constraint to include `GUEST_BED_SWITCH`, ensuring formal administrative logging on room swaps.
+* **`V9__update_invoice_status_check.sql`**: Modifies the `invoices` status check constraint to support the `PENDING_CASH_VERIFICATION` status, permitting offline guest cash handover requests.
 
 ### 3.2 HTML Thymeleaf Templates (`backend/src/main/resources/templates/`)
 * **`email-verification.html`**: A stylized HTML email containing the 6-digit profile email change OTP.
