@@ -1,6 +1,6 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Production Profile — active when SPRING_PROFILES_ACTIVE=prod
-# Overrides the H2 dev settings from application.yml with PostgreSQL.
+# Overrides the dev settings from application.yml with production PostgreSQL.
 # All sensitive values are read from environment variables.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -10,10 +10,7 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ${DB_USERNAME:pgcrm}
     password: ${DB_PASSWORD:pgcrm123}
-
-  h2:
-    console:
-      enabled: false   # Disable H2 console in production
+    continue-on-error: false
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect

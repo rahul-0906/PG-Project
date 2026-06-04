@@ -52,7 +52,7 @@ public class DailyLogServiceTest {
     @Test
     void testUpsertLog_Success() {
         String guestId = "g1";
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now().plusDays(2); // Use a future date to avoid lockout
         Guest guest = new Guest();
         guest.setId(guestId);
         guest.setBreakfastPreference(true);
@@ -91,6 +91,9 @@ public class DailyLogServiceTest {
                 .dinnerOpted(true)
                 .build();
 
+        when(guestRepository.findById(guestId)).thenReturn(Optional.of(guest));
+        when(dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)).thenReturn(Optional.empty());
+
         Exception exception = assertThrows(RuntimeException.class, () -> {
             dailyLogService.upsertLog(guestId, logDate, incoming);
         });
@@ -102,14 +105,14 @@ public class DailyLogServiceTest {
     void testUpsertLog_NoCancellationsAllowed() {
         rules.setAllowMealCancellations(false);
         String guestId = "g1";
-        LocalDate today = LocalDate.now();
+        LocalDate logDate = LocalDate.now().plusDays(2); // Use a future date to avoid lockout
         Guest guest = new Guest();
         guest.setId(guestId);
 
         DailyLog existing = DailyLog.builder()
                 .id("log1")
                 .guest(guest)
-                .logDate(today)
+                .logDate(logDate)
                 .breakfastOpted(true)
                 .lunchOpted(false)
                 .dinnerOpted(true)
@@ -122,10 +125,10 @@ public class DailyLogServiceTest {
                 .build();
 
         when(guestRepository.findById(guestId)).thenReturn(Optional.of(guest));
-        when(dailyLogRepository.findByGuestIdAndLogDate(guestId, today)).thenReturn(Optional.of(existing));
+        when(dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)).thenReturn(Optional.of(existing));
         when(dailyLogRepository.save(any(DailyLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        DailyLog result = dailyLogService.upsertLog(guestId, today, incoming);
+        DailyLog result = dailyLogService.upsertLog(guestId, logDate, incoming);
 
         assertTrue(result.isBreakfastOpted());
         assertFalse(result.isLunchOpted());

@@ -51,7 +51,6 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", "If the email is registered, password reset instructions have been sent."));
     }
 
-
     /**
      * Forces a password change for the authenticated user.
      * Required when mustChangePassword = true (first login after check-in).

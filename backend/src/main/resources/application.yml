@@ -7,34 +7,13 @@ spring:
       - "optional:file:./tenant-config.yml"
       - "optional:file:../tenant-config.yml"
 
-  # ─── H2 (Commented out in favor of PostgreSQL) ─────────────────
-  # datasource:
-  #   url: jdbc:h2:mem:pgcrmdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
-  #   driver-class-name: org.h2.Driver
-  #   username: sa
-  #   password: password
-  #
-  # h2:
-  #   console:
-  #     enabled: true
-  #     path: /h2-console
-  #
-  # jpa:
-  #   database-platform: org.hibernate.dialect.H2Dialect
-  #   hibernate:
-  #     ddl-auto: update
-  #   show-sql: false
-  #   open-in-view: true
-  #   properties:
-  #     hibernate:
-  #       format_sql: true
-
-  # ─── PostgreSQL (Active) ────────────────────────────────────────
+  # ─── PostgreSQL (Active & Exclusive) ────────────────────────────
   datasource:
     url: jdbc:postgresql://localhost:5432/pgcrmdb
     driver-class-name: org.postgresql.Driver
     username: postgres
     password: admin
+    continue-on-error: false
 
   flyway:
     enabled: true

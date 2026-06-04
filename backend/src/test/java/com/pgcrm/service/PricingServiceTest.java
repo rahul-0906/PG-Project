@@ -1,7 +1,9 @@
 package com.pgcrm.service;
 
 import com.pgcrm.config.SystemConfigProperties;
+import com.pgcrm.entity.BuildingConfig;
 import com.pgcrm.entity.PricingConfig;
+import com.pgcrm.repository.BuildingConfigRepository;
 import com.pgcrm.repository.PricingConfigRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,9 @@ public class PricingServiceTest {
 
     @Mock
     private PricingConfigRepository pricingConfigRepository;
+
+    @Mock
+    private BuildingConfigRepository buildingConfigRepository;
 
     @Mock
     private SystemConfigProperties systemConfig;
@@ -47,7 +52,7 @@ public class PricingServiceTest {
     void testGetEffectivePricing_FallbackToDefaults() {
         String buildingId = "b1";
         when(systemConfig.getPricing()).thenReturn(pricingDefaults);
-        when(pricingConfigRepository.findByBuildingId(buildingId)).thenReturn(List.of());
+        when(buildingConfigRepository.findById(buildingId)).thenReturn(Optional.empty());
 
         PricingService.EffectivePricing effective = pricingService.getEffectivePricing(buildingId);
 
@@ -62,19 +67,17 @@ public class PricingServiceTest {
     @Test
     void testGetEffectivePricing_WithOverrides() {
         String buildingId = "b1";
-        PricingConfig overrideBreakfast = PricingConfig.builder()
+        BuildingConfig buildingConfig = BuildingConfig.builder()
                 .buildingId(buildingId)
-                .priceKey(PricingService.BREAKFAST)
-                .value(BigDecimal.valueOf(70.00))
-                .build();
-        PricingConfig overrideOmelette = PricingConfig.builder()
-                .buildingId(buildingId)
-                .priceKey(PricingService.OMELETTE)
-                .value(BigDecimal.valueOf(25.00))
+                .breakfastPrice(BigDecimal.valueOf(70.00))
+                .lunchPrice(BigDecimal.valueOf(65.00))
+                .dinnerPrice(BigDecimal.valueOf(60.00))
+                .washingMachinePrice(BigDecimal.valueOf(50.00))
+                .omelettePrice(BigDecimal.valueOf(25.00))
+                .boiledEggPrice(BigDecimal.valueOf(18.00))
                 .build();
 
-        when(systemConfig.getPricing()).thenReturn(pricingDefaults);
-        when(pricingConfigRepository.findByBuildingId(buildingId)).thenReturn(List.of(overrideBreakfast, overrideOmelette));
+        when(buildingConfigRepository.findById(buildingId)).thenReturn(Optional.of(buildingConfig));
 
         PricingService.EffectivePricing effective = pricingService.getEffectivePricing(buildingId);
 
@@ -89,14 +92,17 @@ public class PricingServiceTest {
     @Test
     void testGetFullPricingMap() {
         String buildingId = "b1";
-        PricingConfig overrideLunch = PricingConfig.builder()
+        BuildingConfig buildingConfig = BuildingConfig.builder()
                 .buildingId(buildingId)
-                .priceKey(PricingService.LUNCH)
-                .value(BigDecimal.valueOf(80.00))
+                .breakfastPrice(BigDecimal.valueOf(60.00))
+                .lunchPrice(BigDecimal.valueOf(80.00))
+                .dinnerPrice(BigDecimal.valueOf(60.00))
+                .washingMachinePrice(BigDecimal.valueOf(50.00))
+                .omelettePrice(BigDecimal.valueOf(18.00))
+                .boiledEggPrice(BigDecimal.valueOf(18.00))
                 .build();
 
-        when(systemConfig.getPricing()).thenReturn(pricingDefaults);
-        when(pricingConfigRepository.findByBuildingId(buildingId)).thenReturn(List.of(overrideLunch));
+        when(buildingConfigRepository.findById(buildingId)).thenReturn(Optional.of(buildingConfig));
 
         Map<String, BigDecimal> fullMap = pricingService.getFullPricingMap(buildingId);
 
