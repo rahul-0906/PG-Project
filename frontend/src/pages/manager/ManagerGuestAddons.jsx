@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi } from '../../api';
 import { useSystemConfig } from '../../context/SystemConfigContext';
@@ -96,9 +96,19 @@ export default function ManagerGuestAddons() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGuestId, setExpandedGuestId] = useState(null);
 
-  // Unsaved changes state tracking
-  const [dirtyGuestIds, setDirtyGuestIds] = useState(new Set());
+  // Hybrid Save states
+  const [hasUnsavedBulkChanges, setHasUnsavedBulkChanges] = useState(false);
+  const [bulkDirtyIds, setBulkDirtyIds] = useState(new Set());
   const [savingGlobal, setSavingGlobal] = useState(false);
+  const [toast, setToast] = useState('');
+
+  // Per-guest debounce timers reference
+  const debounceTimers = useRef({});
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
 
   // Daily logs fetch
   useEffect(() => {
@@ -122,7 +132,8 @@ export default function ManagerGuestAddons() {
         };
       });
       setLogs(logMap);
-      setDirtyGuestIds(new Set());
+      setBulkDirtyIds(new Set());
+      setHasUnsavedBulkChanges(false);
     }).catch(console.error)
     .finally(() => setLoading(false));
   }, [date, activeTab]);
@@ -139,10 +150,21 @@ export default function ManagerGuestAddons() {
       .finally(() => setLoadingMonthly(false));
   }, [month, year, activeTab]);
 
-  // Reset dirty states when date or tab changes
+  // Clear timers and resets dirty changes when date or tab changes
   useEffect(() => {
-    setDirtyGuestIds(new Set());
+    Object.values(debounceTimers.current).forEach(clearTimeout);
+    debounceTimers.current = {};
+    
+    setBulkDirtyIds(new Set());
+    setHasUnsavedBulkChanges(false);
   }, [date, activeTab]);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(debounceTimers.current).forEach(clearTimeout);
+    };
+  }, []);
 
   const getLog = (guestId) => logs[guestId] || { 
     omeletteCount: 0, 
@@ -154,53 +176,80 @@ export default function ManagerGuestAddons() {
     dinnerOpted: false
   };
 
+  // 1. Single Edit Handler: Debounced Silent Auto-Save
   const handleFieldChange = (guestId, field, value) => {
-    // 1. Update the local state logs immediately
+    const updatedLog = { ...getLog(guestId), [field]: value };
+
+    // Update local state instantly for snappy UI
     setLogs(prev => ({ 
       ...prev, 
-      [guestId]: { ...getLog(guestId), [field]: value } 
+      [guestId]: updatedLog 
     }));
 
-    // 2. Mark this guest as dirty (unsaved changes)
-    setDirtyGuestIds(prev => {
-      const next = new Set(prev);
-      next.add(guestId);
-      return next;
-    });
+    // State Isolation: If this guest was part of pending bulk edits, remove them
+    if (bulkDirtyIds.has(guestId)) {
+      setBulkDirtyIds(prev => {
+        const next = new Set(prev);
+        next.delete(guestId);
+        if (next.size === 0) {
+          setHasUnsavedBulkChanges(false);
+        }
+        return next;
+      });
+    }
+
+    // Trigger debounced save API call
+    debouncedSave(guestId, updatedLog);
   };
 
-  const filteredGuests = guests.filter(g => 
-    g.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const debouncedSave = (guestId, updatedLog) => {
+    if (debounceTimers.current[guestId]) {
+      clearTimeout(debounceTimers.current[guestId]);
+    }
 
-  const filteredMonthly = monthlyData.filter(g =>
-    g.guestName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    debounceTimers.current[guestId] = setTimeout(async () => {
+      delete debounceTimers.current[guestId];
+      setSaving(s => ({ ...s, [guestId]: true }));
+      try {
+        await managerApi.updateGuestLog(guestId, date, updatedLog);
+        setSaved(s => ({ ...s, [guestId]: true }));
+        showToast('Auto-saved changes');
+        setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 1500);
+      } catch (err) {
+        console.error(err);
+        showToast('Auto-save failed');
+      } finally {
+        setSaving(s => ({ ...s, [guestId]: false }));
+      }
+    }, 800);
+  };
 
-  // Bulk toggles logic
-  const allBreakfastChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).breakfastOpted);
-  const allLunchChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).lunchOpted);
-  const allDinnerChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).dinnerOpted);
-
+  // 2. Bulk Edit Handler: Stage changes & render float banner
   const handleBulkToggle = (field, checked) => {
     const nextLogs = { ...logs };
-    const nextDirty = new Set(dirtyGuestIds);
+    const nextBulkDirty = new Set(bulkDirtyIds);
 
     filteredGuests.forEach(g => {
+      // Clear any pending single debounced saves for these guests to isolate state
+      if (debounceTimers.current[g.id]) {
+        clearTimeout(debounceTimers.current[g.id]);
+        delete debounceTimers.current[g.id];
+      }
+
       nextLogs[g.id] = { ...getLog(g.id), [field]: checked };
-      nextDirty.add(g.id);
+      nextBulkDirty.add(g.id);
     });
 
     setLogs(nextLogs);
-    setDirtyGuestIds(nextDirty);
+    setBulkDirtyIds(nextBulkDirty);
+    setHasUnsavedBulkChanges(true);
   };
 
   const handleSaveChanges = async () => {
-    if (dirtyGuestIds.size === 0) return;
+    if (bulkDirtyIds.size === 0) return;
     setSavingGlobal(true);
-    const idsToSave = Array.from(dirtyGuestIds);
+    const idsToSave = Array.from(bulkDirtyIds);
 
-    // Track active savings inline per row
     const newSaving = { ...saving };
     idsToSave.forEach(id => { newSaving[id] = true; });
     setSaving(newSaving);
@@ -212,9 +261,11 @@ export default function ManagerGuestAddons() {
         setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 1500);
       }));
 
-      setDirtyGuestIds(new Set());
+      showToast('Bulk changes saved successfully');
+      setBulkDirtyIds(new Set());
+      setHasUnsavedBulkChanges(false);
 
-      // Silent background refresh to confirm data sync
+      // Refresh in background to sync state
       const logRes = await managerApi.getGuestsByDate(date);
       const logMap = {};
       (logRes.data || []).forEach(item => {
@@ -240,7 +291,8 @@ export default function ManagerGuestAddons() {
   };
 
   const handleDiscardChanges = () => {
-    setDirtyGuestIds(new Set());
+    setBulkDirtyIds(new Set());
+    setHasUnsavedBulkChanges(false);
     setLoading(true);
     managerApi.getGuestsByDate(date).then(logRes => {
       const logMap = {};
@@ -259,6 +311,18 @@ export default function ManagerGuestAddons() {
     }).catch(console.error)
     .finally(() => setLoading(false));
   };
+
+  const filteredGuests = guests.filter(g => 
+    g.fullName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredMonthly = monthlyData.filter(g =>
+    g.guestName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const allBreakfastChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).breakfastOpted);
+  const allLunchChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).lunchOpted);
+  const allDinnerChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).dinnerOpted);
 
   // Month navigation helpers
   const handlePrevMonth = () => {
@@ -283,6 +347,13 @@ export default function ManagerGuestAddons() {
 
   return (
     <AppLayout>
+      {/* Toast popup */}
+      {toast && (
+        <div className="fixed top-4 right-4 z-[9999] bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm animate-fade-in-up flex items-center gap-2">
+          <Check className="w-4 h-4 text-emerald-400" strokeWidth={1.5} /> {toast}
+        </div>
+      )}
+
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2">
@@ -427,7 +498,7 @@ export default function ManagerGuestAddons() {
                     const log = getLog(g.id);
                     const isSaving = saving[g.id];
                     const isSaved = saved[g.id];
-                    const isDirty = dirtyGuestIds.has(g.id);
+                    const isBulkDirty = bulkDirtyIds.has(g.id);
 
                     return (
                       <tr key={g.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
@@ -444,7 +515,7 @@ export default function ManagerGuestAddons() {
                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="Non-Veg" />
                                 )}
                                 <span>{g.fullName}</span>
-                                {isDirty && <span className="text-[10px] text-amber-500 font-bold" title="Unsaved changes">*</span>}
+                                {isBulkDirty && <span className="text-[10px] text-amber-500 font-bold animate-pulse" title="Pending bulk save">*</span>}
                                 {isSaving && <Loader2 className="w-3 h-3 animate-spin text-slate-400" strokeWidth={1.5} />}
                                 {isSaved && <Check className="w-3 h-3 text-emerald-500" strokeWidth={1.5} />}
                               </div>
@@ -708,13 +779,13 @@ export default function ManagerGuestAddons() {
         </>
       )}
 
-      {/* Floating Unsaved Changes Actions Bar */}
-      {dirtyGuestIds.size > 0 && (
+      {/* Floating Bulk Action Confirmation Bar */}
+      {hasUnsavedBulkChanges && bulkDirtyIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 border border-slate-800 animate-fade-in-up">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
             <span className="text-xs font-semibold text-slate-300">
-              Unsaved changes for {dirtyGuestIds.size} guest{dirtyGuestIds.size > 1 ? 's' : ''}
+              Unsaved bulk changes for {bulkDirtyIds.size} guest{bulkDirtyIds.size > 1 ? 's' : ''}
             </span>
           </div>
           <div className="flex items-center gap-2">
