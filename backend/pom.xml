@@ -46,8 +46,6 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
 
-
-
         <!-- PostgreSQL — ready for prod (activate via spring.profiles.active=prod) -->
         <dependency>
             <groupId>org.postgresql</groupId>
