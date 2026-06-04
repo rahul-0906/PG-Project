@@ -420,11 +420,11 @@ The client interface is built as a single-page React application powered by Vite
 
 #### `api/index.js`
 * **Purpose**: Axios REST API configuration.
-* **Details**: Intercepts requests to append `Authorization: Bearer <Token>` and `X-Selected-Branch-Id` headers.
+* **Details**: Intercepts requests to append `Authorization: Bearer <Token>` and `X-Selected-Branch-Id` headers. Both keys are fetched dynamically from `sessionStorage`.
 
 #### `context/AuthContext.jsx`
 * **Purpose**: Manages auth status.
-* **Details**: Stores active login details, saves JWTs, and handles sign-out operations.
+* **Details**: Stores active login details, saves JWTs, and handles sign-out operations. To mitigate session persistence vulnerabilities, all credentials (including `accessToken`, `refreshToken`, `user`, and `selectedBranchId`) are persisted in `sessionStorage` rather than `localStorage`.
 
 #### `context/SystemConfigContext.jsx`
 * **Purpose**: Dynamically stores whitelabel configurations.
@@ -438,17 +438,17 @@ The client interface is built as a single-page React application powered by Vite
 * **Purpose**: Standard dashboard template. Implements a responsive 3-pane viewport containing a sticky navigation sidebar, header banner, and content view.
 
 #### `Sidebar.jsx`
-* **Purpose**: Dynamically renders links and icons based on roles.
+* **Purpose**: Dynamically renders links and icons based on roles. All icons are standardized to a thin line-art aesthetic (`strokeWidth={1.5}`). Handles session termination by clearing the keys in `sessionStorage`.
 
 #### `TopHeader.jsx`
-* **Purpose**: Sticky header. Extracts initials for user avatars, displays property indicators, and provides branch dropdown switchers for multi-building managers.
+* **Purpose**: Sticky header. Extracts initials for user avatars, displays property indicators, and provides branch dropdown switchers for multi-building managers. Persists the active manager branch selection in `sessionStorage` under `selectedBranchId`.
 
 ---
 
 ### 2.3 Pages Directory (`src/pages`)
 
 #### `Login.jsx`
-* **Purpose**: Login portal. Features a glassmorphic login card and dynamically displays brand names and logos.
+* **Purpose**: Login portal. Features a glassmorphic login card and dynamically displays brand names and logos. The mock authentication demo panel has been removed to enforce direct backend API validation. Gracefully handles connection timeouts or server 500 errors by printing a descriptive red offline warning banner.
 
 #### `ForgotPassword.jsx`
 * **Purpose**: Password recovery page. Requests temporary credentials, presenting feedback instructions and redirect links upon completion.
@@ -457,7 +457,7 @@ The client interface is built as a single-page React application powered by Vite
 * **Purpose**: User preferences and security configuration page.
 
 #### `ChangePassword.jsx`
-* **Purpose**: Handles password change requests.
+* **Purpose**: Handles password change requests. Automatically clears active user credentials from `sessionStorage` on completion to force re-login.
 
 #### `AuditLog.jsx`
 * **Purpose**: Tracks system operations with pagination, filters, and CSV exports.
@@ -479,13 +479,14 @@ The client interface is built as a single-page React application powered by Vite
 * **Purpose**: Resident issue ticketing interface. Allows guests to create, prioritize, and track issue resolution tickets.
 
 #### `manager/ManagerDashboard.jsx`
-* **Purpose**: Operational dashboard displaying occupancy graphs, pending tasks, and collections data.
+* **Purpose**: Operational dashboard displaying occupancy graphs, pending tasks, and collections data. Resolves the active building ID from the `selectedBranchId` key in `sessionStorage`.
 
 #### `manager/ManagerEbBill.jsx`
 * **Purpose**: Sub-meter input page for managers. Handles equal split and direct sub-meter billing.
 
 #### `manager/ManagerGuestAddons.jsx`
 * **Purpose**: Tracks guest daily add-on orders (omelettes, laundry, eggs) via inline tables and includes a monthly scrollable daily roster matrix.
+* **Details**: Implements background Auto-Save mechanics with inline saving spinner/checkmark feedback icons next to guest names. Displays dietary preferences with green/red dot status indicators next to names. The Monthly Roster table features a minimalist, color-stripped slate layout (removing legacy blue, purple, and green backgrounds) and a sticky table header elevated to `z-index: 10` with a solid `bg-white` fill to keep content alignment clean during scrolls.
 
 #### `manager/ManagerGuests.jsx`
 * **Purpose**: CRUD interface for guest check-ins, KYC tracking, and checkout settlements.
@@ -516,7 +517,10 @@ The client interface is built as a single-page React application powered by Vite
 * **`V9__update_invoice_status_check.sql`**: Modifies the `invoices` status check constraint to support the `PENDING_CASH_VERIFICATION` status, permitting offline guest cash handover requests.
 
 ### 3.2 HTML Thymeleaf Templates (`backend/src/main/resources/templates/`)
-* **`email-verification.html`**: A stylized HTML email containing the 6-digit profile email change OTP.
-* **`password-reset-email.html`**: Sends temporary passwords generated during forgot-password workflows.
-* **`bed-switch-email.html`**: Alerts guests to room assignment updates, listing previous/new rents and room coordinates.
-* **`welcome-back-email.html`**: Welcome template for returning checked-in guests.
+All templates have been updated to replace legacy system emojis with clean, raw inline SVGs configured with modern design values (`stroke-width="1.5" fill="none" stroke="currentColor"`) aligned properly with inline styles.
+* **`email-verification.html`**: A stylized HTML email containing the 6-digit profile email change OTP, featuring inline Key and AlertTriangle SVGs.
+* **`password-reset-email.html`**: Sends temporary passwords generated during forgot-password workflows, featuring inline Lock, AlertTriangle, and Key SVGs.
+* **`bed-switch-email.html`**: Alerts guests to room assignment updates, listing previous/new rents and room coordinates, featuring an inline RefreshCw SVG.
+* **`welcome-back-email.html`**: Welcome template for returning checked-in guests, featuring inline Home and Key SVGs.
+* **`welcome-email.html`**: Welcomes new guests and seeds initial credentials, featuring inline Home, AlertTriangle, and Key SVGs.
+* **`payment-reminder.html`**: Alerts guests to pending invoices, featuring inline AlertTriangle, Calendar, and CreditCard SVGs.

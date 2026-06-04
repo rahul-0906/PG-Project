@@ -22,7 +22,7 @@ sequenceDiagram
     DB->>Auth: User records matching
     Auth->>JWT: Generate Access Token (15m) & Refresh Token (7d)
     Auth->>User: Returns tokens & user meta
-    Note over User: Tokens stored in LocalStorage
+    Note over User: Tokens stored in SessionStorage
 
     Note over User, DB: Silent Token Refresh (API call 401 Interception)
     User->>API: GET /api/manager/guests (Access Token)
@@ -116,12 +116,13 @@ sequenceDiagram
     Controller->>DB: Retrieve or build default DailyLog records
     Controller->>Manager: Returns daily roster payload
     
-    Note over Manager, DB: Daily Log Updates & Saving
+    Note over Manager, DB: Daily Log Updates & Inline Auto-Saving
     Manager->>App: Toggles meal state or increments omelette/washing machine count
-    Manager->>App: Clicks "Save"
+    Note over App: App displays dynamic saving spinner next to guest's name
     App->>Controller: PUT /api/guest/daily-log/{date} (via guest ID)
     Controller->>DB: Save DailyLog (isVeg, breakfast, lunch, dinner, omelettes, laundry)
-    Controller->>Manager: Saved receipt confirmation
+    Controller->>App: Returns saved DailyLog state (200 OK)
+    Note over App: App replaces spinner with checkmark (active Auto-Save feedback)
 ```
 
 ---

@@ -101,7 +101,7 @@ graph TD
 * **TanStack React Query (Server State)**: Performs async cache synchronization, server data mutation, and automated cache invalidation logic for guest and manager dashboards.
 * **Vite PWA (Progressive Web App)**: Integrates client caching, background service worker installations (`sw.js`), updates notifications, offline rendering, and manifest configurations for mobile installations.
 * **Tailwind CSS**: Modern utility styling framework with a unified color token palette.
-* **Lucide React**: Premium icon package.
+* **Lucide React**: Premium icon package standardized to a thin, modern `strokeWidth={1.5}` layout across all UI pages.
 * **Recharts**: Responsive SVG graphs for dashboard analytics.
 * **Razorpay Checkout SDK**: Integrated client-side payment processing modal.
 
@@ -178,6 +178,10 @@ On startup, the system seeds default credentials for testing:
 * **PG Manager**: `manager@pgcrm.com` / `Manager@123`
 * **Guest**: `guest@pgcrm.com` / `Guest@123`
 
+> [!IMPORTANT]
+> **Direct Authentication Enforcement**
+> The "QUICK LOGIN (DEMO)" panel and buttons have been removed from the login screen to strictly enforce real API-driven authentication. You must manually type the credentials above into the login inputs to sign in. In case the backend or database is unreachable, a clear server offline warning banner is displayed.
+
 ### 5.3 Interactive API Documentation
 The backend exposes interactive OpenAPI 3.0 documentation using Swagger UI. When the server is running, navigate to:
 * **Swagger UI URL**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
@@ -213,5 +217,9 @@ Start the database service and the application container simultaneously:
 docker-compose up --build
 ```
 This launches:
-* A **PostgreSQL 15** container listening internally on port `5432`.
+* A **PostgreSQL 15** container listening internally on port `5432` with an active healthcheck utilizing `pg_isready` to verify database health.
 * The **PG CRM Server** listening on port `8080`, mounting the config and seeding schemas.
+
+> [!TIP]
+> **Fail-Fast Startup Sequencing**
+> The backend application container (`app`) is configured to depend strictly on the database container (`postgres`) being healthy (`condition: service_healthy`). This prevents the application server from starting up and trying to initialize its database connection pool until the database daemon is fully initialized and accepting connections.

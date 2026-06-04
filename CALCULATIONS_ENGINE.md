@@ -203,6 +203,10 @@ A guest checks out on May 25th, 2026.
 
 Dashboard analytics run optimized database counts and aggregations to display system health metrics.
 
+> [!NOTE]
+> **Branch/Building Scoped Calculation Context**
+> All dashboard computations and counts are scoped to the active building branch. On the frontend, the user's selected building branch is retrieved from `sessionStorage` key `selectedBranchId` and transmitted in HTTP headers as `X-Selected-Branch-Id`. The backend interceptor validates this ID against the user's authorized branch mappings (defined in user entity) and injects it as `:buildingId` to scope the JPA/SQL aggregation queries.
+
 ### 5.1 Bed Occupancy (Pie/Donut Chart)
 The React dashboard visualizes room allocations by grouping bed states: `OCCUPIED`, `VACANT`, and `NOTICE` (guests on active notice periods).
 
