@@ -47,7 +47,7 @@ export default function ManagerDashboard() {
     setTimeout(() => setToast(''), 3000);
   };
   
-  const activeBuildingId = localStorage.getItem('selectedBranchId') || (user?.branchId ? user.branchId.split(',')[0] : null);
+  const activeBuildingId = sessionStorage.getItem('selectedBranchId') || (user?.branchId ? user.branchId.split(',')[0] : null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['managerDashboard', activeBuildingId],

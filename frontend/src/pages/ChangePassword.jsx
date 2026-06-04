@@ -84,9 +84,9 @@ export default function ChangePassword() {
         </form>
 
         <button type="button" onClick={() => {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('refreshToken');
+            sessionStorage.removeItem('user');
             logout();
             navigate('/login', { replace: true });
           }}

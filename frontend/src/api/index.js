@@ -3,9 +3,9 @@ import axios from 'axios';
 const api = axios.create({ baseURL: '/api' });
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('accessToken');
+  const token = sessionStorage.getItem('accessToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;
-  const selectedBranchId = localStorage.getItem('selectedBranchId');
+  const selectedBranchId = sessionStorage.getItem('selectedBranchId');
   if (selectedBranchId && !config.headers['X-Selected-Branch-Id']) {
     config.headers['X-Selected-Branch-Id'] = selectedBranchId;
   }
@@ -16,15 +16,15 @@ api.interceptors.response.use(
   r => r,
   async err => {
     if (err.response?.status === 401) {
-      const refresh = localStorage.getItem('refreshToken');
+      const refresh = sessionStorage.getItem('refreshToken');
       if (refresh) {
         try {
           const res = await axios.post('/api/auth/refresh', { refreshToken: refresh });
-          localStorage.setItem('accessToken', res.data.accessToken);
+          sessionStorage.setItem('accessToken', res.data.accessToken);
           err.config.headers.Authorization = `Bearer ${res.data.accessToken}`;
           return api(err.config);
         } catch {
-          localStorage.clear();
+          sessionStorage.clear();
           window.location.href = '/login';
         }
       }

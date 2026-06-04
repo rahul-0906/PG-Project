@@ -29,7 +29,7 @@ export default function TopHeader() {
   const brandName = config?.branding?.name || 'PG CRM';
 
   const [assignedBuildings, setAssignedBuildings] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState(() => localStorage.getItem('selectedBranchId') || '');
+  const [selectedBranch, setSelectedBranch] = useState(() => sessionStorage.getItem('selectedBranchId') || '');
 
   const queryClient = useQueryClient();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -79,11 +79,11 @@ export default function TopHeader() {
     if (user && (user.role === 'PG_MANAGER' || user.role === 'PG_OWNER')) {
       managerApi.getAssignedBuildings().then(res => {
         setAssignedBuildings(res.data || []);
-        const stored = localStorage.getItem('selectedBranchId');
+        const stored = sessionStorage.getItem('selectedBranchId');
         if (res.data && res.data.length > 0) {
           const match = res.data.find(b => b.id === stored);
           if (!match) {
-            localStorage.setItem('selectedBranchId', res.data[0].id);
+            sessionStorage.setItem('selectedBranchId', res.data[0].id);
             setSelectedBranch(res.data[0].id);
           }
         }
@@ -93,7 +93,7 @@ export default function TopHeader() {
 
   const handleBranchChange = (e) => {
     const val = e.target.value;
-    localStorage.setItem('selectedBranchId', val);
+    sessionStorage.setItem('selectedBranchId', val);
     setSelectedBranch(val);
     window.location.reload();
   };

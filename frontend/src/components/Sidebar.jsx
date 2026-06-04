@@ -54,10 +54,10 @@ export default function Sidebar() {
   const items = navMap[user?.role] || [];
 
   const handleLogout = () => {
-    // Clear local state first (synchronous), then navigate
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
+    // Clear session state first (synchronous), then navigate
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('user');
     logout();
     navigate('/login', { replace: true });
   };

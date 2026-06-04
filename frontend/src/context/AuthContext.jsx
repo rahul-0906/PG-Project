@@ -5,16 +5,16 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
+    const stored = sessionStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
   });
 
   const login = async (email, password) => {
-    localStorage.removeItem('selectedBranchId');
+    sessionStorage.removeItem('selectedBranchId');
     const res = await authApi.login(email, password);
     const data = res.data;
-    localStorage.setItem('accessToken', data.accessToken);
-    localStorage.setItem('refreshToken', data.refreshToken);
+    sessionStorage.setItem('accessToken', data.accessToken);
+    sessionStorage.setItem('refreshToken', data.refreshToken);
     const userData = {
       userId: data.userId,
       role: data.role,
@@ -23,12 +23,12 @@ export function AuthProvider({ children }) {
       mustChangePassword: data.mustChangePassword === 'true' || data.mustChangePassword === true,
       firstLogin: data.firstLogin === 'true' || data.firstLogin === true,
     };
-    localStorage.setItem('user', JSON.stringify(userData));
+    sessionStorage.setItem('user', JSON.stringify(userData));
 
     if (data.role === 'PG_MANAGER' && data.branchId) {
       const branches = data.branchId.split(',');
       if (branches.length > 0 && branches[0]) {
-        localStorage.setItem('selectedBranchId', branches[0]);
+        sessionStorage.setItem('selectedBranchId', branches[0]);
       }
     }
 
@@ -43,13 +43,13 @@ export function AuthProvider({ children }) {
       // Ignore network failures for logout request
     }
     clearApiCache();
-    localStorage.removeItem('token');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    localStorage.removeItem('branchId');
-    localStorage.removeItem('selectedBranchId');
-    localStorage.clear();
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('branchId');
+    sessionStorage.removeItem('selectedBranchId');
+    sessionStorage.clear();
     setUser(null);
   };
 
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
     setUser(prev => {
       const updated = prev ? { ...prev, ...newData } : null;
       if (updated) {
-        localStorage.setItem('user', JSON.stringify(updated));
+        sessionStorage.setItem('user', JSON.stringify(updated));
       }
       return updated;
     });
