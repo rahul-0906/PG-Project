@@ -682,25 +682,22 @@ export default function ManagerGuestAddons() {
             <div className="table-wrap">
               <table className="min-w-full table-compact">
                 <thead>
-                  <tr className="bg-slate-50/50">
+                  <tr className="bg-slate-50/50 border-b border-slate-200">
                     <th className="py-2.5 px-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">Guest Name</th>
                     <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs">Bed</th>
-                    <th className="text-center font-semibold text-indigo-600 bg-indigo-50/30 py-2.5 text-xs text-xs" title="Breakfast count">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>Breakfast (B)</span>
-                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                    <th className="text-center bg-indigo-50/30 py-2.5" title="Breakfast count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-indigo-600">
+                        BREAKFAST (B) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
-                    <th className="text-center font-semibold text-emerald-600 bg-emerald-50/30 py-2.5 text-xs text-xs" title="Lunch count">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>Lunch (L)</span>
-                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                    <th className="text-center bg-emerald-50/30 py-2.5" title="Lunch count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-emerald-600">
+                        LUNCH (L) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
-                    <th className="text-center font-semibold text-blue-600 bg-blue-50/30 py-2.5 text-xs text-xs" title="Dinner count">
-                      <div className="flex items-center justify-center gap-1">
-                        <span>Dinner (D)</span>
-                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                    <th className="text-center bg-blue-50/30 py-2.5" title="Dinner count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-blue-600">
+                        DINNER (D) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
                     <th className="text-right py-2.5 px-3 font-semibold text-slate-500 uppercase tracking-wider text-xs"></th>
