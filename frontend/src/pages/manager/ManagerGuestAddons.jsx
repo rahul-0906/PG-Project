@@ -685,9 +685,24 @@ export default function ManagerGuestAddons() {
                   <tr className="bg-slate-50/50">
                     <th className="py-2.5 px-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs">Guest Name</th>
                     <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs">Bed</th>
-                    <th className="text-center font-semibold text-indigo-600 bg-indigo-50/30 py-2.5 text-xs" title="Breakfast count">Breakfast (B)</th>
-                    <th className="text-center font-semibold text-emerald-600 bg-emerald-50/30 py-2.5 text-xs" title="Lunch count">Lunch (L)</th>
-                    <th className="text-center font-semibold text-blue-600 bg-blue-50/30 py-2.5 text-xs" title="Dinner count">Dinner (D)</th>
+                    <th className="text-center font-semibold text-indigo-600 bg-indigo-50/30 py-2.5 text-xs text-xs" title="Breakfast count">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>Breakfast (B)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                      </div>
+                    </th>
+                    <th className="text-center font-semibold text-emerald-600 bg-emerald-50/30 py-2.5 text-xs text-xs" title="Lunch count">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>Lunch (L)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                      </div>
+                    </th>
+                    <th className="text-center font-semibold text-blue-600 bg-blue-50/30 py-2.5 text-xs text-xs" title="Dinner count">
+                      <div className="flex items-center justify-center gap-1">
+                        <span>Dinner (D)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">/ {daysInMonth}</span>
+                      </div>
+                    </th>
                     <th className="text-right py-2.5 px-3 font-semibold text-slate-500 uppercase tracking-wider text-xs"></th>
                   </tr>
                 </thead>
