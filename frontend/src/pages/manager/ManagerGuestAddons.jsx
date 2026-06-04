@@ -19,7 +19,9 @@ import {
   Minus,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -686,7 +688,7 @@ export default function ManagerGuestAddons() {
                     <th className="text-center font-semibold text-indigo-600 bg-indigo-50/30 py-2.5 text-xs" title="Breakfast count">Breakfast (B)</th>
                     <th className="text-center font-semibold text-emerald-600 bg-emerald-50/30 py-2.5 text-xs" title="Lunch count">Lunch (L)</th>
                     <th className="text-center font-semibold text-blue-600 bg-blue-50/30 py-2.5 text-xs" title="Dinner count">Dinner (D)</th>
-                    <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs">Action</th>
+                    <th className="text-right py-2.5 px-3 font-semibold text-slate-500 uppercase tracking-wider text-xs"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -718,25 +720,22 @@ export default function ManagerGuestAddons() {
                           <td className="text-center font-bold text-indigo-600 bg-indigo-50/5 text-xs">{bCount}</td>
                           <td className="text-center font-bold text-emerald-600 bg-emerald-50/5 text-xs">{lCount}</td>
                           <td className="text-center font-bold text-blue-600 bg-blue-50/5 text-xs">{dCount}</td>
-                          <td className="text-center py-2.5">
-                            <button
-                              type="button"
-                              className={`btn text-[10px] py-1 px-2.5 ${isExpanded ? 'btn-secondary' : 'btn-primary'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedGuestId(isExpanded ? null : row.guestId);
-                              }}
-                            >
-                              {isExpanded ? 'Hide Days' : 'View Days'}
-                            </button>
+                          <td className="py-2.5 px-3">
+                            <div className="flex justify-end">
+                              {isExpanded ? (
+                                <ChevronUp size={20} className="text-slate-400 transition-transform duration-200" strokeWidth={1.5} />
+                              ) : (
+                                <ChevronDown size={20} className="text-slate-400 transition-transform duration-200" strokeWidth={1.5} />
+                              )}
+                            </div>
                           </td>
                         </tr>
                         {isExpanded && (
-                          <tr>
-                            <td colSpan={6} className="bg-slate-50/60 p-4 border-b border-slate-200">
+                          <tr className="bg-slate-50/60 border-t border-b border-slate-100">
+                            <td colSpan={6} className="p-4">
                               <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 border-b border-slate-100 pb-2">
-                                  <h4 className="text-xs font-semibold text-slate-900 flex items-center gap-1.5 font-heading">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-100 pb-2">
+                                  <h4 className="text-xs font-semibold text-slate-800 flex items-center gap-1.5 font-heading">
                                     <Calendar className="w-3.5 h-3.5 text-primary" strokeWidth={1.5}/>
                                     <span>Daily Opt-in Breakdown for {row.guestName}</span>
                                   </h4>
@@ -744,26 +743,24 @@ export default function ManagerGuestAddons() {
                                     {MONTHS[month - 1]} {year}
                                   </div>
                                 </div>
-                                <div className="overflow-x-auto pb-1">
-                                  <div className="flex gap-2 min-w-max px-12 pt-14 pb-3">
-                                    {Array.from({ length: daysInMonth }, (_, i) => {
-                                      const dayNum = i + 1;
-                                      const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                                      const dayLog = row.days?.[dayStr];
+                                <div className="grid grid-cols-7 sm:grid-cols-10 gap-2">
+                                  {Array.from({ length: daysInMonth }, (_, i) => {
+                                    const dayNum = i + 1;
+                                    const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                                    const dayLog = row.days?.[dayStr];
 
-                                      return (
-                                        <div 
-                                          key={dayNum} 
-                                          className="flex flex-col items-center border border-slate-100 rounded-lg p-2 bg-slate-50/50 min-w-[50px] shadow-sm hover:border-indigo-200 transition-colors"
-                                        >
-                                          <span className="text-[9px] font-bold text-slate-400 mb-1">{dayNum}</span>
-                                          <div className="h-6 flex items-center justify-center">
-                                            <DailyRosterCell log={dayLog} day={dayNum} />
-                                          </div>
+                                    return (
+                                      <div 
+                                        key={dayNum} 
+                                        className="flex flex-col items-center border border-slate-200 rounded-lg p-1.5 bg-slate-50/30 hover:border-slate-300 transition-colors"
+                                      >
+                                        <span className="text-[9px] font-medium text-slate-400 mb-0.5">{dayNum}</span>
+                                        <div className="h-5 flex items-center justify-center">
+                                          <DailyRosterCell log={dayLog} day={dayNum} />
                                         </div>
-                                      );
-                                    })}
-                                  </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             </td>
