@@ -36,31 +36,15 @@ export default function Login() {
       await login(form.email, form.password);
       // Navigation is handled by the useEffect above once user state commits
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      if (!err.response || err.response.status === 500 || err.code === 'ERR_CONNECTION_REFUSED') {
+        setError("Cannot connect to the server. Please ensure the backend and database are running.");
+      } else {
+        setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  const quickLogin = async (email, password) => {
-    setForm({ email, password });
-    setLoading(true); 
-    setError('');
-    try {
-      await login(email, password);
-      // Navigation is handled by the useEffect above once user state commits
-    } catch (err) {
-      setError(err.response?.data?.error || 'Login failed.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const DEMOS = [
-    { label: '🏢 PG Owner',       email: 'owner@pgcrm.com',    pass: 'Owner@123' },
-    { label: '👔 PG Manager',     email: 'manager@pgcrm.com',  pass: 'Manager@123' },
-    { label: '🛏️ Guest',          email: 'guest@pgcrm.com',    pass: 'Guest@123' },
-  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -129,25 +113,6 @@ export default function Login() {
             {loading ? '⏳ Signing in...' : '🔑 Sign In'}
           </button>
         </form>
-
-        <div className="mt-6 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-slate-500 mb-2">
-            ⚡ QUICK LOGIN (DEMO)
-          </p>
-          {DEMOS.map(d => (
-            <button
-              id={`demo-${d.email.split('@')[0].replace('.', '-')}`}
-              key={d.email}
-              type="button"
-              onClick={() => quickLogin(d.email, d.pass)}
-              disabled={loading}
-              className="w-full flex items-center justify-between text-left bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:border-primary hover:shadow-sm transition-all duration-150 disabled:opacity-50"
-            >
-              <span>{d.label}</span>
-              <span className="text-[10px] text-slate-400 font-normal">{d.email}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );

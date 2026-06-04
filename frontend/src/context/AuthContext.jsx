@@ -12,6 +12,9 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     sessionStorage.removeItem('selectedBranchId');
     const res = await authApi.login(email, password);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Invalid server response');
+    }
     const data = res.data;
     sessionStorage.setItem('accessToken', data.accessToken);
     sessionStorage.setItem('refreshToken', data.refreshToken);
