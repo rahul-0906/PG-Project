@@ -685,18 +685,18 @@ export default function ManagerGuestAddons() {
                   <tr className="bg-white">
                     <th className="py-2.5 px-3 text-left font-semibold text-slate-500 uppercase tracking-wider text-xs bg-white border-b border-slate-200">Guest Name</th>
                     <th className="text-center py-2.5 font-semibold text-slate-500 uppercase tracking-wider text-xs bg-white border-b border-slate-200">Bed</th>
-                    <th className="text-center bg-indigo-50 py-2.5 border-b border-slate-200 font-bold" title="Breakfast count">
-                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-indigo-600">
+                    <th className="text-center bg-white py-2.5 border-b border-slate-200" title="Breakfast count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-slate-500">
                         BREAKFAST (B) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
-                    <th className="text-center bg-emerald-50 py-2.5 border-b border-slate-200 font-bold" title="Lunch count">
-                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-emerald-600">
+                    <th className="text-center bg-white py-2.5 border-b border-slate-200" title="Lunch count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-slate-500">
                         LUNCH (L) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
-                    <th className="text-center bg-blue-50 py-2.5 border-b border-slate-200 font-bold" title="Dinner count">
-                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-blue-600">
+                    <th className="text-center bg-white py-2.5 border-b border-slate-200" title="Dinner count">
+                      <div className="flex items-center justify-center gap-1 uppercase text-xs font-semibold text-slate-500">
                         DINNER (D) <span className="font-normal text-slate-400 text-[10px]">/ {daysInMonth}</span>
                       </div>
                     </th>
@@ -717,7 +717,7 @@ export default function ManagerGuestAddons() {
                     return (
                       <React.Fragment key={row.guestId}>
                         <tr 
-                          className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                          className={`hover:bg-slate-50/80 cursor-pointer transition-colors ${isExpanded ? 'bg-slate-50' : ''}`}
                           onClick={() => setExpandedGuestId(isExpanded ? null : row.guestId)}
                         >
                           <td className="py-3 px-3 font-semibold text-slate-900 text-xs">
@@ -729,9 +729,9 @@ export default function ManagerGuestAddons() {
                             </div>
                           </td>
                           <td className="text-slate-600 font-semibold text-center text-xs">{row.bedLabel || '—'}</td>
-                          <td className="text-center font-bold text-indigo-600 bg-indigo-50/5 text-xs">{bCount}</td>
-                          <td className="text-center font-bold text-emerald-600 bg-emerald-50/5 text-xs">{lCount}</td>
-                          <td className="text-center font-bold text-blue-600 bg-blue-50/5 text-xs">{dCount}</td>
+                          <td className="text-center font-medium text-slate-700 text-xs">{bCount}</td>
+                          <td className="text-center font-medium text-slate-700 text-xs">{lCount}</td>
+                          <td className="text-center font-medium text-slate-700 text-xs">{dCount}</td>
                           <td className="py-2.5 px-3">
                             <div className="flex justify-end">
                               {isExpanded ? (
