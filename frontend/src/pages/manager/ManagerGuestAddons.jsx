@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   Plus,
+  Minus,
   Calendar,
   ChevronLeft,
   ChevronRight
@@ -143,18 +144,19 @@ export default function ManagerGuestAddons() {
     dinnerOpted: false
   };
 
-  const updateField = (guestId, field, value) => {
-    setLogs(prev => ({ ...prev, [guestId]: { ...getLog(guestId), [field]: value } }));
-  };
+  const handleFieldChange = async (guestId, field, value) => {
+    // 1. Update the local state logs immediately for responsive UX
+    const updatedLog = { ...getLog(guestId), [field]: value };
+    setLogs(prev => ({ ...prev, [guestId]: updatedLog }));
 
-  const saveGuest = async (guestId) => {
+    // 2. Perform background auto-save
     setSaving(s => ({ ...s, [guestId]: true }));
     try {
-      await managerApi.updateGuestLog(guestId, date, getLog(guestId));
+      await managerApi.updateGuestLog(guestId, date, updatedLog);
       setSaved(s => ({ ...s, [guestId]: true }));
-      setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 2000);
-      
-      // Update local logs summary in case counts changed
+      setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 1500);
+
+      // Refresh in background silently to sync logs
       managerApi.getGuestsByDate(date).then(logRes => {
         const logMap = {};
         (logRes.data || []).forEach(item => {
@@ -170,8 +172,11 @@ export default function ManagerGuestAddons() {
         });
         setLogs(logMap);
       }).catch(console.error);
-    } catch (err) { alert('Save failed: ' + (err.response?.data?.error || err.message)); }
-    finally { setSaving(s => ({ ...s, [guestId]: false })); }
+    } catch (err) {
+      alert('Save failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(s => ({ ...s, [guestId]: false }));
+    }
   };
 
   const filteredGuests = guests.filter(g => 
@@ -273,7 +278,7 @@ export default function ManagerGuestAddons() {
         <>
           {/* Guest Search bar */}
           <div className="card mb-6" style={{ padding: '1rem' }}>
-            <div className="flex items-center gap-2 max-w-md">
+            <div className="flex items-center gap-2 max-w-md bg-white">
               <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <input 
                 type="text" 
@@ -296,18 +301,46 @@ export default function ManagerGuestAddons() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table className="table-compact">
+              <table className="table-compact w-full border-collapse">
                 <thead>
-                  <tr>
-                    <th className="min-w-[160px]">Guest Name</th>
-                    <th>Diet Preference</th>
-                    <th className="text-center">Breakfast</th>
-                    <th className="text-center">Lunch</th>
-                    <th className="text-center">Dinner</th>
-                    <th>Omelette (₹{config?.pricing?.omelette ?? 18})</th>
-                    <th>Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
-                    <th>Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
-                    <th className="text-right">Action</th>
+                  <tr className="border-b border-slate-200 bg-slate-50/50">
+                    <th className="py-3 px-4 text-left font-semibold text-slate-600 text-xs">Guest &amp; Bed</th>
+                    <th className="text-center py-2.5 px-3 min-w-[90px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Breakfast</span>
+                        <input 
+                          type="checkbox" 
+                          disabled 
+                          className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-not-allowed opacity-50" 
+                          title="Bulk actions placeholder"
+                        />
+                      </div>
+                    </th>
+                    <th className="text-center py-2.5 px-3 min-w-[90px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Lunch</span>
+                        <input 
+                          type="checkbox" 
+                          disabled 
+                          className="h-3 w-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-not-allowed opacity-50" 
+                          title="Bulk actions placeholder"
+                        />
+                      </div>
+                    </th>
+                    <th className="text-center py-2.5 px-3 min-w-[90px]">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Dinner</span>
+                        <input 
+                          type="checkbox" 
+                          disabled 
+                          className="h-3 w-3 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-not-allowed opacity-50" 
+                          title="Bulk actions placeholder"
+                        />
+                      </div>
+                    </th>
+                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Omelette (₹{config?.pricing?.omelette ?? 18})</th>
+                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -317,34 +350,33 @@ export default function ManagerGuestAddons() {
                     const isSaved = saved[g.id];
 
                     return (
-                      <tr key={g.id}>
-                        <td className="py-2.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-extrabold text-xs">
+                      <tr key={g.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
+                        <td className="py-2.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-semibold text-xs flex-shrink-0">
                               {g.fullName?.charAt(0).toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-semibold text-slate-900 text-xs leading-none">{g.fullName}</div>
+                              <div className="font-semibold text-slate-900 text-xs flex items-center gap-1.5 leading-none">
+                                {log.isVeg ? (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Veg" />
+                                ) : (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="Non-Veg" />
+                                )}
+                                <span>{g.fullName}</span>
+                                {isSaving && <Loader2 className="w-3 h-3 animate-spin text-slate-400" strokeWidth={1.5} />}
+                                {isSaved && <Check className="w-3 h-3 text-emerald-500" strokeWidth={1.5} />}
+                              </div>
                               <div className="text-[10px] text-slate-400 font-semibold mt-1">Bed: {g.bedLabel ?? '—'}</div>
                             </div>
                           </div>
-                        </td>
-                        <td>
-                          <select
-                            value={log.isVeg ? 'veg' : 'non-veg'}
-                            onChange={e => updateField(g.id, 'isVeg', e.target.value === 'veg')}
-                            className="bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-xxs font-bold uppercase tracking-wider text-slate-700 focus:outline-none focus:ring-1 focus:ring-primary"
-                          >
-                            <option value="veg">Veg</option>
-                            <option value="non-veg">Non-Veg</option>
-                          </select>
                         </td>
                         <td className="text-center">
                           <label className="toggle scale-75">
                             <input
                               type="checkbox"
                               checked={!!log.breakfastOpted}
-                              onChange={e => updateField(g.id, 'breakfastOpted', e.target.checked)}
+                              onChange={e => handleFieldChange(g.id, 'breakfastOpted', e.target.checked)}
                             />
                             <span className="toggle-slider" />
                           </label>
@@ -354,7 +386,7 @@ export default function ManagerGuestAddons() {
                             <input
                               type="checkbox"
                               checked={!!log.lunchOpted}
-                              onChange={e => updateField(g.id, 'lunchOpted', e.target.checked)}
+                              onChange={e => handleFieldChange(g.id, 'lunchOpted', e.target.checked)}
                             />
                             <span className="toggle-slider" />
                           </label>
@@ -364,86 +396,67 @@ export default function ManagerGuestAddons() {
                             <input
                               type="checkbox"
                               checked={!!log.dinnerOpted}
-                              onChange={e => updateField(g.id, 'dinnerOpted', e.target.checked)}
+                              onChange={e => handleFieldChange(g.id, 'dinnerOpted', e.target.checked)}
                             />
                             <span className="toggle-slider" />
                           </label>
                         </td>
                         <td>
-                          <div className="flex items-center gap-1 scale-90 origin-left">
+                          <div className="flex items-center gap-1.5 py-1">
                             <button
                               type="button"
-                              onClick={() => updateField(g.id, 'omeletteCount', Math.max(0, log.omeletteCount - 1))}
-                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
+                              onClick={() => handleFieldChange(g.id, 'omeletteCount', Math.max(0, log.omeletteCount - 1))}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
                             >
-                              −
+                              <Minus size={16} strokeWidth={1.5} />
                             </button>
-                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.omeletteCount}</span>
+                            <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.omeletteCount}</span>
                             <button
                               type="button"
-                              onClick={() => updateField(g.id, 'omeletteCount', log.omeletteCount + 1)}
-                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
+                              onClick={() => handleFieldChange(g.id, 'omeletteCount', log.omeletteCount + 1)}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
                             >
-                              +
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1 scale-90 origin-left">
-                            <button
-                              type="button"
-                              onClick={() => updateField(g.id, 'boiledEggCount', Math.max(0, log.boiledEggCount - 1))}
-                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
-                            >
-                              −
-                            </button>
-                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.boiledEggCount}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateField(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
-                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
-                            >
-                              +
+                              <Plus size={16} strokeWidth={1.5} />
                             </button>
                           </div>
                         </td>
                         <td>
-                          <div className="flex items-center gap-1 scale-90 origin-left">
+                          <div className="flex items-center gap-1.5 py-1">
                             <button
                               type="button"
-                              onClick={() => updateField(g.id, 'washingMachineCount', Math.max(0, log.washingMachineCount - 1))}
-                              className="w-5 h-5 border border-slate-200 bg-slate-50 text-slate-600 rounded flex items-center justify-center font-bold hover:bg-slate-100 transition-colors"
+                              onClick={() => handleFieldChange(g.id, 'boiledEggCount', Math.max(0, log.boiledEggCount - 1))}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
                             >
-                              −
+                              <Minus size={16} strokeWidth={1.5} />
                             </button>
-                            <span className="w-5 text-center font-semibold text-xs text-slate-800">{log.washingMachineCount}</span>
+                            <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.boiledEggCount}</span>
                             <button
                               type="button"
-                              onClick={() => updateField(g.id, 'washingMachineCount', log.washingMachineCount + 1)}
-                              className="w-5 h-5 bg-primary text-white rounded flex items-center justify-center font-bold hover:bg-primary-hover transition-colors"
+                              onClick={() => handleFieldChange(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
                             >
-                              +
+                              <Plus size={16} strokeWidth={1.5} />
                             </button>
                           </div>
                         </td>
-                        <td className="text-right">
-                          <button
-                            type="button"
-                            onClick={() => saveGuest(g.id)}
-                            disabled={isSaving}
-                            className={`btn text-xxs py-1 px-2.5 min-w-[65px] ${isSaved ? 'btn-success' : 'btn-primary'}`}
-                          >
-                            {isSaving ? (
-                              <Loader2 className="w-3 h-3 animate-spin" strokeWidth={1.5}/>
-                            ) : isSaved ? (
-                              <>
-                                <Check className="w-3 h-3" strokeWidth={1.5}/>
-                                <span>Saved</span>
-                              </>
-                            ) : (
-                              <span>Save</span>
-                            )}
-                          </button>
+                        <td>
+                          <div className="flex items-center gap-1.5 py-1">
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange(g.id, 'washingMachineCount', Math.max(0, log.washingMachineCount - 1))}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                            >
+                              <Minus size={16} strokeWidth={1.5} />
+                            </button>
+                            <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.washingMachineCount}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleFieldChange(g.id, 'washingMachineCount', log.washingMachineCount + 1)}
+                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                            >
+                              <Plus size={16} strokeWidth={1.5} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -459,7 +472,7 @@ export default function ManagerGuestAddons() {
           <div className="card mb-6" style={{ padding: '1rem' }}>
             <div className="flex flex-wrap gap-4 items-center justify-between">
               {/* Search Bar */}
-              <div className="flex items-center gap-2 max-w-xs flex-1">
+              <div className="flex items-center gap-2 max-w-xs flex-1 bg-white">
                 <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
                 <input 
                   type="text" 
@@ -543,7 +556,7 @@ export default function ManagerGuestAddons() {
                         >
                           <td className="py-3 px-3 font-semibold text-slate-900 text-xs">
                             <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xxs">
+                              <div className="w-6 h-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-xxs">
                                 {row.guestName?.charAt(0).toUpperCase()}
                               </div>
                               <span>{row.guestName}</span>
@@ -616,4 +629,3 @@ export default function ManagerGuestAddons() {
     </AppLayout>
   );
 }
-
