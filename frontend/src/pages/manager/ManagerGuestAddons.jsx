@@ -96,6 +96,10 @@ export default function ManagerGuestAddons() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGuestId, setExpandedGuestId] = useState(null);
 
+  // Unsaved changes state tracking
+  const [dirtyGuestIds, setDirtyGuestIds] = useState(new Set());
+  const [savingGlobal, setSavingGlobal] = useState(false);
+
   // Daily logs fetch
   useEffect(() => {
     if (activeTab !== 'daily') return;
@@ -118,6 +122,7 @@ export default function ManagerGuestAddons() {
         };
       });
       setLogs(logMap);
+      setDirtyGuestIds(new Set());
     }).catch(console.error)
     .finally(() => setLoading(false));
   }, [date, activeTab]);
@@ -134,6 +139,11 @@ export default function ManagerGuestAddons() {
       .finally(() => setLoadingMonthly(false));
   }, [month, year, activeTab]);
 
+  // Reset dirty states when date or tab changes
+  useEffect(() => {
+    setDirtyGuestIds(new Set());
+  }, [date, activeTab]);
+
   const getLog = (guestId) => logs[guestId] || { 
     omeletteCount: 0, 
     boiledEggCount: 0, 
@@ -144,39 +154,19 @@ export default function ManagerGuestAddons() {
     dinnerOpted: false
   };
 
-  const handleFieldChange = async (guestId, field, value) => {
-    // 1. Update the local state logs immediately for responsive UX
-    const updatedLog = { ...getLog(guestId), [field]: value };
-    setLogs(prev => ({ ...prev, [guestId]: updatedLog }));
+  const handleFieldChange = (guestId, field, value) => {
+    // 1. Update the local state logs immediately
+    setLogs(prev => ({ 
+      ...prev, 
+      [guestId]: { ...getLog(guestId), [field]: value } 
+    }));
 
-    // 2. Perform background auto-save
-    setSaving(s => ({ ...s, [guestId]: true }));
-    try {
-      await managerApi.updateGuestLog(guestId, date, updatedLog);
-      setSaved(s => ({ ...s, [guestId]: true }));
-      setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 1500);
-
-      // Refresh in background silently to sync logs
-      managerApi.getGuestsByDate(date).then(logRes => {
-        const logMap = {};
-        (logRes.data || []).forEach(item => {
-          logMap[item.guestId] = {
-            omeletteCount:       item.omeletteCount       ?? 0,
-            boiledEggCount:      item.boiledEggCount      ?? 0,
-            washingMachineCount: item.washingMachineCount ?? 0,
-            isVeg:               item.isVeg               ?? true,
-            breakfastOpted:      item.breakfastOpted      ?? false,
-            lunchOpted:          item.lunchOpted          ?? false,
-            dinnerOpted:         item.dinnerOpted         ?? false,
-          };
-        });
-        setLogs(logMap);
-      }).catch(console.error);
-    } catch (err) {
-      alert('Save failed: ' + (err.response?.data?.error || err.message));
-    } finally {
-      setSaving(s => ({ ...s, [guestId]: false }));
-    }
+    // 2. Mark this guest as dirty (unsaved changes)
+    setDirtyGuestIds(prev => {
+      const next = new Set(prev);
+      next.add(guestId);
+      return next;
+    });
   };
 
   const filteredGuests = guests.filter(g => 
@@ -186,6 +176,89 @@ export default function ManagerGuestAddons() {
   const filteredMonthly = monthlyData.filter(g =>
     g.guestName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Bulk toggles logic
+  const allBreakfastChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).breakfastOpted);
+  const allLunchChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).lunchOpted);
+  const allDinnerChecked = filteredGuests.length > 0 && filteredGuests.every(g => !!getLog(g.id).dinnerOpted);
+
+  const handleBulkToggle = (field, checked) => {
+    const nextLogs = { ...logs };
+    const nextDirty = new Set(dirtyGuestIds);
+
+    filteredGuests.forEach(g => {
+      nextLogs[g.id] = { ...getLog(g.id), [field]: checked };
+      nextDirty.add(g.id);
+    });
+
+    setLogs(nextLogs);
+    setDirtyGuestIds(nextDirty);
+  };
+
+  const handleSaveChanges = async () => {
+    if (dirtyGuestIds.size === 0) return;
+    setSavingGlobal(true);
+    const idsToSave = Array.from(dirtyGuestIds);
+
+    // Track active savings inline per row
+    const newSaving = { ...saving };
+    idsToSave.forEach(id => { newSaving[id] = true; });
+    setSaving(newSaving);
+
+    try {
+      await Promise.all(idsToSave.map(async (guestId) => {
+        await managerApi.updateGuestLog(guestId, date, getLog(guestId));
+        setSaved(s => ({ ...s, [guestId]: true }));
+        setTimeout(() => setSaved(s => ({ ...s, [guestId]: false })), 1500);
+      }));
+
+      setDirtyGuestIds(new Set());
+
+      // Silent background refresh to confirm data sync
+      const logRes = await managerApi.getGuestsByDate(date);
+      const logMap = {};
+      (logRes.data || []).forEach(item => {
+        logMap[item.guestId] = {
+          omeletteCount:       item.omeletteCount       ?? 0,
+          boiledEggCount:      item.boiledEggCount      ?? 0,
+          washingMachineCount: item.washingMachineCount ?? 0,
+          isVeg:               item.isVeg               ?? true,
+          breakfastOpted:      item.breakfastOpted      ?? false,
+          lunchOpted:          item.lunchOpted          ?? false,
+          dinnerOpted:         item.dinnerOpted         ?? false,
+        };
+      });
+      setLogs(logMap);
+    } catch (err) {
+      alert('Save changes failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      const clearSaving = { ...saving };
+      idsToSave.forEach(id => { delete clearSaving[id]; });
+      setSaving(clearSaving);
+      setSavingGlobal(false);
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setDirtyGuestIds(new Set());
+    setLoading(true);
+    managerApi.getGuestsByDate(date).then(logRes => {
+      const logMap = {};
+      (logRes.data || []).forEach(item => {
+        logMap[item.guestId] = {
+          omeletteCount:       item.omeletteCount       ?? 0,
+          boiledEggCount:      item.boiledEggCount      ?? 0,
+          washingMachineCount: item.washingMachineCount ?? 0,
+          isVeg:               item.isVeg               ?? true,
+          breakfastOpted:      item.breakfastOpted      ?? false,
+          lunchOpted:          item.lunchOpted          ?? false,
+          dinnerOpted:         item.dinnerOpted         ?? false,
+        };
+      });
+      setLogs(logMap);
+    }).catch(console.error)
+    .finally(() => setLoading(false));
+  };
 
   // Month navigation helpers
   const handlePrevMonth = () => {
@@ -306,36 +379,42 @@ export default function ManagerGuestAddons() {
                   <tr className="border-b border-slate-200 bg-slate-50/50">
                     <th className="py-3 px-4 text-left font-semibold text-slate-600 text-xs">Guest &amp; Bed</th>
                     <th className="text-center py-2.5 px-3 min-w-[90px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Breakfast</span>
-                        <input 
-                          type="checkbox" 
-                          disabled 
-                          className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-not-allowed opacity-50" 
-                          title="Bulk actions placeholder"
-                        />
+                      <div className="flex flex-col items-center gap-1.5 justify-center">
+                        <span className="text-slate-500 text-xxs font-bold uppercase tracking-wider">Breakfast</span>
+                        <label className="toggle scale-[0.65] origin-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={allBreakfastChecked} 
+                            onChange={(e) => handleBulkToggle('breakfastOpted', e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
                       </div>
                     </th>
                     <th className="text-center py-2.5 px-3 min-w-[90px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Lunch</span>
-                        <input 
-                          type="checkbox" 
-                          disabled 
-                          className="h-3 w-3 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-not-allowed opacity-50" 
-                          title="Bulk actions placeholder"
-                        />
+                      <div className="flex flex-col items-center gap-1.5 justify-center">
+                        <span className="text-slate-500 text-xxs font-bold uppercase tracking-wider">Lunch</span>
+                        <label className="toggle scale-[0.65] origin-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={allLunchChecked} 
+                            onChange={(e) => handleBulkToggle('lunchOpted', e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
                       </div>
                     </th>
                     <th className="text-center py-2.5 px-3 min-w-[90px]">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-slate-500 text-xxs font-semibold uppercase tracking-wider">Dinner</span>
-                        <input 
-                          type="checkbox" 
-                          disabled 
-                          className="h-3 w-3 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-not-allowed opacity-50" 
-                          title="Bulk actions placeholder"
-                        />
+                      <div className="flex flex-col items-center gap-1.5 justify-center">
+                        <span className="text-slate-500 text-xxs font-bold uppercase tracking-wider">Dinner</span>
+                        <label className="toggle scale-[0.65] origin-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={allDinnerChecked} 
+                            onChange={(e) => handleBulkToggle('dinnerOpted', e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
                       </div>
                     </th>
                     <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Omelette (₹{config?.pricing?.omelette ?? 18})</th>
@@ -348,6 +427,7 @@ export default function ManagerGuestAddons() {
                     const log = getLog(g.id);
                     const isSaving = saving[g.id];
                     const isSaved = saved[g.id];
+                    const isDirty = dirtyGuestIds.has(g.id);
 
                     return (
                       <tr key={g.id} className="hover:bg-slate-50/80 transition-colors border-b border-slate-100">
@@ -364,6 +444,7 @@ export default function ManagerGuestAddons() {
                                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="Non-Veg" />
                                 )}
                                 <span>{g.fullName}</span>
+                                {isDirty && <span className="text-[10px] text-amber-500 font-bold" title="Unsaved changes">*</span>}
                                 {isSaving && <Loader2 className="w-3 h-3 animate-spin text-slate-400" strokeWidth={1.5} />}
                                 {isSaved && <Check className="w-3 h-3 text-emerald-500" strokeWidth={1.5} />}
                               </div>
@@ -625,6 +706,44 @@ export default function ManagerGuestAddons() {
             </div>
           )}
         </>
+      )}
+
+      {/* Floating Unsaved Changes Actions Bar */}
+      {dirtyGuestIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 border border-slate-800 animate-fade-in-up">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs font-semibold text-slate-300">
+              Unsaved changes for {dirtyGuestIds.size} guest{dirtyGuestIds.size > 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDiscardChanges}
+              className="text-xs font-bold text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors"
+              disabled={savingGlobal}
+            >
+              Discard
+            </button>
+            <button
+              onClick={handleSaveChanges}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-1.5 rounded-lg shadow transition-colors flex items-center gap-1.5"
+              disabled={savingGlobal}
+            >
+              {savingGlobal ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" strokeWidth={1.5} />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <span>Save Changes</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
       )}
     </AppLayout>
   );
