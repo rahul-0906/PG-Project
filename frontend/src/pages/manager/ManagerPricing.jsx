@@ -2,15 +2,36 @@ import React, { useEffect, useState, useCallback } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi, ownerApi } from '../../api';
 import { useAuth } from '../../context/AuthContext';
-import { Tag, Check, Pencil, X, Loader2, ChefHat, Bed, Building, RefreshCcw, Clock, Calendar, Settings } from 'lucide-react';
+import { 
+  Tag, 
+  Check, 
+  Pencil, 
+  X, 
+  Loader2, 
+  ChefHat, 
+  Bed, 
+  Building, 
+  RefreshCcw, 
+  Clock, 
+  Settings, 
+  Utensils, 
+  Ban, 
+  Zap, 
+  CreditCard, 
+  CalendarClock, 
+  Coffee, 
+  UtensilsCrossed, 
+  Egg, 
+  Shirt 
+} from 'lucide-react';
 
 const FOOD_KEYS = [
-  { key: 'breakfast',      label: 'Breakfast',       icon: '🍳' },
-  { key: 'lunch',          label: 'Lunch',            icon: '🍱' },
-  { key: 'dinner',         label: 'Dinner',           icon: '🍛' },
-  { key: 'omelette',       label: 'Omelette',         icon: '🥚' },
-  { key: 'boiled_egg',     label: 'Boiled Egg',       icon: '🥚' },
-  { key: 'washing_machine',label: 'Washing Machine',  icon: '🫧' },
+  { key: 'breakfast',       label: 'Breakfast',        Icon: Coffee,          iconClass: 'text-slate-500 w-5 h-5' },
+  { key: 'lunch',           label: 'Lunch',            Icon: UtensilsCrossed, iconClass: 'text-slate-500 w-5 h-5' },
+  { key: 'dinner',          label: 'Dinner',           Icon: UtensilsCrossed, iconClass: 'text-slate-500 w-5 h-5' },
+  { key: 'omelette',        label: 'Omelette',         Icon: Utensils,        iconClass: 'text-amber-600 w-5 h-5' },
+  { key: 'boiled_egg',      label: 'Boiled Egg',       Icon: Egg,             iconClass: 'text-amber-500 w-5 h-5' },
+  { key: 'washing_machine', label: 'Washing Machine',  Icon: Shirt,           iconClass: 'text-blue-500 w-5 h-5' },
 ];
 
 const SHARING_LABELS = { 1: 'Single', 2: 'Double', 3: 'Triple', 4: 'Quad' };
@@ -295,7 +316,7 @@ export default function ManagerPricing() {
               <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">🍽️</span>
+                    <Utensils strokeWidth={1.5} className="text-slate-500 w-5 h-5" />
                     <span className="text-sm font-semibold text-slate-700">Food Included in Rent</span>
                   </div>
                   <span className="text-xs text-slate-400">If enabled, meals are included in the base rent dynamically.</span>
@@ -320,7 +341,7 @@ export default function ManagerPricing() {
               <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">❌</span>
+                    <Ban strokeWidth={1.5} className="text-red-500 w-5 h-5" />
                     <span className="text-sm font-semibold text-slate-700">Allow Meal Cancellations</span>
                   </div>
                   <span className="text-xs text-slate-400">Enables guests to cancel meals for daily food refunds.</span>
@@ -332,7 +353,7 @@ export default function ManagerPricing() {
                   <button
                     type="button"
                     onClick={() => setLocalMealCancellations(prev => !prev)}
-                    className="relative inline-flex items-center focus:outline-none"
+                    className="relative inline-flex inline-flex items-center focus:outline-none"
                   >
                     <div className={`w-11 h-6 rounded-full transition-colors relative ${localMealCancellations ? 'bg-primary' : 'bg-slate-200'}`}>
                       <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localMealCancellations ? 'translate-x-5' : 'translate-x-0'}`}></div>
@@ -345,7 +366,7 @@ export default function ManagerPricing() {
               <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">⚡</span>
+                    <Zap strokeWidth={1.5} className="text-amber-500 w-5 h-5" />
                     <span className="text-sm font-semibold text-slate-700">Electricity Bill Split</span>
                   </div>
                   <span className="text-xs text-slate-400">Method used to divide the building's monthly electricity bill.</span>
@@ -368,7 +389,7 @@ export default function ManagerPricing() {
               <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-lg">💳</span>
+                    <CreditCard strokeWidth={1.5} className="text-blue-500 w-5 h-5" />
                     <span className="text-sm font-semibold text-slate-700">Allowed Payment Modes</span>
                   </div>
                   <span className="text-xs text-slate-400">Set payment options allowed for guest monthly invoices.</span>
@@ -390,7 +411,7 @@ export default function ManagerPricing() {
             {/* Cut-off Settings */}
             <div className="border-t border-slate-150 pt-5 mt-5">
               <h4 className="font-heading text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                <span>🕒</span> Meal Cut-off Settings
+                <Clock strokeWidth={1.5} className="text-slate-500 w-4 h-4" /> Meal Cut-off Settings
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-700">
                 {/* Breakfast Cut-off */}
@@ -479,10 +500,10 @@ export default function ManagerPricing() {
               {FOOD_KEYS.filter(({ key }) => {
                 if (localFoodIncluded && ['breakfast', 'lunch', 'dinner'].includes(key)) return false;
                 return true;
-              }).map(({ key, label, icon }) => (
+              }).map(({ key, label, Icon, iconClass }) => (
                 <div key={key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                   <div className="flex items-center gap-2">
-                    <span className="text-xl">{icon}</span>
+                    <Icon strokeWidth={1.5} className={iconClass} />
                     <span className="text-sm font-medium text-slate-700">{label}</span>
                   </div>
                   <EditablePrice
@@ -507,7 +528,7 @@ export default function ManagerPricing() {
             </p>
             <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
               <div className="flex items-center gap-2">
-                <span className="text-xl">📅</span>
+                <CalendarClock strokeWidth={1.5} className="text-indigo-500 w-5 h-5" />
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-slate-700">Monthly Billing Cron</span>
                   <span className="text-xs text-slate-400">Runs at midnight on the 1st of every month</span>
@@ -518,7 +539,7 @@ export default function ManagerPricing() {
                   <Loader2 className="w-4 h-4 animate-spin text-primary" strokeWidth={1.5} />
                 ) : (
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input
+                     <input
                       id="toggle-scheduler"
                       type="checkbox"
                       className="sr-only peer"
@@ -578,7 +599,7 @@ export default function ManagerPricing() {
                           return (
                             <div key={sharingType} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-white hover:shadow-sm hover:border-slate-200 transition-all">
                               <div className="flex items-center gap-2">
-                                <span className="text-xl">🛏️</span>
+                                <Bed strokeWidth={1.5} className="text-slate-400 w-5 h-5" />
                                 <div className="flex flex-col">
                                   <span className="text-xs font-semibold text-slate-700">{SHARING_LABELS[sharingType]} Sharing</span>
                                   <span className="text-[10px] text-slate-400 font-medium">{roomsOfSt.length} rooms</span>

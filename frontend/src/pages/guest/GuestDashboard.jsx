@@ -18,7 +18,10 @@ import {
   ShieldAlert,
   ArrowRight,
   Utensils,
-  CreditCard
+  CreditCard,
+  Egg,
+  Shirt,
+  Wallet
 } from 'lucide-react';
 
 function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-500', children }) {
@@ -260,7 +263,7 @@ export default function GuestDashboard() {
 
                 {otpError && (
                   <div className="text-rose-500 text-xs font-semibold mt-1 mb-3">
-                    ⚠️ {otpError}
+                    <ShieldAlert strokeWidth={1.5} className="w-4 h-4 text-rose-500 inline-block mr-1 align-text-bottom" /> {otpError}
                   </div>
                 )}
 
@@ -335,7 +338,15 @@ export default function GuestDashboard() {
                             <div>
                               <span className="text-slate-400 font-medium block">Meal Plan Preferences</span>
                               <span className="font-semibold text-slate-700 block mt-0.5">
-                                {profileData.vegPreference ? '🟢 Veg' : '🔴 Non-Veg'}
+                                {profileData.vegPreference ? (
+                                  <span className="inline-flex items-center">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5" /> Veg
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center">
+                                    <span className="w-2 h-2 rounded-full bg-rose-500 mr-1.5" /> Non-Veg
+                                  </span>
+                                )}
                               </span>
                               <span className="text-slate-500 font-medium mt-1 block">
                                 Opted: {[
@@ -354,7 +365,7 @@ export default function GuestDashboard() {
 
                 {otpError && (
                   <div className="text-rose-500 text-xs font-semibold mt-3 mb-1 px-1">
-                    ⚠️ {otpError}
+                    <ShieldAlert strokeWidth={1.5} className="w-4 h-4 text-rose-500 inline-block mr-1 align-text-bottom" /> {otpError}
                   </div>
                 )}
 
@@ -591,8 +602,8 @@ export default function GuestDashboard() {
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0 text-base">
-              🍳
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <Utensils strokeWidth={1.5} className="text-amber-600 w-5 h-5" />
             </div>
             <div>
               <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Omelettes</div>
@@ -601,8 +612,8 @@ export default function GuestDashboard() {
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-yellow-50 flex items-center justify-center flex-shrink-0 text-base">
-              🥚
+            <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <Egg strokeWidth={1.5} className="text-amber-500 w-5 h-5" />
             </div>
             <div>
               <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Boiled Eggs</div>
@@ -611,8 +622,8 @@ export default function GuestDashboard() {
             </div>
           </div>
           <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 text-base">
-              🧺
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <Shirt strokeWidth={1.5} className="text-blue-500 w-5 h-5" />
             </div>
             <div>
               <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Laundry</div>
@@ -620,14 +631,14 @@ export default function GuestDashboard() {
               <div className="text-[9px] text-slate-500 font-medium">₹{totalWashing * wPrice} total</div>
             </div>
           </div>
-          <div className="bg-indigo-50/50 border border-indigo-200 p-3.5 rounded-xl flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-100/80 flex items-center justify-center flex-shrink-0 text-base">
-              💰
+          <div className="bg-emerald-50/50 border border-emerald-200 p-3.5 rounded-xl flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100/80 flex items-center justify-center flex-shrink-0">
+              <Wallet strokeWidth={1.5} className="text-emerald-600 w-5 h-5" />
             </div>
             <div>
-              <div className="text-[9px] font-semibold text-indigo-500 uppercase tracking-wider">Monthly Total</div>
-              <div className="text-sm font-semibold text-indigo-700 mt-0.5">₹{totalAddonCost}</div>
-              <div className="text-[9px] text-indigo-400 font-medium">For {formatMonthName(selectedMonth)}</div>
+              <div className="text-[9px] font-semibold text-emerald-600 uppercase tracking-wider">Monthly Total</div>
+              <div className="text-sm font-semibold text-emerald-700 mt-0.5">₹{totalAddonCost}</div>
+              <div className="text-[9px] text-emerald-400 font-medium">For {formatMonthName(selectedMonth)}</div>
             </div>
           </div>
         </div>
@@ -663,21 +674,24 @@ export default function GuestDashboard() {
                     <span className="text-xs font-bold text-slate-500 min-w-[90px]">{formattedDayStr}</span>
                     <div className="flex flex-wrap gap-1.5">
                       {oCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full">
-                          <span>🍳 Omelette</span>
-                          <span className="bg-amber-200/60 px-1 py-0.2 rounded text-[9px] font-black text-amber-800">x{oCount}</span>
+                        <span className="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full">
+                          <Utensils strokeWidth={1.5} className="text-amber-600 w-3 h-3 mr-1" />
+                          <span>Omelette</span>
+                          <span className="bg-amber-200/60 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-amber-800">x{oCount}</span>
                         </span>
                       )}
                       {eCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-yellow-700 bg-yellow-50/60 border border-yellow-100/60 px-2.5 py-0.5 rounded-full">
-                          <span>🥚 Boiled Egg</span>
-                          <span className="bg-yellow-200/50 px-1 py-0.2 rounded text-[9px] font-black text-yellow-800">x{eCount}</span>
+                        <span className="inline-flex items-center text-[10px] font-bold text-yellow-700 bg-yellow-50/60 border border-yellow-100/60 px-2.5 py-0.5 rounded-full">
+                          <Egg strokeWidth={1.5} className="text-amber-500 w-3 h-3 mr-1" />
+                          <span>Boiled Egg</span>
+                          <span className="bg-yellow-200/50 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-yellow-800">x{eCount}</span>
                         </span>
                       )}
                       {wCount > 0 && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">
-                          <span>🧺 Laundry</span>
-                          <span className="bg-blue-200/60 px-1 py-0.2 rounded text-[9px] font-black text-blue-800">x{wCount}</span>
+                        <span className="inline-flex items-center text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">
+                          <Shirt strokeWidth={1.5} className="text-blue-500 w-3 h-3 mr-1" />
+                          <span>Laundry</span>
+                          <span className="bg-blue-200/60 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-blue-800">x{wCount}</span>
                         </span>
                       )}
                     </div>

@@ -1,9 +1,16 @@
 package com.pgcrm.service;
 
 import com.pgcrm.config.SystemConfigProperties;
-import com.pgcrm.entity.*;
+import com.pgcrm.entity.Block;
+import com.pgcrm.entity.Building;
+import com.pgcrm.entity.EbBill;
+import com.pgcrm.entity.EbBillGuest;
+import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.enums.EbSplitMethod;
-import com.pgcrm.repository.*;
+import com.pgcrm.repository.BlockRepository;
+import com.pgcrm.repository.EbBillGuestRepository;
+import com.pgcrm.repository.EbBillRepository;
+import com.pgcrm.repository.GuestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,26 +22,83 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service responsible for recording and distributing block-level electricity bills
+ * across the resident guests of a {@link Block}.
+ *
+ * <p>Supports three EB split strategies, determined by the building's configured
+ * {@link EbSplitMethod} (falling back to the YAML global default when no building
+ * config override is present):</p>
+ * <ul>
+ *   <li><strong>EQUAL_SPLIT / PER_BED:</strong> Total bill divided equally among all
+ *       guests active in the block during the billing period. Handled by
+ *       {@link #recordAndSplit(String, BigDecimal, LocalDate, LocalDate)}.</li>
+ *   <li><strong>METER_BASED:</strong> Each guest's share is computed individually from
+ *       per-room electricity meter readings. Handled by
+ *       {@link #recordMeterBased(String, BigDecimal, LocalDate, LocalDate, List)}.</li>
+ *   <li><strong>MANAGER_MANUAL:</strong> Shares are entered directly by the manager
+ *       through a separate endpoint (not implemented in this service).</li>
+ * </ul>
+ *
+ * <p><strong>Persistence Model:</strong> Each call creates one parent {@link EbBill} record
+ * and multiple child {@link EbBillGuest} rows — one per active guest in the block.
+ * These child rows are consumed by {@code InvoiceService} during monthly billing
+ * to generate the {@code EB} line item on each guest's invoice.</p>
+ *
+ * @see EbBill
+ * @see EbBillGuest
+ * @see EbSplitMethod
+ * @see GuestRepository#findActiveGuestsInBlock(String, LocalDate, LocalDate)
+ */
 @Service
 @RequiredArgsConstructor
 public class EbBillService {
 
-    private final EbBillRepository ebBillRepository;
-    private final EbBillGuestRepository ebBillGuestRepository;
-    private final BlockRepository blockRepository;
-    private final GuestRepository guestRepository;
+    private final EbBillRepository       ebBillRepository;
+    private final EbBillGuestRepository  ebBillGuestRepository;
+    private final BlockRepository        blockRepository;
+    private final GuestRepository        guestRepository;
     private final SystemConfigProperties systemConfig;
 
-    // ── Equal Split ────────────────────────────────────────────────────────
-    @Transactional
-    public EbBill recordAndSplit(String blockId, BigDecimal totalAmount,
-                                  LocalDate periodStart, LocalDate periodEnd) {
-        Block block = blockRepository.findById(blockId)
-                .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
+    // ── Equal / Per-Bed Split ─────────────────────────────────────────────────
 
-        Building building = (block.getFloor() != null) ? block.getFloor().getBuilding() : null;
+    /**
+     * Records a block-level electricity bill and distributes it equally among all active
+     * guests in the block for the given billing period.
+     *
+     * <p><strong>Split method resolution:</strong></p>
+     * <ol>
+     *   <li>Per-building {@link com.pgcrm.entity.BuildingConfig#getEbSplitMethod()} (if set).</li>
+     *   <li>Global {@link SystemConfigProperties.Rules#getEbSplitMethod()} YAML default.</li>
+     * </ol>
+     *
+     * <p>Only guests with an active stay that overlaps the billing period
+     * ({@code checkInDate ≤ periodEnd AND (actualCheckOutDate IS NULL OR actualCheckOutDate ≥ periodStart)})
+     * are included in the split. If no eligible guests are found, the parent
+     * {@link EbBill} is still saved but no {@link EbBillGuest} rows are created.</p>
+     *
+     * <p>This method handles {@code EQUAL_SPLIT} and {@code PER_BED} strategies.
+     * {@code METER_BASED} is handled by {@link #recordMeterBased(String, BigDecimal, LocalDate, LocalDate, List)}.
+     * {@code MANAGER_MANUAL} is handled externally.</p>
+     *
+     * @param blockId      the UUID of the {@link Block} being billed.
+     * @param totalAmount  the total electricity bill amount for the block and period.
+     * @param periodStart  the start date of the billing period (inclusive).
+     * @param periodEnd    the end date of the billing period (inclusive).
+     * @return the saved parent {@link EbBill} entity.
+     * @throws RuntimeException if no block is found for the given {@code blockId}.
+     */
+    @Transactional
+    public EbBill recordAndSplit(final String blockId, final BigDecimal totalAmount,
+                                 final LocalDate periodStart, final LocalDate periodEnd) {
+        final Block    block    = blockRepository.findById(blockId)
+                .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
+        final Building building = (block.getFloor() != null) ? block.getFloor().getBuilding() : null;
+
+        // Resolve the split method — building config takes precedence over the YAML default.
         String splitMethod = systemConfig.getRules().getEbSplitMethod();
-        if (building != null && building.getBuildingConfig() != null && building.getBuildingConfig().getEbSplitMethod() != null) {
+        if (building != null && building.getBuildingConfig() != null
+                && building.getBuildingConfig().getEbSplitMethod() != null) {
             splitMethod = building.getBuildingConfig().getEbSplitMethod().name();
         }
 
@@ -47,52 +111,72 @@ public class EbBillService {
                 .build();
         bill = ebBillRepository.save(bill);
 
-        List<Guest> activeGuests = guestRepository.findActiveGuestsInBlock(blockId, periodStart, periodEnd);
-        if (activeGuests.isEmpty()) return bill;
+        final List<Guest> activeGuests = guestRepository.findActiveGuestsInBlock(blockId, periodStart, periodEnd);
+        if (activeGuests.isEmpty()) {
+            return bill;
+        }
 
-        List<EbBillGuest> shares = new ArrayList<>();
-        if ("EQUAL_SPLIT".equals(splitMethod) || "PER_BED".equals(splitMethod)) {
-            BigDecimal perGuest = totalAmount.divide(
+        final List<EbBillGuest> shares = new ArrayList<>();
+        if (EbSplitMethod.EQUAL_SPLIT.name().equals(splitMethod)
+                || EbSplitMethod.PER_BED.name().equals(splitMethod)) {
+            final BigDecimal perGuest = totalAmount.divide(
                     BigDecimal.valueOf(activeGuests.size()), 2, RoundingMode.HALF_UP);
-            for (Guest guest : activeGuests) {
+            for (final Guest guest : activeGuests) {
                 shares.add(EbBillGuest.builder()
-                        .ebBill(bill).guest(guest).shareAmount(perGuest).build());
+                        .ebBill(bill)
+                        .guest(guest)
+                        .shareAmount(perGuest)
+                        .build());
             }
         }
-        // METER_BASED and MANAGER_MANUAL are handled by recordMeterBased() and recordManual()
+        // METER_BASED and MANAGER_MANUAL are handled by their respective dedicated methods.
 
         ebBillGuestRepository.saveAll(shares);
         return bill;
     }
 
-    // ── Meter-Based Split ──────────────────────────────────────────────────
+    // ── Meter-Based Split ─────────────────────────────────────────────────────
+
     /**
-     * Manager provides previous + current meter reading per guest.
-     * Bill is calculated as: unitsConsumed × ratePerUnit per guest.
+     * Records a block-level electricity bill using per-guest electricity meter readings.
      *
-     * @param blockId      Block ID
-     * @param ratePerUnit  Electricity rate per kWh (e.g. ₹8.50)
-     * @param periodStart  Billing period start
-     * @param periodEnd    Billing period end
-     * @param readings     List of {guestId, previousReading, currentReading}
-     * @param tenantId     Tenant ID
+     * <p>The total bill amount is derived by summing the individually computed guest costs
+     * ({@code (currentReading - previousReading) × ratePerUnit}). Each guest's share is
+     * recorded in a separate {@link EbBillGuest} row alongside the raw meter reading values,
+     * enabling a full audit trail of the per-unit consumption calculation.</p>
+     *
+     * <p>Each entry in the {@code readings} list must contain the following keys:</p>
+     * <ul>
+     *   <li>{@code "guestId"} — the UUID string of the guest.</li>
+     *   <li>{@code "previousReading"} — the meter reading at the start of the period.</li>
+     *   <li>{@code "currentReading"} — the meter reading at the end of the period.</li>
+     * </ul>
+     *
+     * @param blockId      the UUID of the {@link Block} being billed.
+     * @param ratePerUnit  the electricity rate per kWh (e.g., {@code ₹8.50}).
+     * @param periodStart  the start date of the billing period (inclusive).
+     * @param periodEnd    the end date of the billing period (inclusive).
+     * @param readings     a list of per-guest meter reading maps; must not be {@code null}.
+     * @return the saved parent {@link EbBill} entity with the computed total.
+     * @throws RuntimeException if no block is found for {@code blockId}, or if no
+     *                          guest is found for a {@code guestId} in the readings list.
      */
     @Transactional
-    public EbBill recordMeterBased(String blockId, BigDecimal ratePerUnit,
-                                    LocalDate periodStart, LocalDate periodEnd,
-                                    List<Map<String, Object>> readings) {
-        Block block = blockRepository.findById(blockId)
+    public EbBill recordMeterBased(final String blockId, final BigDecimal ratePerUnit,
+                                   final LocalDate periodStart, final LocalDate periodEnd,
+                                   final List<Map<String, Object>> readings) {
+        final Block block = blockRepository.findById(blockId)
                 .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
 
-        // Calculate total from all guest readings
-        BigDecimal total = readings.stream()
-            .map(r -> {
-                BigDecimal prev = new BigDecimal(r.get("previousReading").toString());
-                BigDecimal curr = new BigDecimal(r.get("currentReading").toString());
-                return curr.subtract(prev).multiply(ratePerUnit);
-            })
-            .reduce(BigDecimal.ZERO, BigDecimal::add)
-            .setScale(2, RoundingMode.HALF_UP);
+        // Sum across all guest readings to compute the block-level total bill amount.
+        final BigDecimal total = readings.stream()
+                .map(r -> {
+                    final BigDecimal prev = new BigDecimal(r.get("previousReading").toString());
+                    final BigDecimal curr = new BigDecimal(r.get("currentReading").toString());
+                    return curr.subtract(prev).multiply(ratePerUnit);
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
 
         EbBill bill = EbBill.builder()
                 .block(block)
@@ -104,21 +188,24 @@ public class EbBillService {
                 .build();
         bill = ebBillRepository.save(bill);
 
-        List<EbBillGuest> shares = new ArrayList<>();
-        for (Map<String, Object> r : readings) {
-            String guestId = r.get("guestId").toString();
-            Guest guest = guestRepository.findById(guestId)
+        final List<EbBillGuest> shares = new ArrayList<>();
+        for (final Map<String, Object> r : readings) {
+            final String  guestId = r.get("guestId").toString();
+            final Guest   guest   = guestRepository.findById(guestId)
                     .orElseThrow(() -> new RuntimeException("Guest not found: " + guestId));
 
-            BigDecimal prev  = new BigDecimal(r.get("previousReading").toString());
-            BigDecimal curr  = new BigDecimal(r.get("currentReading").toString());
-            BigDecimal units = curr.subtract(prev).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal share = units.multiply(ratePerUnit).setScale(2, RoundingMode.HALF_UP);
+            final BigDecimal prev  = new BigDecimal(r.get("previousReading").toString());
+            final BigDecimal curr  = new BigDecimal(r.get("currentReading").toString());
+            final BigDecimal units = curr.subtract(prev).setScale(2, RoundingMode.HALF_UP);
+            final BigDecimal share = units.multiply(ratePerUnit).setScale(2, RoundingMode.HALF_UP);
 
             shares.add(EbBillGuest.builder()
-                    .ebBill(bill).guest(guest)
-                    .previousReading(prev).currentReading(curr)
-                    .unitsConsumed(units).shareAmount(share)
+                    .ebBill(bill)
+                    .guest(guest)
+                    .previousReading(prev)
+                    .currentReading(curr)
+                    .unitsConsumed(units)
+                    .shareAmount(share)
                     .build());
         }
 
@@ -126,8 +213,21 @@ public class EbBillService {
         return bill;
     }
 
-    public BigDecimal getGuestEbShareForMonth(String guestId, String blockId) {
-        List<EbBillGuest> shares = ebBillGuestRepository.findByEbBill_BlockIdAndGuestId(blockId, guestId);
+    // ── Query ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns the total EB bill share amount accrued for a guest in a given block.
+     *
+     * <p>Sums all {@link EbBillGuest#getShareAmount()} values for the guest across
+     * all EB bills recorded for the specified block. The result is used by the
+     * {@code InvoiceService} to populate the {@code EB} line item on the guest's monthly invoice.</p>
+     *
+     * @param guestId the UUID of the {@link Guest}.
+     * @param blockId the UUID of the {@link Block}.
+     * @return the total EB share amount (sum of all shares); {@link BigDecimal#ZERO} if none exist.
+     */
+    public BigDecimal getGuestEbShareForMonth(final String guestId, final String blockId) {
+        final List<EbBillGuest> shares = ebBillGuestRepository.findByEbBill_BlockIdAndGuestId(blockId, guestId);
         return shares.stream()
                 .map(EbBillGuest::getShareAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
