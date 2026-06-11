@@ -1,55 +1,91 @@
 # Local Testing & Verification Guide (PostgreSQL Production Match)
 
-This document provides step-by-step instructions to locally test the PG CRM application using PostgreSQL and a clean database setup that mirrors production exactly from start to finish.
+This document provides step-by-step instructions to locally test the PG CRM application using PostgreSQL. It covers two setup paths:
+* **Approach A**: Testing using host-installed tools (JDK 23, Maven, Node, and local PostgreSQL).
+* **Approach B**: Testing using **Docker Compose only** (requires only Docker installed on the host).
 
 ---
 
-## 1. Local Test Environment Setup
-Ensure you have the required prerequisites installed on your local development machine:
+## 1. Environment Selection
+
+### Approach A: Host-Based Local Testing
+Use this approach if your local development machine has full developer tooling installed.
+
+#### Prerequisites
 - **Java JDK 23**
 - **Node.js v24+**
 - **Apache Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used)
 - **Local PostgreSQL 18** (or run containerized via Docker)
 
----
-
-## 2. PostgreSQL Test Database Setup
-To test the application in a production-identical state, you will use a local PostgreSQL database with a clean, unseeded transaction database.
-
-1. **Start PostgreSQL**: If you are using Docker, spin up the database container:
+#### Database Setup
+1. Spin up the postgres container:
    ```bash
    docker compose up postgres -d
    ```
-2. **Clear Existing Schemas**: Drop and recreate the local test database to ensure a clean slate:
+2. Drop and recreate the local test database to ensure a clean slate:
    ```sql
    DROP DATABASE IF EXISTS pgcrmdb;
    CREATE DATABASE pgcrmdb;
    ```
-3. **Configure Local Environment Settings**: Create or edit the `.env` file in your workspace root:
+3. Configure your local `.env` file in the workspace root:
    ```ini
    SPRING_PROFILES_ACTIVE=prod
-   APP_SEED-DEMO=false             # Ensures database remains clean (no mock users/invoices/logs)
+   APP_SEED-DEMO=false             # Set to true if you want to seed mock guest records
    DB_PASSWORD=pgcrm123            # Match your local Postgres password
    ```
+4. Run the launcher script:
+   ```bash
+   start_project.bat
+   ```
+   - **Frontend URL**: `http://localhost:5173`
+   - **Backend API URL**: `http://localhost:8080`
+   - **Postgres URL**: `localhost:5432`
 
 ---
 
-## 3. Launch the Application
-Start the backend and frontend dev servers locally using the start script:
+### Approach B: Docker-Only Local Testing (No Tooling Setup)
+Use this approach if your testing environment **only has Docker / Docker Compose** installed. All builds, compilations, and runs occur inside containerized layers.
 
+#### Prerequisites
+- **Docker & Docker Compose** installed and running.
+
+#### Setup & Launch
+1. Configure your local `.env` file in the workspace root:
+   ```ini
+   SPRING_PROFILES_ACTIVE=prod
+   APP_SEED-DEMO=false             # Set to true to seed mock guests; false for a clean system
+   DB_PASSWORD=pgcrm123            # Database password used by compose containers
+   ```
+2. Compile and launch the entire stack:
+   ```bash
+   docker compose up --build -d
+   ```
+   - *This command automatically downloads the Java 23/Node 24 base images, compiles backend/frontend code inside Docker build stages, mounts `tenant-config.yml`, and spins up the stack.*
+
+#### Exposed Ports & Access URLs
+When running via Docker Compose, Nginx acts as the frontend web server, routing requests.
+- **Web Frontend**: Access via **`http://localhost`** (Port `80` on host).
+- **Backend REST API**: Access via **`http://localhost:8080`**.
+- **PostgreSQL Database**: Accessible via host port **`5432`** (Username: `pgcrm`, Database: `pgcrmdb`, Password: from `.env`).
+
+#### Resetting Database to Clean State
+To drop all test data, schema tables, and start completely fresh:
 ```bash
-start_project.bat
+# Shutdown containers and destroy the persistent database volume
+docker compose down -v
+
+# Relaunch with clean schemas
+docker compose up -d
 ```
-*The database migrations will run automatically via Flyway, creating the clean database schemas, the default PG Owner administrator, and the physical room layout skeleton.*
 
 ---
 
-## 4. End-to-End Fresh Onboarding Test Flow
-Walk through these scenarios manually to test the application in a clean environment matching the customer's production state.
+## 2. End-to-End Fresh Onboarding Test Flow
+Perform these manual test scenarios to verify that the core system works correctly (using either URL `http://localhost:5173` for Host-Based or `http://localhost` for Docker-Only):
 
 ### Scenario 1: Initial Log In & Admin Security
-1. Open your browser and navigate to `http://localhost:5173`.
-2. Log in using the default root admin credentials:
+1. Navigate to the application in your browser.
+2. Log in using the default seeded owner credentials:
    - **Email**: `owner@pgcrm.com`
    - **Password**: `Owner@123`
 3. Navigate to **Profile Settings** and update the owner account:
@@ -63,7 +99,6 @@ Walk through these scenarios manually to test the application in a clean environ
 3. Click **Add New Manager** and register a manager account (e.g. `testmanager@domain.com`).
 4. Log out.
 5. Log in as the **Manager** you just created (using the default password `Manager@123`).
-6. Enforce password change if prompted, or log in successfully to verify manager access levels.
 
 ### Scenario 3: Real Guest Onboarding & Check-in
 1. Log in as the **Manager**.
@@ -78,7 +113,6 @@ Walk through these scenarios manually to test the application in a clean environ
 5. Click **Confirm Check-in**.
 6. **Verify**:
    - The bed indicator changes to OCCUPIED (red).
-   - An audit log is recorded under Owner logs.
    - Log out, then log in as the newly created **Guest** (`testguest@domain.com` / `Guest@123`).
 
 ### Scenario 4: Invoice Generation & Payment Processing
@@ -89,7 +123,7 @@ Walk through these scenarios manually to test the application in a clean environ
 5. **Verify Payment Simulator**:
    - Log out and log in as the **Guest**.
    - Navigate to **My Invoices** and click **Pay Online** next to the open invoice.
-   - Run the simulation transaction to successful state.
+   - Run the simulation transaction to a successful state.
    - Log back in as the **Manager** and verify the status has updated to **PAID**.
 
 ### Scenario 5: Guest Services (Meals & Tickets)
@@ -104,5 +138,9 @@ Walk through these scenarios manually to test the application in a clean environ
 
 ---
 
-## 5. Verify the Cleanup State
-Before shipping the build, drop and recreate the PostgreSQL database one final time (`DROP DATABASE` -> `CREATE DATABASE`) and start the server with `APP_SEED-DEMO=false` to ensure the customer receives a completely fresh instance.
+## 3. Final Verification Before Handover
+Once you are done testing:
+1. For Docker-Only: Shut down and purge the database volume (`docker compose down -v`).
+2. Make sure `APP_SEED-DEMO=false` is set in `.env`.
+3. Restart the containers (`docker compose up -d`).
+4. Log in as the default Owner to confirm the dashboard is blank, with all room beds marked vacant and ready for delivery.
