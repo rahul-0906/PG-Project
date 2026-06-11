@@ -54,6 +54,9 @@ public class DataSeeder implements CommandLineRunner {
     private final EbBillRepository ebBillRepository;
     private final AuditLogRepository auditLogRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.seed-demo:true}")
+    private boolean seedDemo;
+
     @Override
     @Transactional
     public void run(String... args) {
@@ -310,7 +313,7 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         // Only seed demo transaction data (guests, logs, invoices, tickets, audit logs) for initial setup
-        if (guestRepository.count() == 0) {
+        if (seedDemo && guestRepository.count() == 0) {
             log.info("⚙️ Seeding demo transaction data (guests, logs, invoices, tickets, audit logs) for initial setup...");
 
             // 8. Demo Guest user + Guest entity
