@@ -1,6 +1,6 @@
 package com.pgcrm.service;
 
-import com.pgcrm.config.TwilioConfig;
+import com.pgcrm.config.MetaWhatsAppConfig;
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.Notification;
 import com.pgcrm.entity.User;
@@ -8,14 +8,19 @@ import com.pgcrm.entity.enums.NotificationChannel;
 import com.pgcrm.entity.enums.Role;
 import com.pgcrm.repository.NotificationRepository;
 import com.pgcrm.repository.UserRepository;
-import com.twilio.rest.api.v2010.account.Message;
-import com.twilio.type.PhoneNumber;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service responsible for dispatching notifications to guests and managers across
@@ -26,7 +31,7 @@ import java.util.List;
  *   <li><strong>IN_APP:</strong> A {@link Notification} record is persisted to the database
  *       and surfaced in the portal's notification inbox. Always succeeds if the database is
  *       available.</li>
- *   <li><strong>WHATSAPP:</strong> A message is sent via the Twilio WhatsApp API. A
+ *   <li><strong>WHATSAPP:</strong> A message is sent via the Meta WhatsApp Cloud API. A
  *       {@link Notification} record is always persisted regardless of dispatch outcome,
  *       with {@code deliveryStatus} set to {@code "SENT"}, {@code "FAILED"}, or
  *       {@code "SKIPPED_NO_CONFIG"}.</li>
@@ -34,16 +39,15 @@ import java.util.List;
  *
  * <p><strong>Manager Alerting:</strong> The {@link #alertManager(String, String)} method
  * notifies all managers assigned to the specified building <em>and</em> all owners.
- * Managers receive both an in-app notification and a WhatsApp message (if Twilio is enabled
+ * Managers receive both an in-app notification and a WhatsApp message (if Meta API is enabled
  * and the manager has a registered phone number). Owners receive in-app notifications only.</p>
  *
- * <p><strong>Phone Normalisation:</strong> When sending WhatsApp messages to managers,
- * the method prepends {@code "+91"} if the stored phone number does not already start
- * with a {@code "+"} — appropriate for the primary Indian market. Guest WhatsApp numbers
- * are assumed to already be in international format.</p>
+ * <p><strong>Phone Normalisation:</strong> When sending WhatsApp messages to managers or guests,
+ * the method cleans all non-digit characters and prepends {@code "91"} if the phone number is a
+ * 10-digit number (standard Indian phone format).</p>
  *
  * @see Notification
- * @see TwilioConfig
+ * @see MetaWhatsAppConfig
  * @see NotificationRepository
  */
 @Service
@@ -52,8 +56,9 @@ import java.util.List;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final TwilioConfig           twilioConfig;
+    private final MetaWhatsAppConfig     metaWhatsAppConfig;
     private final UserRepository         userRepository;
+    private final RestTemplate           restTemplate = new RestTemplate();
 
     /**
      * Sends an alert to all managers assigned to the specified building and all owners.
@@ -61,9 +66,8 @@ public class NotificationService {
      * <p>For each manager:</p>
      * <ul>
      *   <li>An {@link NotificationChannel#IN_APP} notification is persisted.</li>
-     *   <li>If Twilio is enabled and the manager has a phone number, a WhatsApp message
-     *       is dispatched. Indian numbers without a leading {@code "+"} are automatically
-     *       prefixed with {@code "+91"}.</li>
+     *   <li>If Meta API is enabled and the manager has a phone number, a WhatsApp message
+     *       is dispatched. Indian numbers are normalized automatically.</li>
      * </ul>
      *
      * <p>For each owner:</p>
@@ -91,21 +95,10 @@ public class NotificationService {
                     .deliveryStatus("DELIVERED")
                     .build());
 
-            if (twilioConfig.isEnabled() && manager.getPhone() != null && !manager.getPhone().isBlank()) {
-                try {
-                    final String cleanPhone = manager.getPhone().trim();
-                    final String toNumber   = "whatsapp:" + (cleanPhone.startsWith("+") ? cleanPhone : "+91" + cleanPhone);
-                    Message.creator(
-                            new PhoneNumber(toNumber),
-                            new PhoneNumber(twilioConfig.getWhatsappFrom()),
-                            messageText
-                    ).create();
-                    log.info("WhatsApp alert successfully sent to Manager {} ({})", manager.getFullName(), cleanPhone);
-                } catch (Exception e) {
-                    log.error("Failed to send WhatsApp alert to Manager {}: {}", manager.getFullName(), e.getMessage());
-                }
+            if (metaWhatsAppConfig.isEnabled() && manager.getPhone() != null && !manager.getPhone().isBlank()) {
+                sendWhatsAppDirect(manager.getPhone(), messageText, manager.getFullName());
             } else {
-                log.info("Manager alert skipped (no WhatsApp phone or Twilio disabled) for Manager: {}",
+                log.info("Manager alert skipped (no WhatsApp phone or Meta disabled) for Manager: {}",
                         manager.getFullName());
             }
         }
@@ -149,9 +142,9 @@ public class NotificationService {
      * <p>A {@link Notification} record is always persisted, regardless of whether the
      * WhatsApp dispatch succeeds. The {@code deliveryStatus} field reflects the outcome:</p>
      * <ul>
-     *   <li>{@code "SENT"} — Twilio API call succeeded.</li>
-     *   <li>{@code "FAILED"} — Twilio API call threw an exception.</li>
-     *   <li>{@code "SKIPPED_NO_CONFIG"} — Twilio is disabled or the guest has no WhatsApp number.</li>
+     *   <li>{@code "SENT"} — Meta Graph API call succeeded.</li>
+     *   <li>{@code "FAILED"} — Meta Graph API call threw an exception or returned an error status.</li>
+     *   <li>{@code "SKIPPED_NO_CONFIG"} — Meta configuration is disabled or the guest has no WhatsApp number.</li>
      * </ul>
      *
      * @param guest       the {@link Guest} to send the WhatsApp message to.
@@ -166,23 +159,12 @@ public class NotificationService {
                 .message(messageText)
                 .build();
 
-        if (twilioConfig.isEnabled() && guest.getWhatsappNumber() != null) {
-            try {
-                final String toNumber = "whatsapp:" + guest.getWhatsappNumber();
-                Message.creator(
-                        new PhoneNumber(toNumber),
-                        new PhoneNumber(twilioConfig.getWhatsappFrom()),
-                        messageText
-                ).create();
-                notification.setDeliveryStatus("SENT");
-                log.info("WhatsApp sent to {} for guest {}", guest.getWhatsappNumber(), guest.getId());
-            } catch (Exception e) {
-                notification.setDeliveryStatus("FAILED");
-                log.error("WhatsApp send failed for guest {}: {}", guest.getId(), e.getMessage());
-            }
+        if (metaWhatsAppConfig.isEnabled() && guest.getWhatsappNumber() != null && !guest.getWhatsappNumber().isBlank()) {
+            boolean success = sendWhatsAppDirect(guest.getWhatsappNumber(), messageText, guest.getFullName());
+            notification.setDeliveryStatus(success ? "SENT" : "FAILED");
         } else {
             notification.setDeliveryStatus("SKIPPED_NO_CONFIG");
-            log.info("WhatsApp skipped (Twilio disabled or no number) for guest {}", guest.getId());
+            log.info("WhatsApp skipped (Meta disabled or no number) for guest {}", guest.getId());
         }
         notificationRepository.save(notification);
     }
@@ -202,5 +184,60 @@ public class NotificationService {
     public void sendBoth(final Guest guest, final String message) {
         sendInApp(guest, message);
         sendWhatsApp(guest, message);
+    }
+
+    /**
+     * Sends WhatsApp message directly to a target phone number using the Meta WhatsApp Cloud API.
+     */
+    private boolean sendWhatsAppDirect(String rawPhone, String messageText, String recipientName) {
+        String cleanPhone = normalizePhoneNumber(rawPhone);
+        if (cleanPhone == null || cleanPhone.isBlank()) {
+            log.warn("Phone number is empty, skipping WhatsApp dispatch.");
+            return false;
+        }
+
+        try {
+            String url = String.format("https://graph.facebook.com/v19.0/%s/messages", metaWhatsAppConfig.getPhoneNumberId());
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(metaWhatsAppConfig.getAccessToken());
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("messaging_product", "whatsapp");
+            payload.put("recipient_type", "individual");
+            payload.put("to", cleanPhone);
+            payload.put("type", "text");
+
+            Map<String, Object> textMap = new HashMap<>();
+            textMap.put("body", messageText);
+            payload.put("text", textMap);
+
+            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(payload, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("WhatsApp successfully sent to {} ({}) via Meta Cloud API", recipientName, cleanPhone);
+                return true;
+            } else {
+                log.error("Meta WhatsApp Cloud API returned non-success status: {} for {}", response.getStatusCode(), recipientName);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Failed to send WhatsApp message to {}: {}", recipientName, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Normalizes a phone number to standard Meta API format (digits only, prepends 91 if it's a 10-digit number).
+     */
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null) return null;
+        String clean = phone.trim().replaceAll("[^0-9]", "");
+        if (clean.length() == 10) {
+            clean = "91" + clean;
+        }
+        return clean;
     }
 }
