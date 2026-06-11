@@ -1,6 +1,6 @@
-# Local Testing & Verification Guide
+# Local Testing & Verification Guide (PostgreSQL Production Match)
 
-This document provides step-by-step instructions to locally test the PG CRM application with a clean or mock database before providing it to end users.
+This document provides step-by-step instructions to locally test the PG CRM application using PostgreSQL and a clean database setup that mirrors production exactly from start to finish.
 
 ---
 
@@ -9,113 +9,100 @@ Ensure you have the required prerequisites installed on your local development m
 - **Java JDK 23**
 - **Node.js v24+**
 - **Apache Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used)
+- **Local PostgreSQL 18** (or run containerized via Docker)
 
 ---
 
-## 2. Fresh Database Launch Options
+## 2. PostgreSQL Test Database Setup
+To test the application in a production-identical state, you will use a local PostgreSQL database with a clean, unseeded transaction database.
 
-### Option A: Test with In-Memory H2 Database (Recommended for Quick Checks)
-Running under the `dev` profile uses an in-memory H2 database. Every time you restart the application, the database starts completely fresh.
-
-1. Open `start_project.bat` or use standard CLI commands.
-2. In `backend/src/main/resources/application.yml`, verify the active profile or launch with `dev` active.
-3. To populate rich mock data (8 guests, logs, transactions), keep the following in your `.env` or properties:
-   ```ini
-   APP_SEED-DEMO=true
-   ```
-4. Run `start_project.bat` in the root folder.
-   - *This starts the backend on port `8080` (H2 DB) and the React frontend on `http://localhost:5173`.*
-
-### Option B: Test with a Fresh Local PostgreSQL Instance
-If you want to test with a real PostgreSQL database but keep it isolated:
-
-1. Spin up the postgres container in docker-compose:
+1. **Start PostgreSQL**: If you are using Docker, spin up the database container:
    ```bash
    docker compose up postgres -d
    ```
-2. Drop/recreate your local database schemas to ensure a clean start:
+2. **Clear Existing Schemas**: Drop and recreate the local test database to ensure a clean slate:
    ```sql
    DROP DATABASE IF EXISTS pgcrmdb;
    CREATE DATABASE pgcrmdb;
    ```
-3. Set your local `.env` file values:
+3. **Configure Local Environment Settings**: Create or edit the `.env` file in your workspace root:
    ```ini
    SPRING_PROFILES_ACTIVE=prod
-   APP_SEED-DEMO=true
-   DB_PASSWORD=pgcrm123
+   APP_SEED-DEMO=false             # Ensures database remains clean (no mock users/invoices/logs)
+   DB_PASSWORD=pgcrm123            # Match your local Postgres password
    ```
-4. Start backend and frontend services.
 
 ---
 
-## 3. Step-by-Step Test Scenarios
+## 3. Launch the Application
+Start the backend and frontend dev servers locally using the start script:
 
-### Scenario 1: Authentication & Role Validation
+```bash
+start_project.bat
+```
+*The database migrations will run automatically via Flyway, creating the clean database schemas, the default PG Owner administrator, and the physical room layout skeleton.*
+
+---
+
+## 4. End-to-End Fresh Onboarding Test Flow
+Walk through these scenarios manually to test the application in a clean environment matching the customer's production state.
+
+### Scenario 1: Initial Log In & Admin Security
 1. Open your browser and navigate to `http://localhost:5173`.
-2. **Test Owner Access**:
-   - **Log in**: `owner@pgcrm.com` / `Owner@123`
-   - **Verify**: You can see multi-building analytics, audit logs, and register managers.
-3. **Test Manager Access**:
-   - **Log in**: `manager@pgcrm.com` / `Manager@123`
-   - **Verify**: You can see room layouts, check-in guests, and record daily logs/meters.
-4. **Test Guest Access**:
-   - **Log in**: `guest@pgcrm.com` / `Guest@123`
-   - **Verify**: You can see billing records, personal meal planner calendars, and maintenance tickets.
+2. Log in using the default root admin credentials:
+   - **Email**: `owner@pgcrm.com`
+   - **Password**: `Owner@123`
+3. Navigate to **Profile Settings** and update the owner account:
+   - Update the email to a test owner email (e.g. `testowner@domain.com`).
+   - Change the password to a secure custom password.
+4. Log out and verify you can log back in with the updated credentials.
 
-### Scenario 2: Guest Check-in & Bed Occupancy
-1. Log in as **Manager**.
-2. Go to **Room Layout** on the sidebar.
-3. Find a room with a vacant bed (e.g. green bed indicator).
-4. Click on the bed and select **Check In Guest**.
-5. Fill in the details (Mock Name, Email, Phone, Advance Deposit, Rent).
-6. Click **Check-In**.
-7. **Verify**:
-   - The bed status changes to OCCUPIED (red).
-   - An audit trail log is generated in the system.
-   - Try logging in with the newly checked-in guest email and password `Guest@123`.
+### Scenario 2: Manager Registration
+1. Log in as the updated **PG Owner**.
+2. Go to **Manager Management** on the sidebar.
+3. Click **Add New Manager** and register a manager account (e.g. `testmanager@domain.com`).
+4. Log out.
+5. Log in as the **Manager** you just created (using the default password `Manager@123`).
+6. Enforce password change if prompted, or log in successfully to verify manager access levels.
 
-### Scenario 3: Billing & Invoicing Flow
-1. Log in as **Manager**.
+### Scenario 3: Real Guest Onboarding & Check-in
+1. Log in as the **Manager**.
+2. Go to the **Room Layout** view.
+3. Choose a room and click on a vacant bed (marked green).
+4. Click **Check In Guest** and fill in the details:
+   - **Full Name**: Enter a test guest name.
+   - **Email**: Enter a test email (e.g. `testguest@domain.com`).
+   - **Phone**: Enter a 10-digit number.
+   - **Advance Deposit**: Enter the deposit amount (e.g. `5000`).
+   - **Base Rent**: Set the custom monthly rent.
+5. Click **Confirm Check-in**.
+6. **Verify**:
+   - The bed indicator changes to OCCUPIED (red).
+   - An audit log is recorded under Owner logs.
+   - Log out, then log in as the newly created **Guest** (`testguest@domain.com` / `Guest@123`).
+
+### Scenario 4: Invoice Generation & Payment Processing
+1. Log in as the **Manager**.
 2. Go to **Billing & Invoices**.
-3. Generate invoices for the current month.
-4. Locate the newly checked-in guest's invoice.
-5. Click **View Invoice**.
-6. **Verify Payments**:
-   - Click **Record Manual Payment** -> Choose **UPI** -> Enter amount -> **Confirm**.
-   - Verify the invoice status updates to **PAID**.
-   - If `RAZORPAY_ENABLED=false`, test online checkouts. The system will launch a mock payment modal allowing you to simulate success/failure.
+3. Select the check-in guest and click **Generate Invoice** for the current month.
+4. Click **View Invoice** to inspect the items (Rent, EB splits, etc.).
+5. **Verify Payment Simulator**:
+   - Log out and log in as the **Guest**.
+   - Navigate to **My Invoices** and click **Pay Online** next to the open invoice.
+   - Run the simulation transaction to successful state.
+   - Log back in as the **Manager** and verify the status has updated to **PAID**.
 
-### Scenario 4: Meal Log Opt-ins & Meal Planner
-1. Log in as **Guest**.
-2. Go to **Meal Planner**.
-3. Toggle breakfast/lunch/dinner preferences on the calendar and save.
-4. Log in as **Manager** or **Owner**.
-5. Go to **Daily Logs** or **Reports**.
-6. **Verify**: The guest's updated meal preference count is reflected in the chef's daily headcount sheet.
-
-### Scenario 5: Maintenance Ticket Workflow
-1. Log in as **Guest**.
-2. Go to **Maintenance Tickets** -> Click **Raise New Ticket**.
-3. Select priority (e.g., High), category (e.g., Wi-Fi), add description, and submit.
-4. Log in as **Manager**.
-5. Go to **Maintenance Desk**.
-6. Locate the open ticket, change status to **In Progress** -> **Resolved**.
-7. Log back in as **Guest** and check that your ticket updates dynamically.
+### Scenario 5: Guest Services (Meals & Tickets)
+1. Log in as the **Guest**.
+2. Go to **Meal Planner** and toggle your daily preference (e.g., breakfast/lunch opt-outs) for the upcoming days.
+3. Go to **Maintenance Portal** -> click **Raise Ticket** -> describe a mock issue (e.g. "Geyser not working").
+4. Log in as the **Manager**.
+5. **Verify**:
+   - In **Daily Logs**, verify the guest's meal headcount updates.
+   - In **Maintenance Desk**, change the status of the guest's ticket to **Resolved**.
+   - Verify the guest portal dynamically updates to show the resolved state.
 
 ---
 
-## 4. Final Verification Before Handover
-Once you are done testing:
-
-1. Drop the local test database schemas so they are completely fresh.
-2. In `.env`, switch:
-   ```ini
-   APP_SEED-DEMO=false
-   ```
-3. Boot the application one last time.
-4. Log in as **Owner** (`owner@pgcrm.com` / `Owner@123`).
-5. **Verify**:
-   - The dashboard metrics are all `0`.
-   - The **Guest List** is empty.
-   - The **Room Layout** displays all beds as **Vacant** (green).
-6. The application is now fully verified and ready for production handoff!
+## 5. Verify the Cleanup State
+Before shipping the build, drop and recreate the PostgreSQL database one final time (`DROP DATABASE` -> `CREATE DATABASE`) and start the server with `APP_SEED-DEMO=false` to ensure the customer receives a completely fresh instance.
