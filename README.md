@@ -5,7 +5,7 @@ PG CRM is a modern, enterprise-grade Paying Guest (PG) and Hostel Management Pla
 
 > [!NOTE]
 > **System Workflows & Visual Models**
-> For a detailed, visual breakdown of the application's core logic flows (including Auth, Check-In, Settlements, Bill Splits, Maintenance Tickets, and background Cron schedulers), refer to [WORKFLOWS.md](file:///e:/Antigravity%20Project/PG%20Project/WORKFLOWS.md).
+> For a detailed, visual breakdown of the application's core logic flows (including Auth, Check-In, Settlements, Bill Splits, Maintenance Tickets, and background Cron schedulers), refer to [WORKFLOWS.md](file:///e:/Antigravity%20Project/PG%20Project/docs/WORKFLOWS.md).
 
 ---
 
@@ -223,3 +223,34 @@ This launches:
 > [!TIP]
 > **Fail-Fast Startup Sequencing**
 > The backend application container (`app`) is configured to depend strictly on the database container (`postgres`) being healthy (`condition: service_healthy`). This prevents the application server from starting up and trying to initialize its database connection pool until the database daemon is fully initialized and accepting connections.
+
+---
+
+## 7. Folder Structure
+
+The project root is structured to isolate source logic, local tooling, configuration, and documentation:
+
+```
+e:/Antigravity Project/PG Project/
+├── backend/                       # Java/Spring Boot backend source
+├── frontend/                      # React/Vite frontend source
+├── apache-maven-3.9.16/           # Bundled Maven distribution
+├── docs/                          # Project documentation and test walkthroughs
+│   ├── history/                   # Legacy planning and task files
+│   ├── media/                     # Testing & tutorial media recordings
+│   ├── CALCULATIONS_ENGINE.md     # Business calculation specs
+│   ├── FILE_ARCHITECTURE.md       # Directory and file mapping
+│   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
+│   ├── ONBOARDING_PROD.md         # Production deployment steps
+│   └── ONBOARDING_TEST.md         # Local verification guide
+├── scripts/                       # Maintenance and helper scripts
+│   └── backup.sh                  # Postgres backup utility script
+├── .env                           # Local environment variables
+├── .env.example                   # Template environment variables
+├── .gitignore                     # Git ignore file
+├── Dockerfile                     # Multi-stage production build configuration
+├── docker-compose.yml             # Local production compose environment
+├── README.md                      # Primary repository entry point documentation
+├── start_project.bat              # Dev launcher script
+└── tenant-config.yml              # White-label branding setup properties
+```

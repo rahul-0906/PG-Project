@@ -1,5 +1,0 @@
-pg:
-  system:
-    branding:
-      name: "My PG Name"        # ← Change this to the PG owner's business name
-      short-title: "PG"
