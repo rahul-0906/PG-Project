@@ -1,0 +1,128 @@
+# Production Onboarding & Deployment Guide
+
+This document outlines the step-by-step procedure to deploy the PG CRM system in a production-ready, clean state for a PG Owner (Tenant).
+
+---
+
+## 1. Branding & White-Label Customization
+The application uses `tenant-config.yml` in the project root to load whitelabel branding on boot.
+
+1. Open `tenant-config.yml` in the project root.
+2. Edit the branding fields to match the client's PG hostel:
+   ```yaml
+   pg:
+     system:
+       branding:
+         name: "Sri Sai Luxury PG"        # Full name displayed on login & headers
+         short-title: "Sri Sai"           # Short title/abbreviation prefix
+   ```
+3. Save the file. (The docker container mounts this file dynamically, so changes apply without rebuilding backend JARs).
+
+---
+
+## 2. Database Preparation (Demo Data Toggle)
+To ensure the client starts with a completely clean database without test users, mock invoices, or dummy logs, disable the data seeder.
+
+1. In your production `.env` file, set the seeder toggle to `false`:
+   ```ini
+   APP_SEED-DEMO=false
+   ```
+2. Keep the backend profile set to `prod` to connect to your live PostgreSQL database:
+   ```ini
+   SPRING_PROFILES_ACTIVE=prod
+   ```
+   *Note: The seeder will still automatically create the root Owner admin account and build the physical building, floor, room, and bed layout skeleton, but all transaction history and guest profiles will remain completely clean.*
+
+---
+
+## 3. Configure Production Credentials & Integrations
+Create an `.env` file in the root directory on the production server (VPS/Cloud VM) with secure production keys:
+
+```ini
+# Core Environment
+SPRING_PROFILES_ACTIVE=prod
+SERVER_PORT=8080
+JWT_SECRET=YOUR_SUPER_SECRET_RANDOM_KEY_AT_LEAST_256_BITS_LONG
+
+# Database Configuration
+DB_PASSWORD=YourSecurePostgreSqlPasswordHere
+
+# SMTP Mail Server (Used for Verification OTPs & Invoices)
+MAIL_ENABLED=true
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=owner-notifications@yourdomain.com
+MAIL_PASSWORD=your_gmail_app_password
+
+# Razorpay Integration (For Live Guest Payments)
+RAZORPAY_ENABLED=true
+RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
+
+# Twilio WhatsApp Integration (For Automated Reminders)
+TWILIO_ENABLED=true
+TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+```
+
+---
+
+## 4. Server & Reverse Proxy Setup (HTTPS/SSL)
+Deploy an Nginx reverse proxy on your server to handle domain routing (e.g. `srisaipg.in`) and SSL certification.
+
+1. **Point DNS**: Point the client's domain A-record to your server IP.
+2. **Install Nginx & Certbot**:
+   ```bash
+   sudo apt update
+   sudo apt install nginx certbot python3-certbot-nginx -y
+   ```
+3. **Configure Nginx Site**: Create `/etc/nginx/sites-available/pgcrm`:
+   ```nginx
+   server {
+       server_name srisaipg.in www.srisaipg.in;
+
+       location / {
+           proxy_pass http://localhost:80; # Points to React Nginx container
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+
+       location /api {
+           proxy_pass http://localhost:8080; # Points to Spring Boot backend
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+       }
+   }
+   ```
+4. **Enable SSL**: Enable the configuration and generate an SSL certificate via Let's Encrypt:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/pgcrm /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl restart nginx
+   sudo certbot --nginx -d srisaipg.in -d www.srisaipg.in
+   ```
+
+---
+
+## 5. Launch the Production Application
+Launch the stack using Docker Compose:
+
+```bash
+docker compose up -d --build
+```
+*This starts the PostgreSQL database container (running flyway migrations), starts the backend API service, compiles clean production frontend assets, and serves them.*
+
+---
+
+## 6. Client Handoff Procedure
+Perform the following steps immediately after launching the application:
+
+1. **Initial Login**: Log in with the default seeded owner credentials:
+   - **Email**: `owner@pgcrm.com`
+   - **Password**: `Owner@123`
+2. **Update Admin Settings**:
+   - Go to Profile Settings and change the email to the client's email (e.g., `owner@srisaipg.in`).
+   - Change the password to a secure custom password.
+3. **Register Managers**: Go to **Manager Management** and create logins for their property managers.
+4. **Layout Check**: Verify the room and bed structure looks correct on the dashboard.
+5. **Begin Guest Onboarding**: Hand over the credentials to the PG owner and manager to begin registering and checking in guests.
