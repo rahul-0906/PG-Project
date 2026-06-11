@@ -168,4 +168,22 @@ public class BuildingConfig {
     @Column(name = "allowed_payment_modes", nullable = false)
     @Builder.Default
     private String allowedPaymentModes = "BOTH";
+
+    /**
+     * Whether the building config allows Omelette add-on.
+     * Defaults to {@code true}.
+     */
+    @Column(name = "offer_omelette", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("offerOmelette")
+    @Builder.Default
+    private boolean offerOmelette = true;
+
+    /**
+     * Whether the building config allows Boiled Egg add-on.
+     * Defaults to {@code true}.
+     */
+    @Column(name = "offer_boiled_egg", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("offerBoiledEgg")
+    @Builder.Default
+    private boolean offerBoiledEgg = true;
 }

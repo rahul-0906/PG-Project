@@ -240,6 +240,23 @@ public class Guest {
     @Builder.Default
     private boolean vegPreference = true;
 
+    /**
+     * The building this guest belongs to. Useful for scoping historical query records
+     * when the guest is checked out and no longer associated with a bed/room.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "building_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "floors"})
+    private Building building;
+
+    /**
+     * Whether the guest booked the entire room.
+     */
+    @Column(name = "is_book_entire_room", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("isBookEntireRoom")
+    @Builder.Default
+    private boolean isBookEntireRoom = false;
+
     // ── Audit Timestamp ───────────────────────────────────────────────────────
 
     /**

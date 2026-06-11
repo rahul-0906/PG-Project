@@ -97,6 +97,15 @@ public class Room {
     private BigDecimal baseRent;
 
     /**
+     * Whether the room has Air Conditioning (AC).
+     * Defaults to {@code false} (Non-AC).
+     */
+    @Column(name = "is_ac", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonProperty("isAc")
+    @Builder.Default
+    private boolean isAc = false;
+
+    /**
      * All {@link Bed} records within this room.
      * Cascade type {@code ALL} ensures beds are persisted and removed with their parent room.
      * Initialised to an empty {@link ArrayList} to prevent {@code NullPointerException}

@@ -2,6 +2,7 @@ package com.pgcrm.service;
 
 import com.pgcrm.dto.GuestResponse;
 import com.pgcrm.entity.Bed;
+import com.pgcrm.entity.Building;
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.User;
 import com.pgcrm.entity.enums.AuditAction;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -104,13 +106,24 @@ public class GuestService {
     public Guest checkIn(final String bedId, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
-                         final String vehicleRegistration) {
+                         final String vehicleRegistration, final boolean isBookEntireRoom) {
 
         final Bed bed = bedRepository.findById(bedId)
                 .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + bedId));
 
         if (bed.getStatus() != BedStatus.VACANT) {
             throw new BedUnavailableException("Bed is not vacant: " + bed.getBedLabel());
+        }
+
+        final Building building = bed.getRoom().getFloor().getBuilding();
+
+        if (isBookEntireRoom) {
+            final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
+            for (final Bed b : roomBeds) {
+                if (b.getStatus() != BedStatus.VACANT) {
+                    throw new BedUnavailableException("All beds in the room must be vacant to book the entire room.");
+                }
+            }
         }
 
         final Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCase(email);
@@ -141,6 +154,8 @@ public class GuestService {
                             .kycStatus(KycStatus.PENDING)
                             .checkInDate(checkInDate != null ? checkInDate : LocalDate.now())
                             .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
+                            .building(building)
+                            .isBookEntireRoom(isBookEntireRoom)
                             .build();
                 } else {
                     // Refresh the existing guest profile for re-check-in.
@@ -150,6 +165,8 @@ public class GuestService {
                     guest.setWhatsappNumber(whatsappNumber != null ? whatsappNumber : phone);
                     guest.setVehicleRegistration(vehicleRegistration);
                     guest.setBed(bed);
+                    guest.setBuilding(building);
+                    guest.setBookEntireRoom(isBookEntireRoom);
                     guest.setAdvanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO);
                     guest.setCheckInDate(checkInDate != null ? checkInDate : LocalDate.now());
                     guest.setExpectedCheckOutDate(null);
@@ -170,8 +187,17 @@ public class GuestService {
                 userRepository.save(existingUser);
 
                 guest = guestRepository.save(guest);
-                bed.setStatus(BedStatus.OCCUPIED);
-                bedRepository.save(bed);
+
+                if (isBookEntireRoom) {
+                    final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
+                    for (final Bed b : roomBeds) {
+                        b.setStatus(BedStatus.OCCUPIED);
+                        bedRepository.save(b);
+                    }
+                } else {
+                    bed.setStatus(BedStatus.OCCUPIED);
+                    bedRepository.save(bed);
+                }
 
                 // Dispatch welcome-back email — failure is non-fatal.
                 final Guest finalGuest = guest;
@@ -217,10 +243,20 @@ public class GuestService {
                 .kycStatus(KycStatus.PENDING)
                 .checkInDate(checkInDate != null ? checkInDate : LocalDate.now())
                 .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
+                .building(building)
+                .isBookEntireRoom(isBookEntireRoom)
                 .build());
 
-        bed.setStatus(BedStatus.OCCUPIED);
-        bedRepository.save(bed);
+        if (isBookEntireRoom) {
+            final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
+            for (final Bed b : roomBeds) {
+                b.setStatus(BedStatus.OCCUPIED);
+                bedRepository.save(b);
+            }
+        } else {
+            bed.setStatus(BedStatus.OCCUPIED);
+            bedRepository.save(bed);
+        }
 
         // Dispatch welcome email — failure is non-fatal.
         final Guest finalGuest = guest;
@@ -237,24 +273,19 @@ public class GuestService {
         return guest;
     }
 
-    /**
-     * Backward-compatible overload of {@link #checkIn(String, String, String, String, String, BigDecimal, LocalDate, String)}
-     * for callers that do not supply a vehicle registration number.
-     *
-     * @param bedId          the UUID of the target {@link Bed}.
-     * @param fullName       the guest's full display name.
-     * @param email          the guest's email address.
-     * @param phone          the guest's primary phone number.
-     * @param whatsappNumber the guest's WhatsApp number; defaults to {@code phone} if null.
-     * @param advanceDeposit the advance security deposit amount; defaults to {@link BigDecimal#ZERO} if null.
-     * @param checkInDate    the check-in date; defaults to today if null.
-     * @return the saved {@link Guest} entity.
-     */
+    @Transactional
+    public Guest checkIn(final String bedId, final String fullName, final String email,
+                         final String phone, final String whatsappNumber,
+                         final BigDecimal advanceDeposit, final LocalDate checkInDate,
+                         final String vehicleRegistration) {
+        return checkIn(bedId, fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, false);
+    }
+
     @Transactional
     public Guest checkIn(final String bedId, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate) {
-        return checkIn(bedId, fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, null);
+        return checkIn(bedId, fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, null, false);
     }
 
     /**
@@ -323,14 +354,24 @@ public class GuestService {
         final String oldBedLabel = (oldBed != null) ? oldBed.getBedLabel() : "None";
 
         if (oldBed != null) {
-            oldBed.setStatus(BedStatus.VACANT);
-            bedRepository.save(oldBed);
+            if (guest.isBookEntireRoom()) {
+                final List<Bed> oldRoomBeds = bedRepository.findByRoomId(oldBed.getRoom().getId());
+                for (final Bed b : oldRoomBeds) {
+                    b.setStatus(BedStatus.VACANT);
+                    bedRepository.save(b);
+                }
+            } else {
+                oldBed.setStatus(BedStatus.VACANT);
+                bedRepository.save(oldBed);
+            }
         }
 
         newBed.setStatus(BedStatus.OCCUPIED);
         bedRepository.save(newBed);
 
         guest.setBed(newBed);
+        guest.setBuilding(newBed.getRoom().getFloor().getBuilding());
+        guest.setBookEntireRoom(false); // Reset book entire room on switch
         final Guest       savedGuest = guestRepository.save(guest);
         final BigDecimal  newRent    = newBed.getRoom().getBaseRent();
 

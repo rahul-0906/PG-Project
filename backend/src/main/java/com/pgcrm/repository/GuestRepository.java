@@ -222,4 +222,40 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
             WHERE g.active = true
             """)
     List<Guest> findActive();
+
+    /**
+     * Finds active or historically active guests in a building during a specific period.
+     */
+    @Query("""
+            SELECT g FROM Guest g
+            LEFT JOIN FETCH g.user
+            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH b.room r
+            LEFT JOIN FETCH r.floor f
+            LEFT JOIN FETCH r.block
+            WHERE g.building.id = :buildingId
+              AND g.checkInDate <= :periodEnd
+              AND (g.actualCheckOutDate IS NULL OR g.actualCheckOutDate >= :periodStart)
+            """)
+    List<Guest> findActiveOrHistoricallyActiveByBuildingInPeriod(
+            @Param("buildingId")  String buildingId,
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd")   LocalDate periodEnd);
+
+    /**
+     * Finds active or historically active guests globally during a specific period.
+     */
+    @Query("""
+            SELECT g FROM Guest g
+            LEFT JOIN FETCH g.user
+            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH b.room r
+            LEFT JOIN FETCH r.floor f
+            LEFT JOIN FETCH r.block
+            WHERE g.checkInDate <= :periodEnd
+              AND (g.actualCheckOutDate IS NULL OR g.actualCheckOutDate >= :periodStart)
+            """)
+    List<Guest> findActiveOrHistoricallyActiveInPeriod(
+            @Param("periodStart") LocalDate periodStart,
+            @Param("periodEnd")   LocalDate periodEnd);
 }

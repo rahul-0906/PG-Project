@@ -139,8 +139,14 @@ public class SettlementService {
         final YearMonth  currentMonth = YearMonth.now();
 
         // ── 1. Pro-rated rent ─────────────────────────────────────────────────
-        final BigDecimal baseRent     = guest.getBed() != null
-                ? guest.getBed().getRoom().getBaseRent() : BigDecimal.ZERO;
+        BigDecimal baseRent = BigDecimal.ZERO;
+        if (guest.getBed() != null) {
+            final com.pgcrm.entity.Room room = guest.getBed().getRoom();
+            baseRent = room.getBaseRent();
+            if (guest.isBookEntireRoom()) {
+                baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
+            }
+        }
         final int        daysInMonth  = currentMonth.lengthOfMonth();
         final long       daysStayed   = today.getDayOfMonth();
         final BigDecimal proratedRent = baseRent
@@ -195,8 +201,16 @@ public class SettlementService {
         guest.setExitDate(null);
         if (guest.getBed() != null) {
             final Bed bed = guest.getBed();
-            bed.setStatus(BedStatus.VACANT);
-            bedRepository.save(bed);
+            if (guest.isBookEntireRoom()) {
+                final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
+                for (final Bed b : roomBeds) {
+                    b.setStatus(BedStatus.VACANT);
+                    bedRepository.save(b);
+                }
+            } else {
+                bed.setStatus(BedStatus.VACANT);
+                bedRepository.save(bed);
+            }
             guest.setBed(null);
         }
         guestRepository.save(guest);

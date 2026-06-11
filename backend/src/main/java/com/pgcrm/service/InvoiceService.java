@@ -328,8 +328,14 @@ public class InvoiceService {
      * @return the pro-rated or full rent amount, rounded to 2 decimal places.
      */
     private BigDecimal calculateProRatedRent(final Guest guest, final YearMonth ym) {
-        final BigDecimal baseRent = guest.getBed() != null
-                ? guest.getBed().getRoom().getBaseRent() : BigDecimal.ZERO;
+        BigDecimal baseRent = BigDecimal.ZERO;
+        if (guest.getBed() != null) {
+            final com.pgcrm.entity.Room room = guest.getBed().getRoom();
+            baseRent = room.getBaseRent();
+            if (guest.isBookEntireRoom()) {
+                baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
+            }
+        }
         final LocalDate checkIn = guest.getCheckInDate();
         if (checkIn == null) return baseRent;
 

@@ -108,7 +108,8 @@ public class PgManagerController {
                 body.getAdvanceDeposit() != null
                         ? body.getAdvanceDeposit() : BigDecimal.ZERO,
                 checkInDate,
-                body.getVehicleRegistration()
+                body.getVehicleRegistration(),
+                body.isBookEntireRoom()
         );
 
         boolean isVeg = body.isVeg();
@@ -505,8 +506,8 @@ public class PgManagerController {
         java.time.LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
 
         java.util.List<Guest> guests = branchId != null
-                ? guestRepository.findActiveGuestsByBuildingId(branchId)
-                : guestRepository.findByActiveTrue();
+                ? guestRepository.findActiveOrHistoricallyActiveByBuildingInPeriod(branchId, start, end)
+                : guestRepository.findActiveOrHistoricallyActiveInPeriod(start, end);
 
         java.util.List<DailyLog> logs = dailyLogRepository.findByLogDateBetween(start, end);
 
@@ -525,6 +526,8 @@ public class PgManagerController {
             item.put("guestId", g.getId());
             item.put("guestName", g.getFullName());
             item.put("bedLabel", g.getBed() != null ? g.getBed().getBedLabel() : "—");
+            item.put("checkInDate", g.getCheckInDate() != null ? g.getCheckInDate().toString() : null);
+            item.put("actualCheckOutDate", g.getActualCheckOutDate() != null ? g.getActualCheckOutDate().toString() : null);
 
             java.util.Map<String, Object> daysMap = new java.util.LinkedHashMap<>();
             java.util.Map<java.time.LocalDate, DailyLog> guestLogs = logsMap.getOrDefault(g.getId(), java.util.Map.of());

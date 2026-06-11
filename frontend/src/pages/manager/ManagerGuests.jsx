@@ -41,11 +41,13 @@ export default function ManagerGuests() {
     foodOptedIn: false,
     breakfastOpted: false,
     lunchOpted: false,
-    dinnerOpted: false
+    dinnerOpted: false,
+    isBookEntireRoom: false
   });
   const [saving, setSaving] = useState(false);
   const [vacantBeds, setVacantBeds] = useState([]);
   const [selectedBedInfo, setSelectedBedInfo] = useState(null);
+  const [selectedRoomBeds, setSelectedRoomBeds] = useState([]);
   const [loadingBeds, setLoadingBeds] = useState(false);
 
   const showToast = (message, type = 'success') => {
@@ -205,9 +207,11 @@ export default function ManagerGuests() {
       foodOptedIn: false,
       breakfastOpted: false,
       lunchOpted: false,
-      dinnerOpted: false
+      dinnerOpted: false,
+      isBookEntireRoom: false
     });
     setSelectedBedInfo(null);
+    setSelectedRoomBeds([]);
     setSameAsPhone(false);
     setDepositError('');
   };
@@ -244,11 +248,13 @@ export default function ManagerGuests() {
       setSaving(true);
 
       const baseRent = Number(selectedBedInfo?.room?.baseRent || 0);
+      const sharingType = Number(selectedBedInfo?.room?.sharingType || 1);
+      const effectiveBaseRent = form.isBookEntireRoom ? baseRent * sharingType : baseRent;
       const deposit = form.advanceDeposit === '' ? 0 : parseFloat(form.advanceDeposit);
       
-      if (deposit < baseRent) {
-        showToast(`Advance deposit (₹${deposit}) cannot be less than the base bed rent (₹${baseRent}).`, 'error');
-        setDepositError(`Advance deposit (₹${deposit}) cannot be less than the base bed rent (₹${baseRent}).`);
+      if (deposit < effectiveBaseRent) {
+        showToast(`Advance deposit (₹${deposit}) cannot be less than the base bed rent (₹${effectiveBaseRent}).`, 'error');
+        setDepositError(`Advance deposit (₹${deposit}) cannot be less than the base bed rent (₹${effectiveBaseRent}).`);
         setSaving(false);
         return;
       }
@@ -265,7 +271,8 @@ export default function ManagerGuests() {
         isVeg: !!form.isVeg,
         breakfastOpted: !!(form.foodOptedIn && form.breakfastOpted),
         lunchOpted: !!(form.foodOptedIn && form.lunchOpted),
-        dinnerOpted: !!(form.foodOptedIn && form.dinnerOpted)
+        dinnerOpted: !!(form.foodOptedIn && form.dinnerOpted),
+        isBookEntireRoom: !!form.isBookEntireRoom
       };
 
       console.log('Initiating check-in with payload:', payload);
@@ -393,6 +400,15 @@ export default function ManagerGuests() {
     return searchMatch && floorMatch;
   });
 
+  const isBookEntireRoomEnabled = selectedRoomBeds.length > 0 && 
+    (selectedBedInfo?.room?.sharingType > 1) && 
+    selectedRoomBeds.every(bed => {
+      const occupant = guests.find(g => g.bedId === bed.id);
+      const isNoticePeriod = occupant && occupant.noticeDate;
+      const isOccupied = (bed.status === 'OCCUPIED' || occupant) && !isNoticePeriod;
+      return !isOccupied && !isNoticePeriod;
+    });
+
   return (
     <AppLayout>
       {toast && (
@@ -510,9 +526,14 @@ export default function ManagerGuests() {
                             {Object.entries(rooms).map(([roomNum, beds]) => (
                               <div key={roomNum} className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col gap-2 min-w-[220px] flex-grow md:flex-initial shadow-sm hover:border-slate-300 transition-colors">
                                 <div className="flex flex-col gap-0.5">
-                                  <span className="flex items-center gap-1 font-semibold text-xs text-slate-700 font-heading">
-                                    <Home className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5}/>
-                                    <span>Room {roomNum}</span>
+                                  <span className="flex items-center justify-between gap-1 font-semibold text-xs text-slate-700 font-heading">
+                                    <span className="flex items-center gap-1">
+                                      <Home className="w-3.5 h-3.5 text-slate-400" strokeWidth={1.5}/>
+                                      <span>Room {roomNum}</span>
+                                    </span>
+                                    {beds[0]?.room?.isAc && (
+                                      <span className="badge bg-blue-50 border border-blue-200 text-blue-600 text-[9px] px-1.5 py-0.5 rounded">AC</span>
+                                    )}
                                   </span>
                                   <span className="text-[11px] text-slate-500 font-semibold" style={{ paddingLeft: '1.25rem' }}>
                                     {beds[0]?.room?.sharingType ? `${beds[0].room.sharingType}-Sharing` : 'Unknown'}
@@ -554,6 +575,7 @@ export default function ManagerGuests() {
                                             if (isVacant) {
                                               setForm(f => ({ ...f, bedId: bed.id }));
                                               setSelectedBedInfo(bed);
+                                              setSelectedRoomBeds(beds);
                                               setShowCheckInModal(true);
                                             }
                                           }}
@@ -652,6 +674,9 @@ export default function ManagerGuests() {
                   <td className="font-semibold text-slate-900">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span>{g.fullName}</span>
+                      {g.isAc && (
+                        <span className="badge bg-blue-50 border border-blue-200 text-blue-700 text-[10px]">AC</span>
+                      )}
                       {g.noticeDate && (
                         <span className="badge badge-warning text-[10px]">Notice</span>
                       )}
@@ -1331,6 +1356,38 @@ export default function ManagerGuests() {
                     value={form.checkInDate || form.checkinDate || ''} 
                     onChange={e => setForm(f => ({ ...f, checkInDate: e.target.value, checkinDate: e.target.value }))} 
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Sharing Type</label>
+                  <select 
+                    className="form-input bg-slate-100 cursor-not-allowed text-slate-500" 
+                    value={selectedBedInfo?.room?.sharingType || ''} 
+                    disabled
+                  >
+                    <option value="">Select Sharing Type</option>
+                    <option value="1">1-Sharing</option>
+                    <option value="2">2-Sharing</option>
+                    <option value="3">3-Sharing</option>
+                    <option value="4">4-Sharing</option>
+                  </select>
+                </div>
+                <div className="form-group mb-0 flex flex-col justify-end pb-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={!!form.isBookEntireRoom} 
+                      disabled={!isBookEntireRoomEnabled}
+                      onChange={e => setForm(f => ({ ...f, isBookEntireRoom: e.target.checked }))} 
+                      className={`rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 ${!isBookEntireRoomEnabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                    />
+                    <div className="flex flex-col">
+                      <span className={`text-xs font-semibold ${!isBookEntireRoomEnabled ? 'text-slate-400' : 'text-slate-700'}`}>Book Entire Room</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Single occupant pays combined rent of all beds</span>
+                    </div>
+                  </label>
                 </div>
               </div>
 

@@ -104,6 +104,8 @@ export default function ManagerPricing() {
   const [dinnerCutoffTime, setDinnerCutoffTime] = useState('14:00');
   const [isPreviousDay, setIsPreviousDay] = useState(true);
   const [allowedPaymentModes, setAllowedPaymentModes] = useState('BOTH');
+  const [offerOmelette, setOfferOmelette] = useState(true);
+  const [offerBoiledEgg, setOfferBoiledEgg] = useState(true);
   const [savingConfig, setSavingConfig] = useState(false);
 
   // Local state for configuration edits
@@ -114,6 +116,8 @@ export default function ManagerPricing() {
   const [localDinnerTime, setLocalDinnerTime] = useState('14:00');
   const [localIsPreviousDay, setLocalIsPreviousDay] = useState(true);
   const [localAllowedPaymentModes, setLocalAllowedPaymentModes] = useState('BOTH');
+  const [localOfferOmelette, setLocalOfferOmelette] = useState(true);
+  const [localOfferBoiledEgg, setLocalOfferBoiledEgg] = useState(true);
 
   // Sync local states when API data is loaded
   useEffect(() => {
@@ -124,7 +128,9 @@ export default function ManagerPricing() {
     setLocalDinnerTime(dinnerCutoffTime);
     setLocalIsPreviousDay(isPreviousDay);
     setLocalAllowedPaymentModes(allowedPaymentModes);
-  }, [foodIncludedInRent, allowMealCancellations, ebSplitMethod, breakfastCutoffTime, dinnerCutoffTime, isPreviousDay, allowedPaymentModes]);
+    setLocalOfferOmelette(offerOmelette);
+    setLocalOfferBoiledEgg(offerBoiledEgg);
+  }, [foodIncludedInRent, allowMealCancellations, ebSplitMethod, breakfastCutoffTime, dinnerCutoffTime, isPreviousDay, allowedPaymentModes, offerOmelette, offerBoiledEgg]);
 
   const { user } = useAuth();
 
@@ -156,6 +162,8 @@ export default function ManagerPricing() {
       setDinnerCutoffTime(res.data.dinnerCutoffTime ? res.data.dinnerCutoffTime.substring(0, 5) : '14:00');
       setIsPreviousDay(res.data.isPreviousDay ?? true);
       setAllowedPaymentModes(res.data.allowedPaymentModes ?? 'BOTH');
+      setOfferOmelette(res.data.offerOmelette ?? true);
+      setOfferBoiledEgg(res.data.offerBoiledEgg ?? true);
 
       if (user?.role === 'PG_MANAGER' && res.data?.buildings?.length > 0) {
         setBuildings(res.data.buildings);
@@ -236,7 +244,9 @@ export default function ManagerPricing() {
         breakfastCutoffTime: localBreakfastTime,
         dinnerCutoffTime: localDinnerTime,
         isPreviousDay: localIsPreviousDay,
-        allowedPaymentModes: localAllowedPaymentModes
+        allowedPaymentModes: localAllowedPaymentModes,
+        offerOmelette: localOfferOmelette,
+        offerBoiledEgg: localOfferBoiledEgg
       };
 
       await managerApi.updateBuildingConfig(payload, selectedBuildingId);
@@ -404,6 +414,56 @@ export default function ManagerPricing() {
                     <option value="BOTH">Cash & Online (Both)</option>
                     <option value="CASH_ONLY">Cash Only</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Offer Omelette */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Utensils strokeWidth={1.5} className="text-amber-600 w-5 h-5" />
+                    <span className="text-sm font-semibold text-slate-700">Offer Omelette Add-on</span>
+                  </div>
+                  <span className="text-xs text-slate-400">If enabled, omelette is offered as an add-on in meal tracker.</span>
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-2">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {localOfferOmelette ? 'Offered' : 'Disabled'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLocalOfferOmelette(prev => !prev)}
+                    className="relative inline-flex items-center focus:outline-none"
+                  >
+                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localOfferOmelette ? 'bg-primary' : 'bg-slate-200'}`}>
+                      <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localOfferOmelette ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Offer Boiled Egg */}
+              <div className="flex flex-col justify-between p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
+                <div className="mb-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Egg strokeWidth={1.5} className="text-amber-500 w-5 h-5" />
+                    <span className="text-sm font-semibold text-slate-700">Offer Boiled Egg Add-on</span>
+                  </div>
+                  <span className="text-xs text-slate-400">If enabled, boiled egg is offered as an add-on in meal tracker.</span>
+                </div>
+                <div className="flex items-center justify-between mt-auto pt-2">
+                  <span className="text-xs font-semibold text-slate-600">
+                    {localOfferBoiledEgg ? 'Offered' : 'Disabled'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setLocalOfferBoiledEgg(prev => !prev)}
+                    className="relative inline-flex items-center focus:outline-none"
+                  >
+                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localOfferBoiledEgg ? 'bg-primary' : 'bg-slate-200'}`}>
+                      <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localOfferBoiledEgg ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>

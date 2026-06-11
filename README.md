@@ -73,7 +73,7 @@ graph TD
     subgraph Infrastructure [Data & Comms]
         DB[(PostgreSQL / H2)]
         Mail[SMTP Mail Server]
-        Twilio[Twilio WhatsApp Gateway]
+        MetaWhatsApp[Meta WhatsApp Cloud API]
     end
 
     UI --> Contexts
@@ -85,7 +85,7 @@ graph TD
     Services --> Repo
     Repo --> DB
     Services --> Mail
-    Services --> Twilio
+    Services --> MetaWhatsApp
 ```
 
 ### 2.1 Backend Platform
@@ -106,7 +106,7 @@ graph TD
 * **Razorpay Checkout SDK**: Integrated client-side payment processing modal.
 
 ### 2.3 External Communications
-* **Twilio WhatsApp API**: Dynamic WhatsApp messaging for payment reminders and receipts.
+* **Meta WhatsApp Cloud API**: Direct integration with the Meta Graph API for automated reminders, notifications, and webhook support.
 * **Spring Mail & Thymeleaf**: Dynamic HTML email template compilation and SMTP delivery.
 
 ---
@@ -137,9 +137,10 @@ Create an `.env` file in the root or set these parameters in your operating syst
 * `SPRING_DATASOURCE_PASSWORD`: Database login password.
 
 ### 4.3 Third-Party API Keys
-* `TWILIO_ACCOUNT_SID`: Account SID for WhatsApp reminders.
-* `TWILIO_AUTH_TOKEN`: Secret Auth Token for Twilio API authentications.
-* `TWILIO_WHATSAPP_NUMBER`: The sandbox or approved WhatsApp sender number (e.g., `whatsapp:+14155238886`).
+### 4.3 Third-Party API Keys
+* `META_WHATSAPP_PHONE_NUMBER_ID`: The Phone Number ID provided in the Meta App Dashboard.
+* `META_WHATSAPP_ACCESS_TOKEN`: The system user access token for Meta Graph API calls.
+* `META_WEBHOOK_VERIFY_TOKEN`: The custom token used to verify WhatsApp incoming webhooks.
 * `RAZORPAY_KEY_ID`: Razorpay public API key (e.g. `rzp_test_SuLwO7L565iIkE`).
 * `RAZORPAY_KEY_SECRET`: Razorpay secure key secret for validation.
 * `RAZORPAY_ENABLED`: Flag to toggle Razorpay (`true` or `false`). When `false`, payments resolve through a mock transaction simulator.

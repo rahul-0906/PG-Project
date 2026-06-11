@@ -172,6 +172,18 @@ public class GuestResponse {
     private boolean vegPreference;
 
     /**
+     * Whether the guest's room has AC.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("isAc")
+    private boolean isAc;
+
+    /**
+     * Whether the guest booked the entire room.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("isBookEntireRoom")
+    private boolean isBookEntireRoom;
+
+    /**
      * Null-safe static factory method that maps a {@link Guest} entity
      * (and its lazily-loaded associations) to a flat {@code GuestResponse} DTO.
      *
@@ -198,10 +210,12 @@ public class GuestResponse {
         String roomNumber = null;
         String floorName  = null;
         BigDecimal baseRent = null;
+        boolean isAc = false;
 
         if (guest.getBed() != null && guest.getBed().getRoom() != null) {
             roomNumber = guest.getBed().getRoom().getRoomNumber();
             baseRent   = guest.getBed().getRoom().getBaseRent();
+            isAc       = guest.getBed().getRoom().isAc();
             if (guest.getBed().getRoom().getFloor() != null) {
                 floorName = guest.getBed().getRoom().getFloor().getFloorLabel();
             }
@@ -232,6 +246,8 @@ public class GuestResponse {
                 .lunchPreference(guest.isLunchPreference())
                 .dinnerPreference(guest.isDinnerPreference())
                 .vegPreference(guest.isVegPreference())
+                .isAc(isAc)
+                .isBookEntireRoom(guest.isBookEntireRoom())
                 .build();
     }
 }

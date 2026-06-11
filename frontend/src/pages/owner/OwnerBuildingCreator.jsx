@@ -31,7 +31,7 @@ function makeBlock(name = 'Block A') {
   return { _id: uid(), name, roomConfigs: [makeRoomConfig()] };
 }
 function makeRoomConfig(sharing = 2) {
-  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''] };
+  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: false };
 }
 
 // ── Step components for Creator ───────────────────────────────────
@@ -192,6 +192,15 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
             id={`base-rent-${rc._id}`}
           />
         </div>
+        <label className="flex items-center gap-1.5 cursor-pointer select-none py-1 px-2 rounded-lg bg-slate-50 border border-slate-200">
+          <input
+            type="checkbox"
+            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+            checked={rc.isAc || false}
+            onChange={e => onUpdate({ ...rc, isAc: e.target.checked })}
+          />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AC</span>
+        </label>
         <button type="button" className="p-1 text-red-400 hover:text-red-600" onClick={onRemove}>
           <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
         </button>
@@ -833,11 +842,22 @@ export default function OwnerBuildingCreator() {
         const match = floorId ? f.id === floorId : f._tempId === floorTempId;
         if (!match) return f;
         const letter = String.fromCharCode(65 + f.blocks.length);
+        const nextRoomNum = `${f.number}${letter}-2S1`;
         const newBlock = {
           id: '',
           _tempId: uid(),
           name: `Block ${letter}`,
-          rooms: []
+          rooms: [
+            {
+              id: '',
+              _tempId: uid(),
+              roomNumber: nextRoomNum,
+              sharing: 2,
+              baseRent: 8000,
+              isAc: false,
+              occupiedBedsCount: 0
+            }
+          ]
         };
         return { ...f, blocks: [...f.blocks, newBlock] };
       })
@@ -873,6 +893,7 @@ export default function OwnerBuildingCreator() {
       roomNumber: '',
       sharing: 2,
       baseRent: 8000,
+      isAc: false,
       occupiedBedsCount: 0
     };
 
@@ -1031,7 +1052,8 @@ export default function OwnerBuildingCreator() {
             id: r.id || null,
             roomNumber: r.roomNumber.trim(),
             sharing: r.sharing,
-            baseRent: parseFloat(r.baseRent) || 0
+            baseRent: parseFloat(r.baseRent) || 0,
+            isAc: r.isAc || false
           })),
           blocks: f.blocks.map(b => ({
             id: b.id || null,
@@ -1040,7 +1062,8 @@ export default function OwnerBuildingCreator() {
               id: r.id || null,
               roomNumber: r.roomNumber.trim(),
               sharing: r.sharing,
-              baseRent: parseFloat(r.baseRent) || 0
+              baseRent: parseFloat(r.baseRent) || 0,
+              isAc: r.isAc || false
             }))
           }))
         }))
@@ -1128,7 +1151,8 @@ export default function OwnerBuildingCreator() {
             sharing: r.sharing,
             count: parseInt(r.count) || 1,
             baseRent: parseFloat(r.baseRent) || 0,
-            roomNumbers: r.roomNumbers || []
+            roomNumbers: r.roomNumbers || [],
+            isAc: r.isAc || false
           })),
           blocks: f.blocks.map(b => ({
             name: b.name,
@@ -1136,7 +1160,8 @@ export default function OwnerBuildingCreator() {
               sharing: r.sharing,
               count: parseInt(r.count) || 1,
               baseRent: parseFloat(r.baseRent) || 0,
-              roomNumbers: r.roomNumbers || []
+              roomNumbers: r.roomNumbers || [],
+              isAc: r.isAc || false
             })),
           })),
         })),
@@ -1611,25 +1636,30 @@ export default function OwnerBuildingCreator() {
                           </div>
 
                           <div className="p-3 flex flex-col gap-2">
-                            <div className="grid grid-cols-5 text-xs text-slate-400 font-medium px-2 mb-0.5">
+                            <div className="grid grid-cols-6 text-xs text-slate-400 font-medium px-2 mb-0.5">
                               <span>Room No.</span>
                               <span>Sharing</span>
                               <span>Rent/Bed</span>
+                              <span className="text-center">AC</span>
                               <span className="text-center">Guests</span>
                               <span></span>
                             </div>
 
                             {block.rooms.map(room => (
-                              <div key={room.id || room._tempId} className="grid grid-cols-5 gap-2 items-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                              <div key={room.id || room._tempId} className="grid grid-cols-6 gap-2 items-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
                                 <input
                                   className="form-input py-1 px-2 text-xs"
                                   value={room.roomNumber}
                                   onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'roomNumber', e.target.value)}
+                                  id={`edit-room-number-block-${room.id || room._tempId}`}
+                                  name={`edit-room-number-block-${room.id || room._tempId}`}
                                 />
                                 <select
                                   className="form-input py-1 px-2 text-xs font-semibold"
                                   value={room.sharing}
                                   onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'sharing', parseInt(e.target.value))}
+                                  id={`edit-sharing-block-${room.id || room._tempId}`}
+                                  name={`edit-sharing-block-${room.id || room._tempId}`}
                                 >
                                   {[1, 2, 3, 4].map(s => (
                                     <option key={s} value={s}>{SHARING_LABELS[s]}</option>
@@ -1648,6 +1678,16 @@ export default function OwnerBuildingCreator() {
                                     autoComplete="off"
                                     name={`edit-base-rent-block-${room.id || room._tempId}`}
                                     id={`edit-base-rent-block-${room.id || room._tempId}`}
+                                  />
+                                </div>
+                                <div className="text-center">
+                                  <input
+                                    type="checkbox"
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                                    checked={room.isAc || false}
+                                    onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'isAc', e.target.checked)}
+                                    id={`edit-isAc-block-${room.id || room._tempId}`}
+                                    name={`edit-isAc-block-${room.id || room._tempId}`}
                                   />
                                 </div>
                                 <div className="text-center">
@@ -1688,29 +1728,34 @@ export default function OwnerBuildingCreator() {
                       {floor.rooms.length > 0 && (
                         <div className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-xs font-semibold text-slate-500 mb-2">Standalone Rooms (no block)</p>
-                          <div className="grid grid-cols-5 text-xs text-slate-400 font-medium px-2 mb-0.5">
+                          <div className="grid grid-cols-6 text-xs text-slate-400 font-medium px-2 mb-0.5">
                             <span>Room No.</span>
                             <span>Sharing</span>
                             <span>Rent/Bed</span>
+                            <span className="text-center">AC</span>
                             <span className="text-center">Guests</span>
                             <span></span>
                           </div>
 
                           {floor.rooms.map(room => (
-                            <div key={room.id || room._tempId} className="grid grid-cols-5 gap-2 items-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
+                            <div key={room.id || room._tempId} className="grid grid-cols-6 gap-2 items-center p-2 rounded-lg bg-slate-50 border border-slate-100 text-xs">
                               <input
                                 className="form-input py-1 px-2 text-xs"
                                 value={room.roomNumber}
                                 onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'roomNumber', e.target.value)}
+                                id={`edit-room-number-standalone-${room.id || room._tempId}`}
+                                name={`edit-room-number-standalone-${room.id || room._tempId}`}
                               />
                               <select
                                 className="form-input py-1 px-2 text-xs font-semibold"
                                 value={room.sharing}
                                 onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'sharing', parseInt(e.target.value))}
+                                id={`edit-sharing-standalone-${room.id || room._tempId}`}
+                                name={`edit-sharing-standalone-${room.id || room._tempId}`}
                               >
-                                {[1, 2, 3, 4].map(s => (
-                                  <option key={s} value={s}>{SHARING_LABELS[s]}</option>
-                                ))}
+                                  {[1, 2, 3, 4].map(s => (
+                                    <option key={s} value={s}>{SHARING_LABELS[s]}</option>
+                                  ))}
                               </select>
                               <div className="flex items-center gap-1">
                                 <span className="text-slate-400 text-xs">₹</span>
@@ -1725,6 +1770,16 @@ export default function OwnerBuildingCreator() {
                                   autoComplete="off"
                                   name={`edit-base-rent-standalone-${room.id || room._tempId}`}
                                   id={`edit-base-rent-standalone-${room.id || room._tempId}`}
+                                />
+                              </div>
+                              <div className="text-center">
+                                <input
+                                  type="checkbox"
+                                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                                  checked={room.isAc || false}
+                                  onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'isAc', e.target.checked)}
+                                  id={`edit-isAc-standalone-${room.id || room._tempId}`}
+                                  name={`edit-isAc-standalone-${room.id || room._tempId}`}
                                 />
                               </div>
                               <div className="text-center">

@@ -83,6 +83,10 @@ public class DailyLogService {
         final Guest guest = guestRepository.findById(guestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
 
+        if (guest.getCheckInDate() != null && logDate.isBefore(guest.getCheckInDate())) {
+            throw new IllegalArgumentException("Cannot update logs for a date prior to the guest's check-in date: " + guest.getCheckInDate());
+        }
+
         validateLockouts(guest, logDate, incoming);
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
@@ -216,11 +220,12 @@ public class DailyLogService {
      * @return the persisted {@link DailyLog} if it exists, or a virtual default log otherwise.
      */
     public DailyLog getLog(final String guestId, final LocalDate logDate) {
+        final Guest guest = guestRepository.findById(guestId).orElse(null);
+        if (guest != null && guest.getCheckInDate() != null && logDate.isBefore(guest.getCheckInDate())) {
+            return createBlankLog(guest, logDate);
+        }
         return dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
-                .orElseGet(() -> {
-                    final Guest guest = guestRepository.findById(guestId).orElse(null);
-                    return createDefaultLog(guest, logDate);
-                });
+                .orElseGet(() -> createDefaultLog(guest, logDate));
     }
 
     /**
@@ -249,9 +254,31 @@ public class DailyLogService {
         final List<DailyLog> result = new ArrayList<>();
 
         for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            final DailyLog dayLog = existingByDate.getOrDefault(date, createDefaultLog(guest, date));
+            final DailyLog dayLog;
+            if (guest != null && guest.getCheckInDate() != null && date.isBefore(guest.getCheckInDate())) {
+                dayLog = createBlankLog(guest, date);
+            } else {
+                dayLog = existingByDate.getOrDefault(date, createDefaultLog(guest, date));
+            }
             result.add(dayLog);
         }
         return result;
+    }
+
+    /**
+     * Helper to create a blank log with all meals false, and counts 0.
+     */
+    private DailyLog createBlankLog(final Guest guest, final LocalDate date) {
+        return DailyLog.builder()
+                .guest(guest)
+                .logDate(date)
+                .breakfastOpted(false)
+                .lunchOpted(false)
+                .dinnerOpted(false)
+                .isVeg(guest != null ? guest.isVegPreference() : true)
+                .omeletteCount(0)
+                .boiledEggCount(0)
+                .washingMachineCount(0)
+                .build();
     }
 }

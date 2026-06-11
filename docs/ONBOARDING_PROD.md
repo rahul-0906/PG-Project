@@ -59,11 +59,10 @@ RAZORPAY_ENABLED=true
 RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxxxx
 RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxx
 
-# Twilio WhatsApp Integration (For Automated Reminders)
-TWILIO_ENABLED=true
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+# Meta WhatsApp Cloud API Integration (For Automated Reminders & Webhooks)
+META_WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
+META_WHATSAPP_ACCESS_TOKEN=your_meta_access_token
+META_WEBHOOK_VERIFY_TOKEN=your_custom_webhook_verify_token
 ```
 
 ---

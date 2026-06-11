@@ -129,4 +129,10 @@ public class GuestCheckInRequest {
      * unless they explicitly cancel for a given day.
      */
     private boolean dinnerOpted;
+
+    /**
+     * Whether the guest booked the entire room.
+     */
+    @JsonProperty("isBookEntireRoom")
+    private boolean isBookEntireRoom;
 }

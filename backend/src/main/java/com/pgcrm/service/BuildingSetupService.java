@@ -125,6 +125,14 @@ public class BuildingSetupService {
         @JsonProperty("boiledEggPrice")
         private BigDecimal boiledEggPrice;
 
+        /** Whether the building config allows Omelette add-on. */
+        @JsonProperty("offerOmelette")
+        private Boolean offerOmelette;
+
+        /** Whether the building config allows Boiled Egg add-on. */
+        @JsonProperty("offerBoiledEgg")
+        private Boolean offerBoiledEgg;
+
         /** Per-building washing machine usage price override; falls back to YAML default if null. */
         @JsonProperty("washingMachinePrice")
         private BigDecimal washingMachinePrice;
@@ -204,6 +212,10 @@ public class BuildingSetupService {
         /** The monthly base rent for rooms of this configuration. */
         private BigDecimal       baseRent;
 
+        /** Whether the rooms in this configuration are AC. */
+        @JsonProperty("isAc")
+        private boolean          isAc;
+
         /**
          * Optional explicit room numbers for each room in this batch.
          * Must have exactly {@link #count} entries if provided; any missing or blank
@@ -257,6 +269,8 @@ public class BuildingSetupService {
         private BigDecimal      dinnerPrice;
         private BigDecimal      omelettePrice;
         private BigDecimal      boiledEggPrice;
+        private Boolean         offerOmelette;
+        private Boolean         offerBoiledEgg;
         private BigDecimal      washingMachinePrice;
         private String          ebSplitMethod;
         private LocalTime       breakfastCutoffTime;
@@ -293,6 +307,8 @@ public class BuildingSetupService {
         private String     roomNumber;
         private int        sharing;
         private BigDecimal baseRent;
+        @JsonProperty("isAc")
+        private boolean    isAc;
         /** The number of occupied beds in this room (read-only display field; not processed on write). */
         private int        occupiedBedsCount;
     }
@@ -356,6 +372,8 @@ public class BuildingSetupService {
                 .breakfastCutoffTime(req.getBreakfastCutoffTime() != null ? req.getBreakfastCutoffTime() : LocalTime.of(22, 0))
                 .dinnerCutoffTime(req.getDinnerCutoffTime()       != null ? req.getDinnerCutoffTime()     : LocalTime.of(14, 0))
                 .isPreviousDay(req.getIsPreviousDay() != null ? req.getIsPreviousDay() : true)
+                .offerOmelette(req.getOfferOmelette() != null ? req.getOfferOmelette() : true)
+                .offerBoiledEgg(req.getOfferBoiledEgg() != null ? req.getOfferBoiledEgg() : true)
                 .build());
 
         int totalBlocks = 0, totalRooms = 0, totalBeds = 0;
@@ -382,6 +400,7 @@ public class BuildingSetupService {
                                 .roomNumber(roomNum)
                                 .sharingType(rc.getSharing())
                                 .baseRent(rc.getBaseRent())
+                                .isAc(rc.isAc())
                                 .build());
 
                         final String bedPrefix = hasExplicitRoomNumber(rc, i)
@@ -421,6 +440,7 @@ public class BuildingSetupService {
                                         .roomNumber(roomNum)
                                         .sharingType(rc.getSharing())
                                         .baseRent(rc.getBaseRent())
+                                        .isAc(rc.isAc())
                                         .build());
 
                                 final String bedPrefix = hasExplicitRoomNumber(rc, r - 1)
@@ -477,6 +497,8 @@ public class BuildingSetupService {
             req.setDinnerPrice(config.getDinnerPrice());
             req.setOmelettePrice(config.getOmelettePrice());
             req.setBoiledEggPrice(config.getBoiledEggPrice());
+            req.setOfferOmelette(config.isOfferOmelette());
+            req.setOfferBoiledEgg(config.isOfferBoiledEgg());
             req.setWashingMachinePrice(config.getWashingMachinePrice());
             req.setEbSplitMethod(config.getEbSplitMethod() != null ? config.getEbSplitMethod().name() : null);
             req.setBreakfastCutoffTime(config.getBreakfastCutoffTime());
@@ -564,6 +586,8 @@ public class BuildingSetupService {
         if (req.getDinnerPrice()           != null) config.setDinnerPrice(req.getDinnerPrice());
         if (req.getOmelettePrice()         != null) config.setOmelettePrice(req.getOmelettePrice());
         if (req.getBoiledEggPrice()        != null) config.setBoiledEggPrice(req.getBoiledEggPrice());
+        if (req.getOfferOmelette()         != null) config.setOfferOmelette(req.getOfferOmelette());
+        if (req.getOfferBoiledEgg()        != null) config.setOfferBoiledEgg(req.getOfferBoiledEgg());
         if (req.getWashingMachinePrice()   != null) config.setWashingMachinePrice(req.getWashingMachinePrice());
         if (req.getBreakfastCutoffTime()   != null) config.setBreakfastCutoffTime(req.getBreakfastCutoffTime());
         if (req.getDinnerCutoffTime()      != null) config.setDinnerCutoffTime(req.getDinnerCutoffTime());
@@ -730,6 +754,7 @@ public class BuildingSetupService {
         re.setRoomNumber(r.getRoomNumber());
         re.setSharing(r.getSharingType());
         re.setBaseRent(r.getBaseRent());
+        re.setAc(r.isAc());
         final List<Bed> beds     = bedRepository.findByRoomId(r.getId());
         final long      occupied = beds.stream().filter(bed -> bed.getStatus() == BedStatus.OCCUPIED).count();
         re.setOccupiedBedsCount((int) occupied);
@@ -803,6 +828,9 @@ public class BuildingSetupService {
                     .orElseThrow(() -> new IllegalArgumentException("Room not found: " + re.getId()));
             existing.setRoomNumber(re.getRoomNumber());
             existing.setBaseRent(re.getBaseRent());
+            existing.setAc(re.isAc());
+            existing.setFloor(floor);
+            existing.setBlock(block);
             if (existing.getSharingType() != re.getSharing()) {
                 adjustRoomBeds(existing, re.getSharing());
                 existing.setSharingType(re.getSharing());
@@ -815,6 +843,7 @@ public class BuildingSetupService {
                     .roomNumber(re.getRoomNumber())
                     .sharingType(re.getSharing())
                     .baseRent(re.getBaseRent())
+                    .isAc(re.isAc())
                     .build());
             createBeds(room, re.getSharing(), "R-" + re.getRoomNumber() + "-B");
         }

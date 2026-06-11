@@ -92,6 +92,8 @@ public class PricingController {
 
         boolean foodIncludedInRent = false;
         boolean allowMealCancellations = true;
+        boolean offerOmelette = true;
+        boolean offerBoiledEgg = true;
         String ebSplitMethod = "EQUAL_SPLIT";
         java.time.LocalTime breakfastCutoffTime = systemConfig.getRules().getBreakfastLockoutTime();
         java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
@@ -104,6 +106,8 @@ public class PricingController {
                 BuildingConfig cfg = configOpt.get();
                 foodIncludedInRent = cfg.isFoodIncludedInRent();
                 allowMealCancellations = cfg.isAllowMealCancellations();
+                offerOmelette = cfg.isOfferOmelette();
+                offerBoiledEgg = cfg.isOfferBoiledEgg();
                 if (cfg.getEbSplitMethod() != null) {
                     ebSplitMethod = cfg.getEbSplitMethod().name();
                 }
@@ -128,18 +132,20 @@ public class PricingController {
             ebSplitMethod = systemConfig.getRules().getEbSplitMethod();
         }
 
-        return ResponseEntity.ok(Map.of(
-                "foodPricing", foodPricing,
-                "buildings", buildings,
-                "billingSchedulerEnabled", schedulerEnabled,
-                "foodIncludedInRent", foodIncludedInRent,
-                "allowMealCancellations", allowMealCancellations,
-                "ebSplitMethod", ebSplitMethod,
-                "breakfastCutoffTime", breakfastCutoffTime.toString(),
-                "dinnerCutoffTime", dinnerCutoffTime.toString(),
-                "isPreviousDay", isPreviousDay,
-                "allowedPaymentModes", allowedPaymentModes
-        ));
+        Map<String, Object> pricingDetails = new LinkedHashMap<>();
+        pricingDetails.put("foodPricing", foodPricing);
+        pricingDetails.put("buildings", buildings);
+        pricingDetails.put("billingSchedulerEnabled", schedulerEnabled);
+        pricingDetails.put("foodIncludedInRent", foodIncludedInRent);
+        pricingDetails.put("allowMealCancellations", allowMealCancellations);
+        pricingDetails.put("offerOmelette", offerOmelette);
+        pricingDetails.put("offerBoiledEgg", offerBoiledEgg);
+        pricingDetails.put("ebSplitMethod", ebSplitMethod);
+        pricingDetails.put("breakfastCutoffTime", breakfastCutoffTime.toString());
+        pricingDetails.put("dinnerCutoffTime", dinnerCutoffTime.toString());
+        pricingDetails.put("isPreviousDay", isPreviousDay);
+        pricingDetails.put("allowedPaymentModes", allowedPaymentModes);
+        return ResponseEntity.ok(pricingDetails);
     }
 
     /**
@@ -218,6 +224,12 @@ public class PricingController {
         }
         if (body.containsKey("allowedPaymentModes")) {
             cfg.setAllowedPaymentModes(body.get("allowedPaymentModes").toString());
+        }
+        if (body.containsKey("offerOmelette")) {
+            cfg.setOfferOmelette(Boolean.parseBoolean(body.get("offerOmelette").toString()));
+        }
+        if (body.containsKey("offerBoiledEgg")) {
+            cfg.setOfferBoiledEgg(Boolean.parseBoolean(body.get("offerBoiledEgg").toString()));
         }
 
         return ResponseEntity.ok(buildingConfigRepository.save(cfg));
@@ -305,6 +317,7 @@ public class PricingController {
         m.put("roomNumber", room.getRoomNumber());
         m.put("sharingType", room.getSharingType());
         m.put("baseRent", room.getBaseRent());
+        m.put("isAc", room.isAc());
         return m;
     }
 }

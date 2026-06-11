@@ -30,7 +30,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-function DailyRosterCell({ log, day }) {
+function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true }) {
   if (!log) return (
     <div className="flex items-center justify-center gap-0.5 text-slate-200">
       <span>•</span><span>•</span><span>•</span>
@@ -40,7 +40,9 @@ function DailyRosterCell({ log, day }) {
   const bOpt = log.breakfast;
   const lOpt = log.lunch;
   const dOpt = log.dinner;
-  const hasAddons = (log.omelettes || 0) > 0 || (log.boiledEggs || 0) > 0 || (log.laundry || 0) > 0;
+  const hasAddons = (offerOmelette && (log.omelettes || 0) > 0) || 
+                    (offerBoiledEgg && (log.boiledEggs || 0) > 0) || 
+                    ((log.laundry || 0) > 0);
 
   let positionClass = "left-1/2 -translate-x-1/2";
   if (day !== undefined) {
@@ -67,8 +69,8 @@ function DailyRosterCell({ log, day }) {
         <div>B: {bOpt ? 'Yes' : 'No'} | L: {lOpt ? 'Yes' : 'No'} | D: {dOpt ? 'Yes' : 'No'}</div>
         {hasAddons && (
           <div className="mt-0.5 border-t border-slate-700 pt-0.5 font-semibold text-indigo-300">
-            {log.omelettes > 0 && `Omelettes: ${log.omelettes} `}
-            {log.boiledEggs > 0 && `Boiled Eggs: ${log.boiledEggs} `}
+            {offerOmelette && log.omelettes > 0 && `Omelettes: ${log.omelettes} `}
+            {offerBoiledEgg && log.boiledEggs > 0 && `Boiled Eggs: ${log.boiledEggs} `}
             {log.laundry > 0 && `Washing Machine: ${log.laundry} `}
           </div>
         )}
@@ -97,6 +99,21 @@ export default function ManagerGuestAddons() {
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedGuestId, setExpandedGuestId] = useState(null);
+
+  // Building configuration for add-on toggles
+  const [offerOmelette, setOfferOmelette] = useState(true);
+  const [offerBoiledEgg, setOfferBoiledEgg] = useState(true);
+
+  useEffect(() => {
+    managerApi.getPricing()
+      .then(res => {
+        setOfferOmelette(res.data.offerOmelette ?? true);
+        setOfferBoiledEgg(res.data.offerBoiledEgg ?? true);
+      })
+      .catch(err => {
+        console.error("Failed to fetch pricing config for add-on toggles", err);
+      });
+  }, []);
 
   // Hybrid Save states
   const [hasUnsavedBulkChanges, setHasUnsavedBulkChanges] = useState(false);
@@ -397,12 +414,12 @@ export default function ManagerGuestAddons() {
       {activeTab === 'daily' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           {[
-            { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), bg: 'bg-indigo-50', color: 'text-indigo-600' },
-            { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), bg: 'bg-amber-50', color: 'text-amber-600' },
+            offerOmelette && { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), bg: 'bg-indigo-50', color: 'text-indigo-600' },
+            offerBoiledEgg && { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), bg: 'bg-amber-50', color: 'text-amber-600' },
             { icon: Shirt, label:'Washing Machine', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), bg: 'bg-blue-50', color: 'text-blue-600' },
             { icon: Leaf, label:'Veg Guests', val: Object.values(logs).filter(l => l.isVeg).length, bg: 'bg-emerald-50', color: 'text-emerald-600' },
             { icon: Utensils, label:'Non-Veg', val: Object.values(logs).filter(l => !l.isVeg).length, bg: 'bg-rose-50', color: 'text-rose-600' },
-          ].map(s => {
+          ].filter(Boolean).map(s => {
             const Icon = s.icon;
             return (
               <div key={s.label} className="bg-white rounded-xl border border-slate-200 p-3 flex items-center gap-3 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200">
@@ -490,8 +507,12 @@ export default function ManagerGuestAddons() {
                         </label>
                       </div>
                     </th>
-                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Omelette (₹{config?.pricing?.omelette ?? 18})</th>
-                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                    {offerOmelette && (
+                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Omelette (₹{config?.pricing?.omelette ?? 18})</th>
+                    )}
+                    {offerBoiledEgg && (
+                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                    )}
                     <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
                   </tr>
                 </thead>
@@ -555,44 +576,48 @@ export default function ManagerGuestAddons() {
                             <span className="toggle-slider" />
                           </label>
                         </td>
-                        <td>
-                          <div className="flex items-center gap-1.5 py-1">
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange(g.id, 'omeletteCount', Math.max(0, log.omeletteCount - 1))}
-                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                            >
-                              <Minus size={16} strokeWidth={1.5} />
-                            </button>
-                            <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.omeletteCount}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange(g.id, 'omeletteCount', log.omeletteCount + 1)}
-                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                            >
-                              <Plus size={16} strokeWidth={1.5} />
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div className="flex items-center gap-1.5 py-1">
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange(g.id, 'boiledEggCount', Math.max(0, log.boiledEggCount - 1))}
-                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                            >
-                              <Minus size={16} strokeWidth={1.5} />
-                            </button>
-                            <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.boiledEggCount}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleFieldChange(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
-                              className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
-                            >
-                              <Plus size={16} strokeWidth={1.5} />
-                            </button>
-                          </div>
-                        </td>
+                        {offerOmelette && (
+                          <td>
+                            <div className="flex items-center gap-1.5 py-1">
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(g.id, 'omeletteCount', Math.max(0, log.omeletteCount - 1))}
+                                className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                              >
+                                <Minus size={16} strokeWidth={1.5} />
+                              </button>
+                              <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.omeletteCount}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(g.id, 'omeletteCount', log.omeletteCount + 1)}
+                                className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                              >
+                                <Plus size={16} strokeWidth={1.5} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                        {offerBoiledEgg && (
+                          <td>
+                            <div className="flex items-center gap-1.5 py-1">
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(g.id, 'boiledEggCount', Math.max(0, log.boiledEggCount - 1))}
+                                className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                              >
+                                <Minus size={16} strokeWidth={1.5} />
+                              </button>
+                              <span className="w-6 text-center font-semibold text-xs text-slate-700">{log.boiledEggCount}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleFieldChange(g.id, 'boiledEggCount', log.boiledEggCount + 1)}
+                                className="w-6 h-6 border border-slate-200 hover:border-slate-300 text-slate-400 hover:text-slate-600 rounded-md flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors"
+                              >
+                                <Plus size={16} strokeWidth={1.5} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                         <td>
                           <div className="flex items-center gap-1.5 py-1">
                             <button
@@ -760,15 +785,21 @@ export default function ManagerGuestAddons() {
                                     const dayNum = i + 1;
                                     const dayStr = `${year}-${String(month).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                                     const dayLog = row.days?.[dayStr];
+                                    const isOutside = (row.checkInDate && dayStr < row.checkInDate) || 
+                                                      (row.actualCheckOutDate && dayStr > row.actualCheckOutDate);
 
                                     return (
                                       <div 
                                         key={dayNum} 
-                                        className="flex flex-col items-center border border-slate-200 rounded-lg p-1.5 bg-slate-50/30 hover:border-slate-300 transition-colors"
+                                        className={`flex flex-col items-center border rounded-lg p-1.5 transition-colors ${
+                                          isOutside 
+                                            ? 'bg-slate-100 border-slate-200 opacity-40 cursor-not-allowed select-none' 
+                                            : 'bg-slate-50/30 border-slate-200 hover:border-slate-300'
+                                        }`}
                                       >
                                         <span className="text-[9px] font-medium text-slate-400 mb-0.5">{dayNum}</span>
                                         <div className="h-5 flex items-center justify-center">
-                                          <DailyRosterCell log={dayLog} day={dayNum} />
+                                          <DailyRosterCell log={isOutside ? null : dayLog} day={dayNum} offerOmelette={offerOmelette} offerBoiledEgg={offerBoiledEgg} />
                                         </div>
                                       </div>
                                     );
