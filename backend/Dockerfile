@@ -1,5 +1,5 @@
 # ─── Stage 1: Build ─────────────────────────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-17-alpine AS build
+FROM maven:3.9.16-eclipse-temurin-23-alpine AS build
 WORKDIR /app
 # Cache dependencies first (only re-downloads when pom.xml changes)
 COPY pom.xml .
@@ -9,7 +9,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests -q
 
 # ─── Stage 2: Runtime ────────────────────────────────────────────────────────
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:23-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 

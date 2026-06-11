@@ -89,12 +89,12 @@ graph TD
 ```
 
 ### 2.1 Backend Platform
-* **Java 17 & Spring Boot 3.2.5**: Core runtime framework providing embedded Tomcat execution, dependency injection, and REST controllers.
+* **Java 23 & Spring Boot 3.2.5**: Core runtime framework providing embedded Tomcat execution, dependency injection, and REST controllers.
 * **Spring Data JPA & Hibernate**: Object-relational mapping, database transactions, and queries.
 * **Flyway (Database Migrations)**: Standardizes database versioning, executing automated schema migrations (`V1` through `V5`) cleanly on server start.
 * **MapStruct (DTO Mapping)**: Facilitates type-safe, high-performance object conversion between JPA entity objects and REST data transfer objects (DTOs).
 * **Spring Security & JSON Web Tokens (JWT)**: Secures REST endpoints and verifies request authenticity stateless.
-* **H2 / PostgreSQL**: In-memory H2 database for local development and PostgreSQL 15+ for production durability.
+* **H2 / PostgreSQL**: In-memory H2 database for local development and PostgreSQL 18+ for production durability.
 
 ### 2.2 Frontend Client
 * **React 18 & Vite**: Component-driven UI framework with fast building compilation.
@@ -149,9 +149,9 @@ Create an `.env` file in the root or set these parameters in your operating syst
 ## 5. Development Quick Start
 
 ### Prerequisites
-* **Java Development Kit (JDK) 17** installed and on path.
-* **Node.js (v18+)** and **npm** installed.
-* **Maven 3.9+** (provided binary in `/apache-maven-3.9.6` can be used).
+* **Java Development Kit (JDK) 23** installed and on path.
+* **Node.js (v24+)** and **npm** installed.
+* **Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used).
 
 ### 5.1 Local Execution (H2 Database - Development Mode)
 
@@ -159,7 +159,7 @@ Create an `.env` file in the root or set these parameters in your operating syst
 Navigate to the backend directory and launch the application using the default `dev` profile:
 ```bash
 cd backend
-../apache-maven-3.9.6/bin/mvn spring-boot:run
+../apache-maven-3.9.16/bin/mvn spring-boot:run
 ```
 *The backend automatically boots on port `8080`, spins up an in-memory H2 database, and runs the `DataSeeder` runner to populate initial sample layout data.*
 
@@ -217,7 +217,7 @@ Start the database service and the application container simultaneously:
 docker-compose up --build
 ```
 This launches:
-* A **PostgreSQL 15** container listening internally on port `5432` with an active healthcheck utilizing `pg_isready` to verify database health.
+* A **PostgreSQL 18** container listening internally on port `5432` with an active healthcheck utilizing `pg_isready` to verify database health.
 * The **PG CRM Server** listening on port `8080`, mounting the config and seeding schemas.
 
 > [!TIP]
