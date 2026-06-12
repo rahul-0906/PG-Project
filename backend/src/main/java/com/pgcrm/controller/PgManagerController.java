@@ -277,6 +277,9 @@ public class PgManagerController {
             item.put("breakfastOpted",      log.isBreakfastOpted());
             item.put("lunchOpted",          log.isLunchOpted());
             item.put("dinnerOpted",         log.isDinnerOpted());
+            item.put("breakfastDisabled",   log.isBreakfastDisabled());
+            item.put("lunchDisabled",       log.isLunchDisabled());
+            item.put("dinnerDisabled",      log.isDinnerDisabled());
             item.put("omeletteCount",        log.getOmeletteCount());
             item.put("boiledEggCount",       log.getBoiledEggCount());
             item.put("washingMachineCount",  log.getWashingMachineCount());
@@ -544,7 +547,10 @@ public class PgManagerController {
                     java.util.Map.entry("isVeg", log.isVeg()),
                     java.util.Map.entry("omelettes", log.getOmeletteCount()),
                     java.util.Map.entry("boiledEggs", log.getBoiledEggCount()),
-                    java.util.Map.entry("laundry", log.getWashingMachineCount())
+                    java.util.Map.entry("laundry", log.getWashingMachineCount()),
+                    java.util.Map.entry("breakfastDisabled", log.isBreakfastDisabled()),
+                    java.util.Map.entry("lunchDisabled", log.isLunchDisabled()),
+                    java.util.Map.entry("dinnerDisabled", log.isDinnerDisabled())
                 ));
             }
             item.put("days", daysMap);

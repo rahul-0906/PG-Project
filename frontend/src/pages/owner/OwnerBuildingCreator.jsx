@@ -31,7 +31,7 @@ function makeBlock(name = 'Block A') {
   return { _id: uid(), name, roomConfigs: [makeRoomConfig()] };
 }
 function makeRoomConfig(sharing = 2) {
-  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: false };
+  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: true };
 }
 
 // ── Step components for Creator ───────────────────────────────────
@@ -196,10 +196,10 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
           <input
             type="checkbox"
             className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
-            checked={rc.isAc || false}
-            onChange={e => onUpdate({ ...rc, isAc: e.target.checked })}
+            checked={rc.isAc === false}
+            onChange={e => onUpdate({ ...rc, isAc: !e.target.checked })}
           />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AC</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Non-AC Room</span>
         </label>
         <button type="button" className="p-1 text-red-400 hover:text-red-600" onClick={onRemove}>
           <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5}/>
@@ -436,6 +436,18 @@ function Step4Pricing({ data, onChange, isEditMode = false }) {
     { key: 'washingMachinePrice', label: 'Washing Machine Price (₹)',  placeholder: '50' }
   ];
 
+  const [enablePremiumSurcharges, setEnablePremiumSurcharges] = useState(
+    data.foodIncludedInRent && (parseFloat(data.omelettePrice || 0) > 0 || parseFloat(data.boiledEggPrice || 0) > 0)
+  );
+
+  useEffect(() => {
+    if (!data.foodIncludedInRent) {
+      setEnablePremiumSurcharges(false);
+    } else {
+      setEnablePremiumSurcharges(parseFloat(data.omelettePrice || 0) > 0 || parseFloat(data.boiledEggPrice || 0) > 0);
+    }
+  }, [data.foodIncludedInRent, data.omelettePrice, data.boiledEggPrice]);
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -472,6 +484,27 @@ function Step4Pricing({ data, onChange, isEditMode = false }) {
           />
           <span>Food Included in Rent (Guests won't be charged extra for daily meals)</span>
         </label>
+        {data.foodIncludedInRent && (
+          <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 pl-6 cursor-pointer`}>
+            <input
+              type="checkbox"
+              checked={enablePremiumSurcharges}
+              disabled={isEditMode}
+              onChange={e => {
+                const checked = e.target.checked;
+                setEnablePremiumSurcharges(checked);
+                if (!checked) {
+                  onChange({
+                    ...data,
+                    omelettePrice: '0',
+                    boiledEggPrice: '0'
+                  });
+                }
+              }}
+            />
+            <span>Enable Premium Add-on Surcharges</span>
+          </label>
+        )}
         <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
           <input
             type="checkbox"
@@ -500,6 +533,9 @@ function Step4Pricing({ data, onChange, isEditMode = false }) {
       <div className="grid grid-cols-2 gap-4">
         {FOOD_ITEMS.filter(({ key }) => {
           if (data.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(key)) {
+            return false;
+          }
+          if (data.foodIncludedInRent && ['omelettePrice', 'boiledEggPrice'].includes(key) && !enablePremiumSurcharges) {
             return false;
           }
           return true;
@@ -644,9 +680,9 @@ export default function OwnerBuildingCreator() {
     breakfastPrice: '',
     lunchPrice: '',
     dinnerPrice: '',
-    omelettePrice: '',
-    boiledEggPrice: '',
-    washingMachinePrice: '',
+    omelettePrice: '0',
+    boiledEggPrice: '0',
+    washingMachinePrice: '0',
     ebSplitMethod: 'EQUAL_SPLIT'
   });
   const [floors, setFloors] = useState([makeFloor(0)]);
@@ -854,7 +890,7 @@ export default function OwnerBuildingCreator() {
               roomNumber: nextRoomNum,
               sharing: 2,
               baseRent: 8000,
-              isAc: false,
+              isAc: true,
               occupiedBedsCount: 0
             }
           ]
@@ -893,7 +929,7 @@ export default function OwnerBuildingCreator() {
       roomNumber: '',
       sharing: 2,
       baseRent: 8000,
-      isAc: false,
+      isAc: true,
       occupiedBedsCount: 0
     };
 
@@ -1186,9 +1222,9 @@ export default function OwnerBuildingCreator() {
       breakfastPrice: '',
       lunchPrice: '',
       dinnerPrice: '',
-      omelettePrice: '',
-      boiledEggPrice: '',
-      washingMachinePrice: '',
+      omelettePrice: '0',
+      boiledEggPrice: '0',
+      washingMachinePrice: '0',
       ebSplitMethod: 'EQUAL_SPLIT'
     });
     setFloors([makeFloor(0)]);
@@ -1640,7 +1676,7 @@ export default function OwnerBuildingCreator() {
                               <span>Room No.</span>
                               <span>Sharing</span>
                               <span>Rent/Bed</span>
-                              <span className="text-center">AC</span>
+                              <span className="text-center">Non-AC</span>
                               <span className="text-center">Guests</span>
                               <span></span>
                             </div>
@@ -1655,11 +1691,12 @@ export default function OwnerBuildingCreator() {
                                   name={`edit-room-number-block-${room.id || room._tempId}`}
                                 />
                                 <select
-                                  className="form-input py-1 px-2 text-xs font-semibold"
+                                  className={`form-input py-1 px-2 text-xs font-semibold ${room.occupiedBedsCount > 0 ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
                                   value={room.sharing}
                                   onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'sharing', parseInt(e.target.value))}
                                   id={`edit-sharing-block-${room.id || room._tempId}`}
                                   name={`edit-sharing-block-${room.id || room._tempId}`}
+                                  disabled={room.occupiedBedsCount > 0}
                                 >
                                   {[1, 2, 3, 4].map(s => (
                                     <option key={s} value={s}>{SHARING_LABELS[s]}</option>
@@ -1684,8 +1721,8 @@ export default function OwnerBuildingCreator() {
                                   <input
                                     type="checkbox"
                                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
-                                    checked={room.isAc || false}
-                                    onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'isAc', e.target.checked)}
+                                    checked={room.isAc === false}
+                                    onChange={e => updateEditRoomField(floor.id, floor._tempId, block.id, block._tempId, room.id, room._tempId, 'isAc', !e.target.checked)}
                                     id={`edit-isAc-block-${room.id || room._tempId}`}
                                     name={`edit-isAc-block-${room.id || room._tempId}`}
                                   />
@@ -1732,7 +1769,7 @@ export default function OwnerBuildingCreator() {
                             <span>Room No.</span>
                             <span>Sharing</span>
                             <span>Rent/Bed</span>
-                            <span className="text-center">AC</span>
+                            <span className="text-center">Non-AC</span>
                             <span className="text-center">Guests</span>
                             <span></span>
                           </div>
@@ -1747,11 +1784,12 @@ export default function OwnerBuildingCreator() {
                                 name={`edit-room-number-standalone-${room.id || room._tempId}`}
                               />
                               <select
-                                className="form-input py-1 px-2 text-xs font-semibold"
+                                className={`form-input py-1 px-2 text-xs font-semibold ${room.occupiedBedsCount > 0 ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''}`}
                                 value={room.sharing}
                                 onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'sharing', parseInt(e.target.value))}
                                 id={`edit-sharing-standalone-${room.id || room._tempId}`}
                                 name={`edit-sharing-standalone-${room.id || room._tempId}`}
+                                disabled={room.occupiedBedsCount > 0}
                               >
                                   {[1, 2, 3, 4].map(s => (
                                     <option key={s} value={s}>{SHARING_LABELS[s]}</option>
@@ -1776,8 +1814,8 @@ export default function OwnerBuildingCreator() {
                                 <input
                                   type="checkbox"
                                   className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
-                                  checked={room.isAc || false}
-                                  onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'isAc', e.target.checked)}
+                                  checked={room.isAc === false}
+                                  onChange={e => updateEditRoomField(floor.id, floor._tempId, null, null, room.id, room._tempId, 'isAc', !e.target.checked)}
                                   id={`edit-isAc-standalone-${room.id || room._tempId}`}
                                   name={`edit-isAc-standalone-${room.id || room._tempId}`}
                                 />

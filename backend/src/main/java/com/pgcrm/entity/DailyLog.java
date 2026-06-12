@@ -196,4 +196,40 @@ public class DailyLog {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    @Transient
+    @JsonProperty("breakfastDisabled")
+    public boolean isBreakfastDisabled() {
+        if (guest == null || guest.getCheckInDate() == null || logDate == null) return false;
+        if (logDate.isBefore(guest.getCheckInDate())) return true;
+        if (logDate.equals(guest.getCheckInDate())) {
+            java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
+            return checkInDateTime.toLocalTime().isAfter(java.time.LocalTime.of(10, 0));
+        }
+        return false;
+    }
+
+    @Transient
+    @JsonProperty("lunchDisabled")
+    public boolean isLunchDisabled() {
+        if (guest == null || guest.getCheckInDate() == null || logDate == null) return false;
+        if (logDate.isBefore(guest.getCheckInDate())) return true;
+        if (logDate.equals(guest.getCheckInDate())) {
+            java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
+            return checkInDateTime.toLocalTime().isAfter(java.time.LocalTime.of(14, 0));
+        }
+        return false;
+    }
+
+    @Transient
+    @JsonProperty("dinnerDisabled")
+    public boolean isDinnerDisabled() {
+        if (guest == null || guest.getCheckInDate() == null || logDate == null) return false;
+        if (logDate.isBefore(guest.getCheckInDate())) return true;
+        if (logDate.equals(guest.getCheckInDate())) {
+            java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
+            return checkInDateTime.toLocalTime().isAfter(java.time.LocalTime.of(21, 0));
+        }
+        return false;
+    }
 }

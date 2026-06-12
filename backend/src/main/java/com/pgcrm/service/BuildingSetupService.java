@@ -365,9 +365,9 @@ public class BuildingSetupService {
                 .breakfastPrice(req.getBreakfastPrice()       != null ? req.getBreakfastPrice()       : systemConfig.getPricing().getBreakfast())
                 .lunchPrice(req.getLunchPrice()               != null ? req.getLunchPrice()           : systemConfig.getPricing().getLunch())
                 .dinnerPrice(req.getDinnerPrice()             != null ? req.getDinnerPrice()           : systemConfig.getPricing().getDinner())
-                .omelettePrice(req.getOmelettePrice()         != null ? req.getOmelettePrice()         : systemConfig.getPricing().getOmelette())
-                .boiledEggPrice(req.getBoiledEggPrice()       != null ? req.getBoiledEggPrice()       : systemConfig.getPricing().getBoiledEgg())
-                .washingMachinePrice(req.getWashingMachinePrice() != null ? req.getWashingMachinePrice() : systemConfig.getPricing().getWashingMachine())
+                .omelettePrice(req.getOmelettePrice()         != null ? req.getOmelettePrice()         : BigDecimal.ZERO)
+                .boiledEggPrice(req.getBoiledEggPrice()       != null ? req.getBoiledEggPrice()       : BigDecimal.ZERO)
+                .washingMachinePrice(req.getWashingMachinePrice() != null ? req.getWashingMachinePrice() : BigDecimal.ZERO)
                 .ebSplitMethod(splitMethod)
                 .breakfastCutoffTime(req.getBreakfastCutoffTime() != null ? req.getBreakfastCutoffTime() : LocalTime.of(22, 0))
                 .dinnerCutoffTime(req.getDinnerCutoffTime()       != null ? req.getDinnerCutoffTime()     : LocalTime.of(14, 0))
@@ -832,6 +832,11 @@ public class BuildingSetupService {
             existing.setFloor(floor);
             existing.setBlock(block);
             if (existing.getSharingType() != re.getSharing()) {
+                final List<Bed> beds = bedRepository.findByRoomId(existing.getId());
+                final long occupied = beds.stream().filter(bed -> bed.getStatus() == BedStatus.OCCUPIED).count();
+                if (occupied > 0) {
+                    throw new IllegalStateException("Cannot change sharing type on occupied room: " + existing.getRoomNumber());
+                }
                 adjustRoomBeds(existing, re.getSharing());
                 existing.setSharingType(re.getSharing());
             }

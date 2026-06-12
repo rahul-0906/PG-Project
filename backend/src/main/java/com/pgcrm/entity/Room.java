@@ -103,7 +103,7 @@ public class Room {
     @Column(name = "is_ac", nullable = false)
     @com.fasterxml.jackson.annotation.JsonProperty("isAc")
     @Builder.Default
-    private boolean isAc = false;
+    private boolean isAc = true;
 
     /**
      * All {@link Bed} records within this room.

@@ -107,6 +107,7 @@ export default function ManagerPricing() {
   const [offerOmelette, setOfferOmelette] = useState(true);
   const [offerBoiledEgg, setOfferBoiledEgg] = useState(true);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [enablePremiumSurcharges, setEnablePremiumSurcharges] = useState(false);
 
   // Local state for configuration edits
   const [localFoodIncluded, setLocalFoodIncluded] = useState(false);
@@ -164,6 +165,11 @@ export default function ManagerPricing() {
       setAllowedPaymentModes(res.data.allowedPaymentModes ?? 'BOTH');
       setOfferOmelette(res.data.offerOmelette ?? true);
       setOfferBoiledEgg(res.data.offerBoiledEgg ?? true);
+      
+      const fp = res.data.foodPricing || {};
+      const omeletteVal = parseFloat(fp.omelette ?? 0);
+      const boiledEggVal = parseFloat(fp.boiled_egg ?? 0);
+      setEnablePremiumSurcharges(!!res.data.foodIncludedInRent && (omeletteVal > 0 || boiledEggVal > 0));
 
       if (user?.role === 'PG_MANAGER' && res.data?.buildings?.length > 0) {
         setBuildings(res.data.buildings);
@@ -197,6 +203,20 @@ export default function ManagerPricing() {
       showToast('Price updated successfully');
     } catch { showToast('Failed to update price'); }
     finally { setSavingKey(''); }
+  };
+
+  const handleTogglePremiumSurcharges = async (checked) => {
+    setEnablePremiumSurcharges(checked);
+    if (!checked) {
+      try {
+        await managerApi.updateFoodPrice('omelette', 0, selectedBuildingId);
+        await managerApi.updateFoodPrice('boiled_egg', 0, selectedBuildingId);
+        await loadPricing();
+        showToast('Premium prices reset to 0');
+      } catch (err) {
+        showToast('Failed to reset premium prices');
+      }
+    }
   };
 
   const handleRoomRentUpdate = async (roomId, baseRent) => {
@@ -331,19 +351,36 @@ export default function ManagerPricing() {
                   </div>
                   <span className="text-xs text-slate-400">If enabled, meals are included in the base rent dynamically.</span>
                 </div>
-                <div className="flex items-center justify-between mt-auto pt-2">
-                  <span className="text-xs font-semibold text-slate-600">
-                    {localFoodIncluded ? 'Included' : 'Billed Separately'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setLocalFoodIncluded(prev => !prev)}
-                    className="relative inline-flex items-center focus:outline-none"
-                  >
-                    <div className={`w-11 h-6 rounded-full transition-colors relative ${localFoodIncluded ? 'bg-primary' : 'bg-slate-200'}`}>
-                      <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localFoodIncluded ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                <div className="flex flex-col gap-2 mt-auto pt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-600">
+                      {localFoodIncluded ? 'Included' : 'Billed Separately'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setLocalFoodIncluded(prev => !prev)}
+                      className="relative inline-flex items-center focus:outline-none"
+                    >
+                      <div className={`w-11 h-6 rounded-full transition-colors relative ${localFoodIncluded ? 'bg-primary' : 'bg-slate-200'}`}>
+                        <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-5 w-5 transition-transform ${localFoodIncluded ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                      </div>
+                    </button>
+                  </div>
+                  {localFoodIncluded && (
+                    <div className="flex items-center justify-between border-t border-slate-100 pt-2 mt-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Premium Surcharges</span>
+                      <button
+                        type="button"
+                        id="enable-premium-surcharges"
+                        onClick={() => handleTogglePremiumSurcharges(!enablePremiumSurcharges)}
+                        className="relative inline-flex items-center focus:outline-none"
+                      >
+                        <div className={`w-9 h-5 rounded-full transition-colors relative ${enablePremiumSurcharges ? 'bg-primary' : 'bg-slate-200'}`}>
+                          <div className={`absolute top-[2px] left-[2px] bg-white border border-slate-300 rounded-full h-3.5 w-3.5 transition-transform ${enablePremiumSurcharges ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                        </div>
+                      </button>
                     </div>
-                  </button>
+                  )}
                 </div>
               </div>
 
@@ -559,6 +596,7 @@ export default function ManagerPricing() {
             <div className="grid grid-cols-2 gap-3" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
               {FOOD_KEYS.filter(({ key }) => {
                 if (localFoodIncluded && ['breakfast', 'lunch', 'dinner'].includes(key)) return false;
+                if (localFoodIncluded && ['omelette', 'boiled_egg'].includes(key) && !enablePremiumSurcharges) return false;
                 return true;
               }).map(({ key, label, Icon, iconClass }) => (
                 <div key={key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">

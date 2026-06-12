@@ -87,6 +87,20 @@ public class DailyLogService {
             throw new IllegalArgumentException("Cannot update logs for a date prior to the guest's check-in date: " + guest.getCheckInDate());
         }
 
+        if (guest.getCheckInDate() != null && logDate.equals(guest.getCheckInDate())) {
+            final java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
+            final java.time.LocalTime checkInTime = checkInDateTime.toLocalTime();
+            if (checkInTime.isAfter(java.time.LocalTime.of(10, 0))) {
+                incoming.setBreakfastOpted(false);
+            }
+            if (checkInTime.isAfter(java.time.LocalTime.of(14, 0))) {
+                incoming.setLunchOpted(false);
+            }
+            if (checkInTime.isAfter(java.time.LocalTime.of(21, 0))) {
+                incoming.setDinnerOpted(false);
+            }
+        }
+
         validateLockouts(guest, logDate, incoming);
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
@@ -193,10 +207,24 @@ public class DailyLogService {
      * @return an unsaved {@link DailyLog} entity pre-populated with preference defaults.
      */
     public DailyLog createDefaultLog(final Guest guest, final LocalDate date) {
-        final boolean defBreakfast = guest != null && guest.isBreakfastPreference();
-        final boolean defLunch     = guest != null && guest.isLunchPreference();
-        final boolean defDinner    = guest != null && guest.isDinnerPreference();
+        boolean defBreakfast = guest != null && guest.isBreakfastPreference();
+        boolean defLunch     = guest != null && guest.isLunchPreference();
+        boolean defDinner    = guest != null && guest.isDinnerPreference();
         final boolean defVeg       = guest == null || guest.isVegPreference();
+
+        if (guest != null && guest.getCheckInDate() != null && date.equals(guest.getCheckInDate())) {
+            final java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : date.atStartOfDay();
+            final java.time.LocalTime checkInTime = checkInDateTime.toLocalTime();
+            if (checkInTime.isAfter(java.time.LocalTime.of(10, 0))) {
+                defBreakfast = false;
+            }
+            if (checkInTime.isAfter(java.time.LocalTime.of(14, 0))) {
+                defLunch = false;
+            }
+            if (checkInTime.isAfter(java.time.LocalTime.of(21, 0))) {
+                defDinner = false;
+            }
+        }
 
         return DailyLog.builder()
                 .guest(guest)

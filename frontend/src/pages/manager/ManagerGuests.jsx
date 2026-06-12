@@ -541,7 +541,13 @@ export default function ManagerGuests() {
                                 </div>
                                 <div className="flex flex-wrap gap-1.5 mt-1">
                                   {beds.map(bed => {
-                                    const occupant = guests.find(g => g.bedId === bed.id);
+                                    const wholeRoomGuest = guests.find(g =>
+                                      beds.some(b => b.id === g.bedId) && g.isBookEntireRoom
+                                    );
+                                    let occupant = guests.find(g => g.bedId === bed.id);
+                                    if (!occupant && wholeRoomGuest) {
+                                      occupant = wholeRoomGuest;
+                                    }
                                     const isNoticePeriod = occupant && occupant.noticeDate;
                                     const isOccupied = (bed.status === 'OCCUPIED' || occupant) && !isNoticePeriod;
                                     const isVacant = !isOccupied && !isNoticePeriod;
@@ -573,7 +579,12 @@ export default function ManagerGuests() {
                                           disabled={isDisabled}
                                           onClick={() => {
                                             if (isVacant) {
-                                              setForm(f => ({ ...f, bedId: bed.id }));
+                                              setForm(f => ({
+                                                ...f,
+                                                bedId: bed.id,
+                                                advanceDeposit: bed.room?.baseRent?.toString() || '',
+                                                isBookEntireRoom: false
+                                              }));
                                               setSelectedBedInfo(bed);
                                               setSelectedRoomBeds(beds);
                                               setShowCheckInModal(true);
@@ -1380,7 +1391,17 @@ export default function ManagerGuests() {
                       type="checkbox" 
                       checked={!!form.isBookEntireRoom} 
                       disabled={!isBookEntireRoomEnabled}
-                      onChange={e => setForm(f => ({ ...f, isBookEntireRoom: e.target.checked }))} 
+                      onChange={e => {
+                        const checked = e.target.checked;
+                        const baseRent = selectedBedInfo?.room?.baseRent || 0;
+                        const sharingType = selectedBedInfo?.room?.sharingType || 1;
+                        const newDeposit = checked ? baseRent * sharingType : baseRent;
+                        setForm(f => ({ 
+                          ...f, 
+                          isBookEntireRoom: checked,
+                          advanceDeposit: newDeposit.toString()
+                        }));
+                      }} 
                       className={`rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 ${!isBookEntireRoomEnabled ? 'cursor-not-allowed opacity-60' : ''}`}
                     />
                     <div className="flex flex-col">

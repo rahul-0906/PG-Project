@@ -29,7 +29,39 @@ export default function DailyLog() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  const isMealElapsedOnCheckIn = (mealKey, date) => {
+    if (!log || !log.guest) return false;
+    const checkInDate = log.guest.checkInDate;
+    if (!checkInDate) return false;
+    
+    let checkInDateStr = typeof checkInDate === 'string' ? checkInDate : '';
+    if (Array.isArray(checkInDate)) {
+      checkInDateStr = `${checkInDate[0]}-${String(checkInDate[1]).padStart(2, '0')}-${String(checkInDate[2]).padStart(2, '0')}`;
+    }
+    
+    if (!checkInDateStr || date !== checkInDateStr) return false;
+    
+    const checkInTime = log.guest.createdAt;
+    if (!checkInTime) return false;
+    
+    let hour = 0;
+    if (typeof checkInTime === 'string') {
+      const parsedDate = new Date(checkInTime);
+      hour = parsedDate.getHours();
+    } else if (Array.isArray(checkInTime)) {
+      hour = checkInTime[3] || 0;
+    } else if (checkInTime instanceof Date) {
+      hour = checkInTime.getHours();
+    }
+    
+    if (mealKey === 'breakfast') return hour >= 10;
+    if (mealKey === 'lunch') return hour >= 14;
+    if (mealKey === 'dinner') return hour >= 21;
+    return false;
+  };
+
   const isLocked = (mealKey, date) => {
+    if (isMealElapsedOnCheckIn(mealKey, date)) return true;
     if (!config) return false;
     const now = new Date();
     const logDate = new Date(date);

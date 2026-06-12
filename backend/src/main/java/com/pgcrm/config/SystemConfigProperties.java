@@ -46,8 +46,8 @@ public class SystemConfigProperties {
         private BigDecimal breakfast = new BigDecimal("60.00");
         private BigDecimal lunch = new BigDecimal("65.00");
         private BigDecimal dinner = new BigDecimal("60.00");
-        private BigDecimal washingMachine = new BigDecimal("50.00");
-        private BigDecimal omelette = new BigDecimal("18.00");
-        private BigDecimal boiledEgg = new BigDecimal("18.00");
+        private BigDecimal washingMachine = BigDecimal.ZERO;
+        private BigDecimal omelette = BigDecimal.ZERO;
+        private BigDecimal boiledEgg = BigDecimal.ZERO;
     }
 }

@@ -40,6 +40,10 @@ function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true
   const bOpt = log.breakfast;
   const lOpt = log.lunch;
   const dOpt = log.dinner;
+  const bDisabled = log.breakfastDisabled;
+  const lDisabled = log.lunchDisabled;
+  const dDisabled = log.dinnerDisabled;
+
   const hasAddons = (offerOmelette && (log.omelettes || 0) > 0) || 
                     (offerBoiledEgg && (log.boiledEggs || 0) > 0) || 
                     ((log.laundry || 0) > 0);
@@ -53,12 +57,20 @@ function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true
     }
   }
 
+  const bClass = bDisabled ? "text-transparent leading-none pointer-events-none" : (bOpt ? "text-amber-500 font-bold text-sm leading-none" : "text-slate-200 leading-none");
+  const lClass = lDisabled ? "text-transparent leading-none pointer-events-none" : (lOpt ? "text-emerald-500 font-bold text-sm leading-none" : "text-slate-200 leading-none");
+  const dClass = dDisabled ? "text-transparent leading-none pointer-events-none" : (dOpt ? "text-blue-500 font-bold text-sm leading-none" : "text-slate-200 leading-none");
+
+  const bText = bDisabled ? '—' : (bOpt ? 'Yes' : 'No');
+  const lText = lDisabled ? '—' : (lOpt ? 'Yes' : 'No');
+  const dText = dDisabled ? '—' : (dOpt ? 'Yes' : 'No');
+
   return (
     <div className="flex flex-col items-center justify-center gap-0.5 relative group py-1">
       <div className="flex items-center justify-center gap-1">
-        <span className={bOpt ? "text-amber-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Breakfast">●</span>
-        <span className={lOpt ? "text-emerald-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Lunch">●</span>
-        <span className={dOpt ? "text-blue-500 font-bold text-sm leading-none" : "text-slate-200 leading-none"} title="Dinner">●</span>
+        <span className={bClass} title={bDisabled ? "" : "Breakfast"}>●</span>
+        <span className={lClass} title={lDisabled ? "" : "Lunch"}>●</span>
+        <span className={dClass} title={dDisabled ? "" : "Dinner"}>●</span>
       </div>
       {hasAddons && (
         <span className="absolute bottom-0 text-[7px] font-bold text-indigo-500 leading-none scale-75">*</span>
@@ -66,7 +78,7 @@ function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true
       
       {/* Tooltip on hover */}
       <div className={`absolute bottom-full mb-1 hidden group-hover:block bg-slate-900/95 backdrop-blur-sm text-white text-[9px] rounded-lg px-2.5 py-1.5 z-30 whitespace-nowrap border border-slate-700/50 shadow-lg shadow-slate-900/20 pointer-events-none ${positionClass}`}>
-        <div>B: {bOpt ? 'Yes' : 'No'} | L: {lOpt ? 'Yes' : 'No'} | D: {dOpt ? 'Yes' : 'No'}</div>
+        <div>B: {bText} | L: {lText} | D: {dText}</div>
         {hasAddons && (
           <div className="mt-0.5 border-t border-slate-700 pt-0.5 font-semibold text-indigo-300">
             {offerOmelette && log.omelettes > 0 && `Omelettes: ${log.omelettes} `}
@@ -148,6 +160,9 @@ export default function ManagerGuestAddons() {
           breakfastOpted:      item.breakfastOpted      ?? false,
           lunchOpted:          item.lunchOpted          ?? false,
           dinnerOpted:         item.dinnerOpted         ?? false,
+          breakfastDisabled:   item.breakfastDisabled   ?? false,
+          lunchDisabled:       item.lunchDisabled       ?? false,
+          dinnerDisabled:      item.dinnerDisabled      ?? false,
         };
       });
       setLogs(logMap);
@@ -192,7 +207,10 @@ export default function ManagerGuestAddons() {
     isVeg: true,
     breakfastOpted: false,
     lunchOpted: false,
-    dinnerOpted: false
+    dinnerOpted: false,
+    breakfastDisabled: false,
+    lunchDisabled: false,
+    dinnerDisabled: false,
   };
 
   // 1. Single Edit Handler: Debounced Silent Auto-Save
@@ -296,6 +314,9 @@ export default function ManagerGuestAddons() {
           breakfastOpted:      item.breakfastOpted      ?? false,
           lunchOpted:          item.lunchOpted          ?? false,
           dinnerOpted:         item.dinnerOpted         ?? false,
+          breakfastDisabled:   item.breakfastDisabled   ?? false,
+          lunchDisabled:       item.lunchDisabled       ?? false,
+          dinnerDisabled:      item.dinnerDisabled      ?? false,
         };
       });
       setLogs(logMap);
@@ -324,6 +345,9 @@ export default function ManagerGuestAddons() {
           breakfastOpted:      item.breakfastOpted      ?? false,
           lunchOpted:          item.lunchOpted          ?? false,
           dinnerOpted:         item.dinnerOpted         ?? false,
+          breakfastDisabled:   item.breakfastDisabled   ?? false,
+          lunchDisabled:       item.lunchDisabled       ?? false,
+          dinnerDisabled:      item.dinnerDisabled      ?? false,
         };
       });
       setLogs(logMap);
@@ -547,34 +571,46 @@ export default function ManagerGuestAddons() {
                           </div>
                         </td>
                         <td className="text-center">
-                          <label className="toggle scale-75">
-                            <input
-                              type="checkbox"
-                              checked={!!log.breakfastOpted}
-                              onChange={e => handleFieldChange(g.id, 'breakfastOpted', e.target.checked)}
-                            />
-                            <span className="toggle-slider" />
-                          </label>
+                          {log.breakfastDisabled ? (
+                            <span className="text-slate-400 font-semibold text-xs">—</span>
+                          ) : (
+                            <label className="toggle scale-75">
+                              <input
+                                type="checkbox"
+                                checked={!!log.breakfastOpted}
+                                onChange={e => handleFieldChange(g.id, 'breakfastOpted', e.target.checked)}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                          )}
                         </td>
                         <td className="text-center">
-                          <label className="toggle scale-75">
-                            <input
-                              type="checkbox"
-                              checked={!!log.lunchOpted}
-                              onChange={e => handleFieldChange(g.id, 'lunchOpted', e.target.checked)}
-                            />
-                            <span className="toggle-slider" />
-                          </label>
+                          {log.lunchDisabled ? (
+                            <span className="text-slate-400 font-semibold text-xs">—</span>
+                          ) : (
+                            <label className="toggle scale-75">
+                              <input
+                                type="checkbox"
+                                checked={!!log.lunchOpted}
+                                onChange={e => handleFieldChange(g.id, 'lunchOpted', e.target.checked)}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                          )}
                         </td>
                         <td className="text-center">
-                          <label className="toggle scale-75">
-                            <input
-                              type="checkbox"
-                              checked={!!log.dinnerOpted}
-                              onChange={e => handleFieldChange(g.id, 'dinnerOpted', e.target.checked)}
-                            />
-                            <span className="toggle-slider" />
-                          </label>
+                          {log.dinnerDisabled ? (
+                            <span className="text-slate-400 font-semibold text-xs">—</span>
+                          ) : (
+                            <label className="toggle scale-75">
+                              <input
+                                type="checkbox"
+                                checked={!!log.dinnerOpted}
+                                onChange={e => handleFieldChange(g.id, 'dinnerOpted', e.target.checked)}
+                              />
+                              <span className="toggle-slider" />
+                            </label>
+                          )}
                         </td>
                         {offerOmelette && (
                           <td>
