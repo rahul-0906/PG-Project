@@ -48,6 +48,7 @@ export default function ManagerGuests() {
   const [vacantBeds, setVacantBeds] = useState([]);
   const [selectedBedInfo, setSelectedBedInfo] = useState(null);
   const [selectedRoomBeds, setSelectedRoomBeds] = useState([]);
+  const [isEntireRoomBooked, setIsEntireRoomBooked] = useState(false);
   const [loadingBeds, setLoadingBeds] = useState(false);
 
   const showToast = (message, type = 'success') => {
@@ -212,6 +213,7 @@ export default function ManagerGuests() {
     });
     setSelectedBedInfo(null);
     setSelectedRoomBeds([]);
+    setIsEntireRoomBooked(false);
     setSameAsPhone(false);
     setDepositError('');
   };
@@ -249,7 +251,7 @@ export default function ManagerGuests() {
 
       const baseRent = Number(selectedBedInfo?.room?.baseRent || 0);
       const sharingType = Number(selectedBedInfo?.room?.sharingType || 1);
-      const effectiveBaseRent = form.isBookEntireRoom ? baseRent * sharingType : baseRent;
+      const effectiveBaseRent = isEntireRoomBooked ? baseRent * sharingType : baseRent;
       const deposit = form.advanceDeposit === '' ? 0 : parseFloat(form.advanceDeposit);
       
       if (deposit < effectiveBaseRent) {
@@ -272,7 +274,9 @@ export default function ManagerGuests() {
         breakfastOpted: !!(form.foodOptedIn && form.breakfastOpted),
         lunchOpted: !!(form.foodOptedIn && form.lunchOpted),
         dinnerOpted: !!(form.foodOptedIn && form.dinnerOpted),
-        isBookEntireRoom: !!form.isBookEntireRoom
+        isBookEntireRoom: !!isEntireRoomBooked,
+        roomBedIds: isEntireRoomBooked ? selectedRoomBeds.map(b => b.id) : [form.bedId],
+        bedIds: isEntireRoomBooked ? selectedRoomBeds.map(b => b.id) : [form.bedId],
       };
 
       console.log('Initiating check-in with payload:', payload);
@@ -406,8 +410,17 @@ export default function ManagerGuests() {
       const occupant = guests.find(g => g.bedId === bed.id);
       const isNoticePeriod = occupant && occupant.noticeDate;
       const isOccupied = (bed.status === 'OCCUPIED' || occupant) && !isNoticePeriod;
-      return !isOccupied && !isNoticePeriod;
     });
+
+  const singleBedBaseRent = Number(selectedBedInfo?.room?.baseRent || 0);
+  const totalBedsInRoom = selectedRoomBeds.length || 1;
+  const calculatedBaseRent = isEntireRoomBooked 
+    ? singleBedBaseRent * totalBedsInRoom 
+    : singleBedBaseRent;
+
+  const displayedBedAllocation = isEntireRoomBooked
+    ? `All Beds (${selectedRoomBeds.map(b => b.bedLabel).join(', ')})`
+    : selectedBedInfo?.bedLabel || '';
 
   return (
     <AppLayout>
@@ -582,9 +595,9 @@ export default function ManagerGuests() {
                                               setForm(f => ({
                                                 ...f,
                                                 bedId: bed.id,
-                                                advanceDeposit: bed.room?.baseRent?.toString() || '',
-                                                isBookEntireRoom: false
+                                                advanceDeposit: bed.room?.baseRent?.toString() || ''
                                               }));
+                                              setIsEntireRoomBooked(false);
                                               setSelectedBedInfo(bed);
                                               setSelectedRoomBeds(beds);
                                               setShowCheckInModal(true);
@@ -1277,14 +1290,14 @@ export default function ManagerGuests() {
               <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 text-xs font-semibold text-slate-600 mb-4 flex justify-between items-center">
                 <div>
                   <span className="text-slate-400">Selected Bed: </span>
-                  <span className="text-primary font-bold">{selectedBedInfo.bedLabel}</span>
+                  <span className="text-primary font-bold">{displayedBedAllocation}</span>
                   <span className="text-slate-300 mx-2">|</span>
                   <span className="text-slate-400">Room: </span>
                   <span className="text-slate-800">{selectedBedInfo.room?.roomNumber}</span>
                 </div>
                 <div>
                   <span className="text-slate-400">Base Rent: </span>
-                  <span className="text-slate-800">₹{selectedBedInfo.room?.baseRent}</span>
+                  <span className="text-slate-800">₹{calculatedBaseRent}</span>
                 </div>
               </div>
 
@@ -1389,19 +1402,9 @@ export default function ManagerGuests() {
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input 
                       type="checkbox" 
-                      checked={!!form.isBookEntireRoom} 
+                      checked={isEntireRoomBooked} 
                       disabled={!isBookEntireRoomEnabled}
-                      onChange={e => {
-                        const checked = e.target.checked;
-                        const baseRent = selectedBedInfo?.room?.baseRent || 0;
-                        const sharingType = selectedBedInfo?.room?.sharingType || 1;
-                        const newDeposit = checked ? baseRent * sharingType : baseRent;
-                        setForm(f => ({ 
-                          ...f, 
-                          isBookEntireRoom: checked,
-                          advanceDeposit: newDeposit.toString()
-                        }));
-                      }} 
+                      onChange={e => setIsEntireRoomBooked(e.target.checked)} 
                       className={`rounded border-slate-300 text-primary focus:ring-primary w-4 h-4 ${!isBookEntireRoomEnabled ? 'cursor-not-allowed opacity-60' : ''}`}
                     />
                     <div className="flex flex-col">

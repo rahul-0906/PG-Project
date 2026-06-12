@@ -135,4 +135,10 @@ public class GuestCheckInRequest {
      */
     @JsonProperty("isBookEntireRoom")
     private boolean isBookEntireRoom;
+
+    /** List of all bed IDs in the room when booking the entire room. */
+    private java.util.List<String> roomBedIds;
+
+    /** List of all bed IDs in the room when booking the entire room (alias). */
+    private java.util.List<String> bedIds;
 }
