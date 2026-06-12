@@ -404,13 +404,7 @@ export default function ManagerGuests() {
     return searchMatch && floorMatch;
   });
 
-  const isBookEntireRoomEnabled = selectedRoomBeds.length > 0 && 
-    (selectedBedInfo?.room?.sharingType > 1) && 
-    selectedRoomBeds.every(bed => {
-      const occupant = guests.find(g => g.bedId === bed.id);
-      const isNoticePeriod = occupant && occupant.noticeDate;
-      const isOccupied = (bed.status === 'OCCUPIED' || occupant) && !isNoticePeriod;
-    });
+  const isBookEntireRoomEnabled = selectedBedInfo?.room?.sharingType > 1;
 
   const singleBedBaseRent = Number(selectedBedInfo?.room?.baseRent || 0);
   const totalBedsInRoom = selectedRoomBeds.length || 1;
@@ -419,7 +413,7 @@ export default function ManagerGuests() {
     : singleBedBaseRent;
 
   const displayedBedAllocation = isEntireRoomBooked
-    ? `All Beds (${selectedRoomBeds.map(b => b.bedLabel).join(', ')})`
+    ? selectedRoomBeds.map(b => b.bedLabel).join(', ')
     : selectedBedInfo?.bedLabel || '';
 
   return (
@@ -595,7 +589,7 @@ export default function ManagerGuests() {
                                               setForm(f => ({
                                                 ...f,
                                                 bedId: bed.id,
-                                                advanceDeposit: bed.room?.baseRent?.toString() || ''
+                                                advanceDeposit: ''
                                               }));
                                               setIsEntireRoomBooked(false);
                                               setSelectedBedInfo(bed);
