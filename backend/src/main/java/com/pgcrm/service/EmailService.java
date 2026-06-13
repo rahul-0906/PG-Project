@@ -7,6 +7,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -82,6 +83,7 @@ public class EmailService {
      * @param tempPassword the generated temporary plaintext password to include in the email.
      */
     public void sendGuestWelcomeEmail(final Guest guest, final String tempPassword) {
+        log.info("Initiating welcome email dispatch to: {}", guest.getEmail());
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Welcome email for {} — temp password: {}", guest.getEmail(), tempPassword);
             return;
@@ -93,20 +95,27 @@ public class EmailService {
             ctx.setVariable("tempPassword", tempPassword);
             ctx.setVariable("pgName",      fromName);
             ctx.setVariable("loginUrl",    "http://localhost:5173/login");
-            String assignedBeds = guest.getBeds() != null
+            
+            String assignedBeds = guest.getBeds() != null && !guest.getBeds().isEmpty()
                     ? guest.getBeds().stream()
                             .filter(java.util.Objects::nonNull)
                             .map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")
                             .collect(java.util.stream.Collectors.joining(", "))
                     : "Unassigned";
-            ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
+            
+            log.info("Populating welcome email context variables. Assigned beds: {}", assignedBeds);
+            ctx.setVariable("bedLabel",    assignedBeds);
             ctx.setVariable("assignedBeds", assignedBeds);
 
             final String html = templateEngine.process("welcome-email", ctx);
             sendHtmlMail(guest.getEmail(), "🏠 Welcome to " + fromName + " — Your Login Details", html);
             log.info("📧 Welcome email sent to {}", guest.getEmail());
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage());
+            log.error("Failed to send welcome email to {}: {}", guest.getEmail(), e.getMessage(), e);
         }
     }
 
@@ -120,6 +129,7 @@ public class EmailService {
      * @param tempPassword the newly generated temporary plaintext password.
      */
     public void sendReturningGuestWelcomeEmail(final Guest guest, final String tempPassword) {
+        log.info("Initiating welcome back email dispatch to: {}", guest.getEmail());
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Welcome back email for {}", guest.getEmail());
             return;
@@ -129,21 +139,28 @@ public class EmailService {
             ctx.setVariable("guestName",   guest.getFullName());
             ctx.setVariable("email",       guest.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
-            String assignedBeds = guest.getBeds() != null
+            
+            String assignedBeds = guest.getBeds() != null && !guest.getBeds().isEmpty()
                     ? guest.getBeds().stream()
                             .filter(java.util.Objects::nonNull)
                             .map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")
                             .collect(java.util.stream.Collectors.joining(", "))
                     : "Unassigned";
-            ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
+            
+            log.info("Populating welcome back email context variables. Assigned beds: {}", assignedBeds);
+            ctx.setVariable("bedLabel",    assignedBeds);
             ctx.setVariable("assignedBeds", assignedBeds);
             ctx.setVariable("loginUrl",    "http://localhost:5173/login");
 
             final String html = templateEngine.process("welcome-back-email", ctx);
             sendHtmlMail(guest.getEmail(), "🏠 Welcome Back to " + fromName + " — Check-in Confirmation", html);
             log.info("📧 Welcome back email sent to {}", guest.getEmail());
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send welcome back email to {}: {}", guest.getEmail(), e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send welcome back email to {}: {}", guest.getEmail(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send welcome back email to {}: {}", guest.getEmail(), e.getMessage());
+            log.error("Failed to send welcome back email to {}: {}", guest.getEmail(), e.getMessage(), e);
         }
     }
 
@@ -158,6 +175,7 @@ public class EmailService {
      * @param tempPassword the newly generated temporary plaintext password.
      */
     public void sendPasswordResetEmail(final com.pgcrm.entity.User user, final String tempPassword) {
+        log.info("Initiating password reset email dispatch to: {}", user.getEmail());
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Password reset email for {} — temp password: {}", user.getEmail(), tempPassword);
             return;
@@ -172,8 +190,12 @@ public class EmailService {
             final String html = templateEngine.process("password-reset-email", ctx);
             sendHtmlMail(user.getEmail(), "🔐 Password Reset Request — PG CRM", html);
             log.info("📧 Password reset email sent to {}", user.getEmail());
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send password reset email to {}: {}", user.getEmail(), e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send password reset email to {}: {}", user.getEmail(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage());
+            log.error("Failed to send password reset email to {}: {}", user.getEmail(), e.getMessage(), e);
         }
     }
 
@@ -188,6 +210,7 @@ public class EmailService {
      * @param guestName the display name of the user initiating the email change.
      */
     public void sendEmailVerificationCode(final String toEmail, final String code, final String guestName) {
+        log.info("Initiating email verification code dispatch to: {}", toEmail);
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Email verification code for {} — code: {}", toEmail, code);
             return;
@@ -202,8 +225,12 @@ public class EmailService {
             final String html = templateEngine.process("email-verification", ctx);
             sendHtmlMail(toEmail, "🔑 Confirm Your New Email Address — " + fromName, html);
             log.info("📧 Email verification code sent to {}", toEmail);
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send email verification to {}: {}", toEmail, e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send email verification to {}: {}", toEmail, e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send email verification to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send email verification to {}: {}", toEmail, e.getMessage(), e);
         }
     }
 
@@ -217,6 +244,7 @@ public class EmailService {
      * @param invoice the {@link Invoice} for which the reminder is being sent.
      */
     public void sendPaymentReminderEmail(final Guest guest, final Invoice invoice) {
+        log.info("Initiating payment reminder email dispatch to: {}", guest.getEmail());
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Payment reminder for {} — Invoice #{}", guest.getEmail(), invoice.getId());
             return;
@@ -235,8 +263,12 @@ public class EmailService {
             final String html = templateEngine.process("payment-reminder", ctx);
             sendHtmlMail(guest.getEmail(), "⚠️ Payment Reminder — " + monthName + " Invoice Due", html);
             log.info("📧 Payment reminder sent to {}", guest.getEmail());
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send payment reminder to {}: {}", guest.getEmail(), e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send payment reminder to {}: {}", guest.getEmail(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send payment reminder to {}: {}", guest.getEmail(), e.getMessage());
+            log.error("Failed to send payment reminder to {}: {}", guest.getEmail(), e.getMessage(), e);
         }
     }
 
@@ -253,6 +285,7 @@ public class EmailService {
      */
     public void sendBedSwitchEmail(final Guest guest, final String oldBedLabel,
                                    final String newBedLabel, final BigDecimal newRent) {
+        log.info("Initiating bed switch email dispatch to: {}", guest.getEmail());
         if (!mailEnabled) {
             log.info("📧 [MAIL DISABLED] Bed switch email for {} — from {} to {}, new rent: {}",
                     guest.getEmail(), oldBedLabel, newBedLabel, newRent);
@@ -269,8 +302,12 @@ public class EmailService {
             final String html = templateEngine.process("bed-switch-email", ctx);
             sendHtmlMail(guest.getEmail(), "🔄 Bed Assignment Updated — " + fromName, html);
             log.info("📧 Bed switch email sent to {}", guest.getEmail());
+        } catch (MessagingException e) {
+            log.error("SMTP MessagingException failed to send bed switch email to {}: {}", guest.getEmail(), e.getMessage(), e);
+        } catch (MailException e) {
+            log.error("Spring MailException failed to send bed switch email to {}: {}", guest.getEmail(), e.getMessage(), e);
         } catch (Exception e) {
-            log.error("Failed to send bed switch email to {}: {}", guest.getEmail(), e.getMessage());
+            log.error("Failed to send bed switch email to {}: {}", guest.getEmail(), e.getMessage(), e);
         }
     }
 

@@ -35,6 +35,10 @@ This walkthrough details the changes made to adopt a strictly dynamic, config-dr
 - **Modified** [DatabaseSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DatabaseSeeder.java):
   - Configured `@Profile("!prod")` per explicit user request. This allows the seeder to run under the `test` profile.
   - Refactored the seeder to dynamically load the default owner's name, email, and password using Spring's `@Value` annotation with safe fallback defaults. It prints the dynamic credentials in the startup console banner.
+- **Modified** [EmailService.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/service/EmailService.java):
+  - Fixed welcome and returning guest email templates to collect and join all assigned bed labels (from `guest.getBeds()`) instead of a single bed value.
+  - Enabled SLF4J loggers at the start of all email dispatch methods to trace recipient details.
+  - Refactored catch blocks across all dispatch methods to specifically catch SMTP `MessagingException` and `MailException` and print precise stack traces and reasons.
 
 ---
 

@@ -17,3 +17,5 @@
   - [x] Frontend production build validation (`npm run build`)
 - [x] Dynamic Seeder Refactoring
   - [x] Refactor [DatabaseSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DatabaseSeeder.java) to pull owner credentials dynamically
+- [x] Welcome Email & SLF4J Logging Refactoring
+  - [x] Refactor [EmailService.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/service/EmailService.java) to fix multi-bed display and add robust SLF4J logging
