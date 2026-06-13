@@ -1,19 +1,14 @@
-# Test Environment Profile and Seeder Neutralization Walkthrough
+# Welcome Email Context Refactoring Walkthrough
 
-This walkthrough details the changes made to configure a dedicated `test` environment profile that guarantees a 100% empty, freshly created database on startup, bypassing Flyway migrations and disabling all seeders.
+This walkthrough details the changes made to fix the welcome email context formatting for guests checks. It resolves a data truncation bug where multiple bed assignments (Whole Room Booking) were dropped or could cause `NullPointerException` issues.
 
 ## Changes Made
 
-### 1. Test Environment Profile Configuration
-- **Created** [application-test.yml](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/resources/application-test.yml):
-  - Set `spring.flyway.enabled=false` to completely disable all database migration scripts on startup.
-  - Set `spring.jpa.hibernate.ddl-auto=create` to force Hibernate to physically drop and recreate all tables empty based on current JPA entities.
-
-### 2. Database Seeder Neutralization
-- **Modified** [DataSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DataSeeder.java):
-  - Added `@Profile("!test")` annotation and the corresponding import `org.springframework.context.annotation.Profile` to prevent the legacy seeder from running under the `test` profile.
-- **Modified** [DatabaseSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DatabaseSeeder.java):
-  - Updated profile annotation from `@Profile("!prod")` to `@Profile("!prod & !test")` to prevent the new database seeder from executing under either the `prod` or the `test` profiles.
+### 1. Welcome Email Context Refactoring
+- **Modified** [EmailService.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/service/EmailService.java):
+  - Refactored `sendGuestWelcomeEmail(final Guest guest, final String tempPassword)` and `sendReturningGuestWelcomeEmail(final Guest guest, final String tempPassword)` to parse the guest's bed list using a null-safe stream pipeline.
+  - Implemented filters for null `Bed` elements (`filter(java.util.Objects::nonNull)`) and fallback labels for null bed labels (`map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")`).
+  - Sets the context variables `bedLabel` and `assignedBeds` safely to ensure all checked-in beds are formatted as a comma-separated list.
 
 ---
 
@@ -25,4 +20,4 @@ This walkthrough details the changes made to configure a dedicated `test` enviro
 
 ### 2. Frontend Production Build
 - Executed `npm run build` in the `frontend` directory.
-- **Result**: Frontend compiled and bundled successfully in `12.65s` with no warnings/errors.
+- **Result**: Frontend compiled and bundled successfully in `12.11s` with no warnings/errors.

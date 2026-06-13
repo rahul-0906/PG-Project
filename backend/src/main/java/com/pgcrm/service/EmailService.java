@@ -94,7 +94,10 @@ public class EmailService {
             ctx.setVariable("pgName",      fromName);
             ctx.setVariable("loginUrl",    "http://localhost:5173/login");
             String assignedBeds = guest.getBeds() != null
-                    ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(", "))
+                    ? guest.getBeds().stream()
+                            .filter(java.util.Objects::nonNull)
+                            .map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")
+                            .collect(java.util.stream.Collectors.joining(", "))
                     : "Unassigned";
             ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
             ctx.setVariable("assignedBeds", assignedBeds);
@@ -127,7 +130,10 @@ public class EmailService {
             ctx.setVariable("email",       guest.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
             String assignedBeds = guest.getBeds() != null
-                    ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(", "))
+                    ? guest.getBeds().stream()
+                            .filter(java.util.Objects::nonNull)
+                            .map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")
+                            .collect(java.util.stream.Collectors.joining(", "))
                     : "Unassigned";
             ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
             ctx.setVariable("assignedBeds", assignedBeds);
