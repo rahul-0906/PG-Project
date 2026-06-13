@@ -53,7 +53,7 @@ if exist "%ROOT_DIR%.env" (
 
 echo.
 echo Starting Spring Boot Backend in a separate window...
-start "PG CRM Backend" cmd /k "cd /d %ROOT_DIR%backend && ..\apache-maven-3.9.16\bin\mvn spring-boot:run"
+start "PG CRM Backend" cmd /k "cd /d %ROOT_DIR%backend && ..\apache-maven-3.9.16\bin\mvn spring-boot:run -Dspring-boot.run.profiles=test"
 
 echo Starting Vite/React Frontend in a separate window...
 start "PG CRM Frontend" cmd /k "cd /d %ROOT_DIR%frontend && npm run dev"

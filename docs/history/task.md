@@ -1,8 +1,8 @@
-# Welcome Email Context Refactoring Task List
+# Change Default Profile to Test Task List
 
-- [x] Email Service Refactoring
-  - [x] Implement null-safe bed list streaming in `sendGuestWelcomeEmail`
-  - [x] Implement null-safe bed list streaming in `sendReturningGuestWelcomeEmail`
+- [x] Configuration
+  - [x] Modify `start_project.bat` to run with `-Dspring-boot.run.profiles=test`
+  - [x] Modify `.env` to include `SPRING_PROFILES_ACTIVE=test`
 - [x] Verification and Build
   - [x] Run `mvn clean test` on backend
   - [x] Run `npm run build` on frontend to verify compilation

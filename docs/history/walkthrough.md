@@ -1,14 +1,18 @@
-# Welcome Email Context Refactoring Walkthrough
+# Default Server Profile Set to Test Walkthrough
 
-This walkthrough details the changes made to fix the welcome email context formatting for guests checks. It resolves a data truncation bug where multiple bed assignments (Whole Room Booking) were dropped or could cause `NullPointerException` issues.
+This walkthrough details the changes made to switch the default server execution profile from `dev` to `test` in the local launcher script and environment files.
 
 ## Changes Made
 
-### 1. Welcome Email Context Refactoring
-- **Modified** [EmailService.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/service/EmailService.java):
-  - Refactored `sendGuestWelcomeEmail(final Guest guest, final String tempPassword)` and `sendReturningGuestWelcomeEmail(final Guest guest, final String tempPassword)` to parse the guest's bed list using a null-safe stream pipeline.
-  - Implemented filters for null `Bed` elements (`filter(java.util.Objects::nonNull)`) and fallback labels for null bed labels (`map(b -> b.getBedLabel() != null ? b.getBedLabel() : "Unnamed Bed")`).
-  - Sets the context variables `bedLabel` and `assignedBeds` safely to ensure all checked-in beds are formatted as a comma-separated list.
+### 1. Launcher Script Update
+- **Modified** [start_project.bat](file:///E:/Antigravity%20Project/PG%20Project/start_project.bat):
+  - Updated the backend Maven run command to set `-Dspring-boot.run.profiles=test`, forcing the Spring Boot application to run under the `test` profile when launched via this script.
+
+### 2. Environment Variables Configuration
+- **Modified** [.env](file:///E:/Antigravity%20Project/PG%20Project/.env):
+  - Appended `SPRING_PROFILES_ACTIVE=test` as the active environment profile.
+- **Modified** [.env.example](file:///E:/Antigravity%20Project/PG%20Project/.env.example):
+  - Appended `SPRING_PROFILES_ACTIVE=test` to the variables template file.
 
 ---
 
@@ -20,4 +24,4 @@ This walkthrough details the changes made to fix the welcome email context forma
 
 ### 2. Frontend Production Build
 - Executed `npm run build` in the `frontend` directory.
-- **Result**: Frontend compiled and bundled successfully in `12.11s` with no warnings/errors.
+- **Result**: Frontend compiled and bundled successfully in `13.41s` with no warnings/errors.
