@@ -110,13 +110,18 @@ public class GuestService {
                          final boolean isVeg, final boolean breakfastPreference,
                          final boolean lunchPreference, final boolean dinnerPreference) {
 
+        log.info("Starting check-in operation for guest email: {} | Beds: {}", email, bedIds);
         if (bedIds == null || bedIds.isEmpty()) {
+            log.warn("Check-in failed: No bed IDs provided for guest email: {}", email);
             throw new IllegalArgumentException("At least one bed must be selected for check-in.");
         }
 
         final String primaryBedId = bedIds.get(0);
         final Bed primaryBed = bedRepository.findById(primaryBedId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + primaryBedId));
+                .orElseThrow(() -> {
+                    log.warn("Check-in failed: Bed not found for ID: {}", primaryBedId);
+                    return new ResourceNotFoundException("Bed not found: " + primaryBedId);
+                });
 
         final Building building = primaryBed.getRoom().getFloor().getBuilding();
 
@@ -135,8 +140,12 @@ public class GuestService {
         final List<Bed> targetBeds = new java.util.ArrayList<>();
         for (final String bid : targetBedIds) {
             final Bed b = bedRepository.findById(bid)
-                    .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + bid));
+                    .orElseThrow(() -> {
+                        log.warn("Check-in failed: Bed not found for ID: {}", bid);
+                        return new ResourceNotFoundException("Bed not found: " + bid);
+                    });
             if (b.getStatus() != BedStatus.VACANT) {
+                log.warn("Check-in failed: Bed {} is not vacant (status: {})", b.getBedLabel(), b.getStatus());
                 throw new BedUnavailableException("Bed is not vacant: " + b.getBedLabel());
             }
             targetBeds.add(b);
@@ -229,9 +238,11 @@ public class GuestService {
                         String.format("Returning Guest '%s' checked back into room beds '%s'", fullName, primaryBed.getBedLabel()),
                         String.format("{\"bedIds\":\"%s\",\"checkInDate\":\"%s\"}", targetBedIds, checkInDate));
 
+                log.info("Check-in successful (Returning Guest) for email: {}", email);
                 return guest;
             } else {
                 // ── Scenario B: Already Active Guest ─────────────────────────
+                log.warn("Check-in failed: Duplicate active guest with email: {}", email);
                 throw new DuplicateEmailException("A guest with this email is already checked into the system.");
             }
         }
@@ -287,6 +298,7 @@ public class GuestService {
                 String.format("Guest '%s' checked into room beds '%s'", fullName, primaryBed.getBedLabel()),
                 String.format("{\"bedIds\":\"%s\",\"checkInDate\":\"%s\"}", targetBedIds, checkInDate));
 
+        log.info("Check-in successful (New Guest) for email: {} (ID: {})", email, guest.getId());
         return guest;
     }
 
@@ -322,7 +334,10 @@ public class GuestService {
      */
     public Guest getByUserId(final String userId) {
         return guestRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Guest profile not found for user: " + userId));
+                .orElseThrow(() -> {
+                    log.warn("Retrieve by user ID failed: Guest profile not found for user ID: {}", userId);
+                    return new ResourceNotFoundException("Guest profile not found for user: " + userId);
+                });
     }
 
     /**
@@ -336,6 +351,7 @@ public class GuestService {
      */
     @Transactional
     public Guest save(final Guest guest) {
+        log.info("Persisting guest entity for ID: {}", guest.getId());
         return guestRepository.save(guest);
     }
 
@@ -361,17 +377,26 @@ public class GuestService {
      */
     @Transactional
     public GuestResponse switchBed(final String guestId, final String newBedId) {
+        log.info("Starting bed switch operation for guest ID: {} | Target Bed ID: {}", guestId, newBedId);
         final Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
+                .orElseThrow(() -> {
+                    log.warn("Bed switch failed: Guest not found for ID: {}", guestId);
+                    return new ResourceNotFoundException("Guest not found: " + guestId);
+                });
 
         if (!guest.isActive()) {
+            log.warn("Bed switch failed: Guest ID {} ({}) is not active", guestId, guest.getFullName());
             throw new IllegalArgumentException("Guest is not active: " + guest.getFullName());
         }
 
         final Bed newBed = bedRepository.findById(newBedId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + newBedId));
+                .orElseThrow(() -> {
+                    log.warn("Bed switch failed: Bed not found for ID: {}", newBedId);
+                    return new ResourceNotFoundException("Bed not found: " + newBedId);
+                });
 
         if (newBed.getStatus() != BedStatus.VACANT) {
+            log.warn("Bed switch failed: Target Bed {} is not vacant", newBed.getBedLabel());
             throw new BedUnavailableException("Bed is not vacant: " + newBed.getBedLabel());
         }
 
@@ -423,6 +448,7 @@ public class GuestService {
             log.warn("Failed to send bed switch in-app notification: {}", e.getMessage());
         }
 
+        log.info("Bed switch completed successfully for guest {} | Bed: {}", savedGuest.getFullName(), newBed.getBedLabel());
         return GuestResponse.fromEntity(savedGuest);
     }
 

@@ -95,55 +95,68 @@ public class PaymentService {
      */
     @Transactional
     public Map<String, Object> createOrder(final String invoiceId) {
-        final Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
-
-        if (invoice.getStatus() == InvoiceStatus.PAID) {
-            throw new RuntimeException("Invoice is already paid");
-        }
-
-        // In dev/mock mode, return a synthetic order without calling the Razorpay API.
-        if (!razorpayEnabled || globalKeyId.contains("placeholder")) {
-            log.info("💳 [RAZORPAY DISABLED] Mock order for invoice {} — amount ₹{}", invoiceId, invoice.getTotalAmount());
-            return Map.of(
-                    "orderId",    "order_mock_" + invoiceId,
-                    "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
-                    "currency",   "INR",
-                    "keyId",      "rzp_test_demo",
-                    "invoiceId",  invoiceId,
-                    "guestName",  invoice.getGuest().getFullName(),
-                    "guestEmail", invoice.getGuest().getEmail(),
-                    "mock",       true
-            );
-        }
-
+        log.info("Creating payment order for invoice ID: {}", invoiceId);
         try {
-            final RazorpayClient client = new RazorpayClient(globalKeyId, globalKeySecret);
-            final JSONObject opts = new JSONObject();
-            // Amount must be in paise (smallest currency unit).
-            opts.put("amount",   invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue());
-            opts.put("currency", "INR");
-            opts.put("receipt", "pgcrm_inv_" + invoiceId.substring(0, 8));
-            opts.put("notes",    new JSONObject(Map.of("invoiceId", invoiceId, "guestId", invoice.getGuest().getId())));
+            final Invoice invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> {
+                        log.warn("Invoice not found for ID: {} during order creation", invoiceId);
+                        return new ResourceNotFoundException("Invoice not found: " + invoiceId);
+                    });
 
-            final Order  order          = client.orders.create(opts);
-            final String razorpayOrderId = order.get("id");
+            if (invoice.getStatus() == InvoiceStatus.PAID) {
+                log.warn("Invoice {} is already paid, cannot create order", invoiceId);
+                throw new RuntimeException("Invoice is already paid");
+            }
 
-            // Persist the Razorpay order ID for correlation during payment verification.
-            invoice.setRazorpayOrderId(razorpayOrderId);
-            invoiceRepository.save(invoice);
+            // In dev/mock mode, return a synthetic order without calling the Razorpay API.
+            if (!razorpayEnabled || globalKeyId.contains("placeholder")) {
+                log.info("💳 [RAZORPAY DISABLED] Mock order for invoice {} — amount ₹{}", invoiceId, invoice.getTotalAmount());
+                return Map.of(
+                        "orderId",    "order_mock_" + invoiceId,
+                        "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
+                        "currency",   "INR",
+                        "keyId",      "rzp_test_demo",
+                        "invoiceId",  invoiceId,
+                        "guestName",  invoice.getGuest().getFullName(),
+                        "guestEmail", invoice.getGuest().getEmail(),
+                        "mock",       true
+                );
+            }
 
-            return Map.of(
-                    "orderId",    razorpayOrderId,
-                    "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
-                    "currency",   "INR",
-                    "keyId",      globalKeyId,
-                    "invoiceId",  invoiceId,
-                    "guestName",  invoice.getGuest().getFullName(),
-                    "guestEmail", invoice.getGuest().getEmail()
-            );
-        } catch (RazorpayException e) {
-            throw new RuntimeException("Razorpay order creation failed: " + e.getMessage());
+            try {
+                final RazorpayClient client = new RazorpayClient(globalKeyId, globalKeySecret);
+                final JSONObject opts = new JSONObject();
+                // Amount must be in paise (smallest currency unit).
+                opts.put("amount",   invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue());
+                opts.put("currency", "INR");
+                opts.put("receipt", "pgcrm_inv_" + invoiceId.substring(0, 8));
+                opts.put("notes",    new JSONObject(Map.of("invoiceId", invoiceId, "guestId", invoice.getGuest().getId())));
+
+                final Order  order          = client.orders.create(opts);
+                final String razorpayOrderId = order.get("id");
+
+                // Persist the Razorpay order ID for correlation during payment verification.
+                invoice.setRazorpayOrderId(razorpayOrderId);
+                invoiceRepository.save(invoice);
+
+                log.info("Successfully created Razorpay order ID: {} for invoice ID: {}", razorpayOrderId, invoiceId);
+
+                return Map.of(
+                        "orderId",    razorpayOrderId,
+                        "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
+                        "currency",   "INR",
+                        "keyId",      globalKeyId,
+                        "invoiceId",  invoiceId,
+                        "guestName",  invoice.getGuest().getFullName(),
+                        "guestEmail", invoice.getGuest().getEmail()
+                );
+            } catch (RazorpayException e) {
+                log.error("Razorpay SDK order creation failed for invoice ID: {}", invoiceId, e);
+                throw new RuntimeException("Razorpay order creation failed: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            log.error("Error creating order for invoice ID: {}", invoiceId, e);
+            throw e;
         }
     }
 
@@ -168,20 +181,38 @@ public class PaymentService {
     @Transactional
     public Invoice verifyAndCapture(final String invoiceId, final String razorpayOrderId,
                                     final String razorpayPaymentId, final String signature) {
-        final Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
+        log.info("Verifying and capturing payment for invoice ID: {}, Razorpay Order ID: {}, Payment ID: {}",
+                invoiceId, razorpayOrderId, razorpayPaymentId);
+        try {
+            final Invoice invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> {
+                        log.warn("Invoice not found for ID: {} during payment verification", invoiceId);
+                        return new ResourceNotFoundException("Invoice not found: " + invoiceId);
+                    });
 
-        if (!razorpayEnabled || globalKeySecret.contains("placeholder")) {
-            log.info("💳 [RAZORPAY DISABLED] Marking invoice {} as PAID (mock)", invoiceId);
-        } else {
-            verifySignature(razorpayOrderId, razorpayPaymentId, signature, globalKeySecret);
+            if (!razorpayEnabled || globalKeySecret.contains("placeholder")) {
+                log.info("💳 [RAZORPAY DISABLED] Marking invoice {} as PAID (mock)", invoiceId);
+            } else {
+                try {
+                    verifySignature(razorpayOrderId, razorpayPaymentId, signature, globalKeySecret);
+                } catch (SignatureVerificationException e) {
+                    log.warn("Razorpay signature verification failed for invoice ID: {}, order ID: {}, payment ID: {}",
+                            invoiceId, razorpayOrderId, razorpayPaymentId);
+                    throw e;
+                }
+            }
+
+            invoice.setStatus(InvoiceStatus.PAID);
+            invoice.setRazorpayOrderId(razorpayOrderId);
+            invoice.setRazorpayPaymentId(razorpayPaymentId);
+            invoice.setPaidAt(LocalDateTime.now());
+            final Invoice savedInvoice = invoiceRepository.save(invoice);
+            log.info("Successfully verified and captured payment for invoice ID: {}, marked as PAID", invoiceId);
+            return savedInvoice;
+        } catch (Exception e) {
+            log.error("Error verifying/capturing payment for invoice ID: {}", invoiceId, e);
+            throw e;
         }
-
-        invoice.setStatus(InvoiceStatus.PAID);
-        invoice.setRazorpayOrderId(razorpayOrderId);
-        invoice.setRazorpayPaymentId(razorpayPaymentId);
-        invoice.setPaidAt(LocalDateTime.now());
-        return invoiceRepository.save(invoice);
     }
 
     /**
@@ -200,18 +231,28 @@ public class PaymentService {
      */
     @Transactional
     public Invoice recordManualPayment(final String invoiceId, final BigDecimal amount, final String method) {
-        final Invoice invoice = invoiceRepository.findById(invoiceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + invoiceId));
+        log.info("Recording manual offline payment for invoice ID: {}, amount: ₹{}, method: {}", invoiceId, amount, method);
+        try {
+            final Invoice invoice = invoiceRepository.findById(invoiceId)
+                    .orElseThrow(() -> {
+                        log.warn("Invoice not found for ID: {} during manual payment recording", invoiceId);
+                        return new ResourceNotFoundException("Invoice not found: " + invoiceId);
+                    });
 
-        if (invoice.getStatus() == InvoiceStatus.PAID) {
-            throw new RuntimeException("Invoice is already paid");
+            if (invoice.getStatus() == InvoiceStatus.PAID) {
+                log.warn("Invoice {} is already paid, cannot record manual payment", invoiceId);
+                throw new RuntimeException("Invoice is already paid");
+            }
+
+            invoice.setStatus(InvoiceStatus.PAID);
+            invoice.setPaymentMethod(method);
+            invoice.setPaidAt(LocalDateTime.now());
+            log.info("Manual payment recorded for invoice {} — ₹{} via {}", invoiceId, amount, method);
+            return invoiceRepository.save(invoice);
+        } catch (Exception e) {
+            log.error("Error recording manual payment for invoice ID: {}", invoiceId, e);
+            throw e;
         }
-
-        invoice.setStatus(InvoiceStatus.PAID);
-        invoice.setPaymentMethod(method);
-        invoice.setPaidAt(LocalDateTime.now());
-        log.info("Manual payment recorded for invoice {} — ₹{} via {}", invoiceId, amount, method);
-        return invoiceRepository.save(invoice);
     }
 
     // ── Private Helpers ───────────────────────────────────────────────────────

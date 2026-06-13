@@ -83,20 +83,27 @@ public class AuthService {
      */
     @Transactional(readOnly = true)
     public AuthResponse login(final String email, final String password) {
+        log.info("Login attempt initiated for email: {}", email);
         final User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Invalid credentials"));
+                .orElseThrow(() -> {
+                    log.warn("Login failed: User not found for email: {}", email);
+                    return new ResourceNotFoundException("Invalid credentials");
+                });
 
         if (!user.isActive()) {
+            log.warn("Login failed: Account is deactivated for email: {}", email);
             throw new RuntimeException("Account is deactivated");
         }
 
         if (!passwordEncoder.matches(password, user.getPassword())) {
+            log.warn("Login failed: Password mismatch for email: {}", email);
             throw new ResourceNotFoundException("Invalid credentials");
         }
 
         final String accessToken  = jwtUtil.generateAccessToken(user.getId(), user.getRole(), user.getBranchId());
         final String refreshToken = jwtUtil.generateRefreshToken(user.getId());
 
+        log.info("Login successful for email: {} with role: {}", email, user.getRole());
         return buildAuthResponse(user, accessToken, refreshToken);
     }
 
@@ -116,14 +123,19 @@ public class AuthService {
     @Transactional
     public AuthResponse refresh(final String refreshToken) {
         if (!jwtUtil.isTokenValid(refreshToken)) {
+            log.warn("Token refresh failed: Invalid refresh token");
             throw new RuntimeException("Invalid refresh token");
         }
 
         final String userId = jwtUtil.extractUserId(refreshToken);
         final User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+                .orElseThrow(() -> {
+                    log.warn("Token refresh failed: User not found for ID: {}", userId);
+                    return new ResourceNotFoundException("User not found: " + userId);
+                });
 
         final String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getRole(), user.getBranchId());
+        log.info("Token refreshed successfully for user ID: {}", userId);
         return buildAuthResponse(user, newAccessToken, refreshToken);
     }
 
@@ -144,6 +156,7 @@ public class AuthService {
      */
     @Transactional
     public void processForgotPassword(final String email) {
+        log.info("Password reset request received for email: {}", email);
         final Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
         if (userOpt.isPresent()) {
             final User user = userOpt.get();
@@ -159,6 +172,7 @@ public class AuthService {
             userRepository.save(user);
 
             emailService.sendPasswordResetEmail(user, tempPassword);
+            log.info("Temporary password generated and email dispatched for user: {}", email);
         } else {
             log.info("Password reset requested for unregistered email: {}", email);
         }

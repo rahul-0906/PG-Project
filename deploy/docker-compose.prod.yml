@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: pgcrm-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: pgcrmdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pgcrmdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: pgcrm-backend-prod
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://postgres:5432/pgcrmdb
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${DB_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
+      - PG_NAME=${PG_NAME}
+      - PG_SHORT_NAME=${PG_SHORT_NAME}
+      - PG_PRIMARY_COLOR=${PG_PRIMARY_COLOR}
+      - PG_DEFAULT_OWNER_EMAIL=${PG_DEFAULT_OWNER_EMAIL}
+      - PG_DEFAULT_OWNER_NAME=${PG_DEFAULT_OWNER_NAME}
+      - PG_DEFAULT_OWNER_PASSWORD=${PG_DEFAULT_OWNER_PASSWORD}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - MAIL_ENABLED=${MAIL_ENABLED}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - RAZORPAY_ENABLED=${RAZORPAY_ENABLED}
+      - META_WHATSAPP_PHONE_NUMBER_ID=${META_WHATSAPP_PHONE_NUMBER_ID}
+      - META_WHATSAPP_ACCESS_TOKEN=${META_WHATSAPP_ACCESS_TOKEN}
+      - META_WEBHOOK_VERIFY_TOKEN=${META_WEBHOOK_VERIFY_TOKEN}
+    volumes:
+      # Optional: mount custom configuration files
+      - ../tenant-config.yml:/app/config/tenant-config.yml
+
+volumes:
+  pgdata:
+    driver: local

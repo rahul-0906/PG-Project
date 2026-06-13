@@ -130,103 +130,109 @@ public class InvoiceService {
      */
     @Transactional
     public Invoice generateInvoiceForGuest(final Guest guest, final int month, final int year) {
-        // Idempotency guard: return existing invoice if already generated.
-        final Optional<Invoice> existing = invoiceRepository.findByGuestIdAndMonthAndYear(guest.getId(), month, year);
-        if (existing.isPresent()) {
-            log.info("Invoice already exists for guest {} for {}/{}", guest.getId(), month, year);
-            return existing.get();
+        log.info("Generating invoice for guest ID: {} for month: {}/{}", guest.getId(), month, year);
+        try {
+            // Idempotency guard: return existing invoice if already generated.
+            final Optional<Invoice> existing = invoiceRepository.findByGuestIdAndMonthAndYear(guest.getId(), month, year);
+            if (existing.isPresent()) {
+                log.info("Invoice already exists for guest {} for {}/{}", guest.getId(), month, year);
+                return existing.get();
+            }
+
+            final YearMonth  ym          = YearMonth.of(year, month);
+            final LocalDate  periodStart = ym.atDay(1);
+            final LocalDate  periodEnd   = ym.atEndOfMonth();
+
+            final List<InvoiceLineItem> lineItems = new ArrayList<>();
+            BigDecimal                  total     = BigDecimal.ZERO;
+
+            // ── 1. RENT (pro-rated if mid-month check-in) ─────────────────────────
+            final BigDecimal rent = calculateProRatedRent(guest, ym);
+            lineItems.add(InvoiceLineItem.builder()
+                    .type(InvoiceLineType.RENT)
+                    .description("Room Rent - " + ym.getMonth().name() + " " + year)
+                    .amount(rent)
+                    .build());
+            total = total.add(rent);
+
+            // ── 2. EB Share ───────────────────────────────────────────────────────
+            BigDecimal ebShare = BigDecimal.ZERO;
+            if (guest.getBed() != null && guest.getBed().getRoom().getBlock() != null) {
+                final String          blockId  = guest.getBed().getRoom().getBlock().getId();
+                final List<EbBillGuest> ebShares = ebBillGuestRepository.findByEbBill_BlockIdAndGuestId(blockId, guest.getId());
+                ebShare = ebShares.stream()
+                        .filter(s -> isWithinPeriod(s.getEbBill().getBillingPeriodStart(), periodStart, periodEnd))
+                        .map(EbBillGuest::getShareAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+            }
+            lineItems.add(InvoiceLineItem.builder()
+                    .type(InvoiceLineType.EB)
+                    .description("Electricity Bill Share")
+                    .amount(ebShare)
+                    .build());
+            total = total.add(ebShare);
+
+            // ── Resolve per-building pricing ──────────────────────────────────────
+            final String buildingId = resolveBuildingId(guest);
+            final PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+
+            // ── 3. FOOD (skipped if food is included in rent) ─────────────────────
+            BigDecimal foodTotal    = BigDecimal.ZERO;
+            boolean    foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
+            if (buildingId != null) {
+                foodIncluded = buildingConfigRepository.findById(buildingId)
+                        .map(BuildingConfig::isFoodIncludedInRent)
+                        .orElse(foodIncluded);
+            }
+            if (!foodIncluded) {
+                foodTotal = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
+            }
+            lineItems.add(InvoiceLineItem.builder()
+                    .type(InvoiceLineType.FOOD)
+                    .description("Food & Extras")
+                    .amount(foodTotal)
+                    .build());
+            total = total.add(foodTotal);
+
+            // ── 4. LAUNDRY ────────────────────────────────────────────────────────
+            BigDecimal laundryTotal = BigDecimal.ZERO;
+            if (systemConfig.getRules().isHasWashingMachine()) {
+                laundryTotal = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
+            }
+            lineItems.add(InvoiceLineItem.builder()
+                    .type(InvoiceLineType.LAUNDRY)
+                    .description("Washing Machine")
+                    .amount(laundryTotal)
+                    .build());
+            total = total.add(laundryTotal);
+
+            // ── Persist invoice and line items ────────────────────────────────────
+            final LocalDate dueDate = YearMonth.of(year, month).atDay(systemConfig.getRules().getPaymentDueDayOfMonth());
+            final Invoice invoice = Invoice.builder()
+                    .guest(guest)
+                    .month(month)
+                    .year(year)
+                    .totalAmount(total)
+                    .status(InvoiceStatus.GENERATED)
+                    .dueDate(dueDate)
+                    .build();
+
+            final Invoice savedInvoice = invoiceRepository.save(invoice);
+            lineItems.forEach(item -> item.setInvoice(savedInvoice));
+            savedInvoice.setLineItems(lineItems);
+            invoiceRepository.save(savedInvoice);
+
+            // ── Notify guest ──────────────────────────────────────────────────────
+            final String message = buildInvoiceMessage(guest, savedInvoice, rent, ebShare, foodTotal, laundryTotal);
+            notificationService.sendBoth(guest, message);
+
+            log.info("Invoice generated for guest {} | Rent={} EB={} Food={} WM={} Total={}",
+                    guest.getId(), rent, ebShare, foodTotal, laundryTotal, total);
+            return savedInvoice;
+        } catch (Exception e) {
+            log.error("Error generating invoice for guest ID: {} for month: {}/{}", guest.getId(), month, year, e);
+            throw e;
         }
-
-        final YearMonth  ym          = YearMonth.of(year, month);
-        final LocalDate  periodStart = ym.atDay(1);
-        final LocalDate  periodEnd   = ym.atEndOfMonth();
-
-        final List<InvoiceLineItem> lineItems = new ArrayList<>();
-        BigDecimal                  total     = BigDecimal.ZERO;
-
-        // ── 1. RENT (pro-rated if mid-month check-in) ─────────────────────────
-        final BigDecimal rent = calculateProRatedRent(guest, ym);
-        lineItems.add(InvoiceLineItem.builder()
-                .type(InvoiceLineType.RENT)
-                .description("Room Rent - " + ym.getMonth().name() + " " + year)
-                .amount(rent)
-                .build());
-        total = total.add(rent);
-
-        // ── 2. EB Share ───────────────────────────────────────────────────────
-        BigDecimal ebShare = BigDecimal.ZERO;
-        if (guest.getBed() != null && guest.getBed().getRoom().getBlock() != null) {
-            final String          blockId  = guest.getBed().getRoom().getBlock().getId();
-            final List<EbBillGuest> ebShares = ebBillGuestRepository.findByEbBill_BlockIdAndGuestId(blockId, guest.getId());
-            ebShare = ebShares.stream()
-                    .filter(s -> isWithinPeriod(s.getEbBill().getBillingPeriodStart(), periodStart, periodEnd))
-                    .map(EbBillGuest::getShareAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-        }
-        lineItems.add(InvoiceLineItem.builder()
-                .type(InvoiceLineType.EB)
-                .description("Electricity Bill Share")
-                .amount(ebShare)
-                .build());
-        total = total.add(ebShare);
-
-        // ── Resolve per-building pricing ──────────────────────────────────────
-        final String buildingId = resolveBuildingId(guest);
-        final PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
-
-        // ── 3. FOOD (skipped if food is included in rent) ─────────────────────
-        BigDecimal foodTotal    = BigDecimal.ZERO;
-        boolean    foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
-        if (buildingId != null) {
-            foodIncluded = buildingConfigRepository.findById(buildingId)
-                    .map(BuildingConfig::isFoodIncludedInRent)
-                    .orElse(foodIncluded);
-        }
-        if (!foodIncluded) {
-            foodTotal = calculateFoodTotal(guest, periodStart, periodEnd, pricing);
-        }
-        lineItems.add(InvoiceLineItem.builder()
-                .type(InvoiceLineType.FOOD)
-                .description("Food & Extras")
-                .amount(foodTotal)
-                .build());
-        total = total.add(foodTotal);
-
-        // ── 4. LAUNDRY ────────────────────────────────────────────────────────
-        BigDecimal laundryTotal = BigDecimal.ZERO;
-        if (systemConfig.getRules().isHasWashingMachine()) {
-            laundryTotal = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
-        }
-        lineItems.add(InvoiceLineItem.builder()
-                .type(InvoiceLineType.LAUNDRY)
-                .description("Washing Machine")
-                .amount(laundryTotal)
-                .build());
-        total = total.add(laundryTotal);
-
-        // ── Persist invoice and line items ────────────────────────────────────
-        final LocalDate dueDate = YearMonth.of(year, month).atDay(systemConfig.getRules().getPaymentDueDayOfMonth());
-        final Invoice invoice = Invoice.builder()
-                .guest(guest)
-                .month(month)
-                .year(year)
-                .totalAmount(total)
-                .status(InvoiceStatus.GENERATED)
-                .dueDate(dueDate)
-                .build();
-
-        final Invoice savedInvoice = invoiceRepository.save(invoice);
-        lineItems.forEach(item -> item.setInvoice(savedInvoice));
-        savedInvoice.setLineItems(lineItems);
-        invoiceRepository.save(savedInvoice);
-
-        // ── Notify guest ──────────────────────────────────────────────────────
-        final String message = buildInvoiceMessage(guest, savedInvoice, rent, ebShare, foodTotal, laundryTotal);
-        notificationService.sendBoth(guest, message);
-
-        log.info("Invoice generated for guest {} | Rent={} EB={} Food={} WM={} Total={}",
-                guest.getId(), rent, ebShare, foodTotal, laundryTotal, total);
-        return savedInvoice;
     }
 
     /**

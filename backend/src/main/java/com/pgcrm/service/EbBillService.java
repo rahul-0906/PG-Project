@@ -12,6 +12,7 @@ import com.pgcrm.repository.EbBillGuestRepository;
 import com.pgcrm.repository.EbBillRepository;
 import com.pgcrm.repository.GuestRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +53,7 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EbBillService {
 
     private final EbBillRepository       ebBillRepository;
@@ -91,48 +93,60 @@ public class EbBillService {
     @Transactional
     public EbBill recordAndSplit(final String blockId, final BigDecimal totalAmount,
                                  final LocalDate periodStart, final LocalDate periodEnd) {
-        final Block    block    = blockRepository.findById(blockId)
-                .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
-        final Building building = (block.getFloor() != null) ? block.getFloor().getBuilding() : null;
+        log.info("Recording and splitting EB bill for block ID: {}, amount: {}, period: {} to {}",
+                blockId, totalAmount, periodStart, periodEnd);
+        try {
+            final Block    block    = blockRepository.findById(blockId)
+                    .orElseThrow(() -> {
+                        log.warn("Block not found for ID: {} during EB split", blockId);
+                        return new RuntimeException("Block not found: " + blockId);
+                    });
+            final Building building = (block.getFloor() != null) ? block.getFloor().getBuilding() : null;
 
-        // Resolve the split method — building config takes precedence over the YAML default.
-        String splitMethod = systemConfig.getRules().getEbSplitMethod();
-        if (building != null && building.getBuildingConfig() != null
-                && building.getBuildingConfig().getEbSplitMethod() != null) {
-            splitMethod = building.getBuildingConfig().getEbSplitMethod().name();
-        }
-
-        EbBill bill = EbBill.builder()
-                .block(block)
-                .totalAmount(totalAmount)
-                .splitMethod(splitMethod)
-                .billingPeriodStart(periodStart)
-                .billingPeriodEnd(periodEnd)
-                .build();
-        bill = ebBillRepository.save(bill);
-
-        final List<Guest> activeGuests = guestRepository.findActiveGuestsInBlock(blockId, periodStart, periodEnd);
-        if (activeGuests.isEmpty()) {
-            return bill;
-        }
-
-        final List<EbBillGuest> shares = new ArrayList<>();
-        if (EbSplitMethod.EQUAL_SPLIT.name().equals(splitMethod)
-                || EbSplitMethod.PER_BED.name().equals(splitMethod)) {
-            final BigDecimal perGuest = totalAmount.divide(
-                    BigDecimal.valueOf(activeGuests.size()), 2, RoundingMode.HALF_UP);
-            for (final Guest guest : activeGuests) {
-                shares.add(EbBillGuest.builder()
-                        .ebBill(bill)
-                        .guest(guest)
-                        .shareAmount(perGuest)
-                        .build());
+            // Resolve the split method — building config takes precedence over the YAML default.
+            String splitMethod = systemConfig.getRules().getEbSplitMethod();
+            if (building != null && building.getBuildingConfig() != null
+                    && building.getBuildingConfig().getEbSplitMethod() != null) {
+                splitMethod = building.getBuildingConfig().getEbSplitMethod().name();
             }
-        }
-        // METER_BASED and MANAGER_MANUAL are handled by their respective dedicated methods.
 
-        ebBillGuestRepository.saveAll(shares);
-        return bill;
+            EbBill bill = EbBill.builder()
+                    .block(block)
+                    .totalAmount(totalAmount)
+                    .splitMethod(splitMethod)
+                    .billingPeriodStart(periodStart)
+                    .billingPeriodEnd(periodEnd)
+                    .build();
+            bill = ebBillRepository.save(bill);
+
+            final List<Guest> activeGuests = guestRepository.findActiveGuestsInBlock(blockId, periodStart, periodEnd);
+            if (activeGuests.isEmpty()) {
+                log.info("No active guests found in block ID: {} for EB split period {} to {}", blockId, periodStart, periodEnd);
+                return bill;
+            }
+
+            final List<EbBillGuest> shares = new ArrayList<>();
+            if (EbSplitMethod.EQUAL_SPLIT.name().equals(splitMethod)
+                    || EbSplitMethod.PER_BED.name().equals(splitMethod)) {
+                final BigDecimal perGuest = totalAmount.divide(
+                        BigDecimal.valueOf(activeGuests.size()), 2, RoundingMode.HALF_UP);
+                for (final Guest guest : activeGuests) {
+                    shares.add(EbBillGuest.builder()
+                            .ebBill(bill)
+                            .guest(guest)
+                            .shareAmount(perGuest)
+                            .build());
+                }
+            }
+            // METER_BASED and MANAGER_MANUAL are handled by their respective dedicated methods.
+
+            ebBillGuestRepository.saveAll(shares);
+            log.info("Successfully recorded and split EB bill ID: {} (Block ID: {}) among {} guests", bill.getId(), blockId, activeGuests.size());
+            return bill;
+        } catch (Exception e) {
+            log.error("Error splitting EB bill for block ID: {}", blockId, e);
+            throw e;
+        }
     }
 
     // ── Meter-Based Split ─────────────────────────────────────────────────────
@@ -165,52 +179,67 @@ public class EbBillService {
     public EbBill recordMeterBased(final String blockId, final BigDecimal ratePerUnit,
                                    final LocalDate periodStart, final LocalDate periodEnd,
                                    final List<Map<String, Object>> readings) {
-        final Block block = blockRepository.findById(blockId)
-                .orElseThrow(() -> new RuntimeException("Block not found: " + blockId));
+        log.info("Recording meter-based EB bill for block ID: {}, rate: {}, period: {} to {}",
+                blockId, ratePerUnit, periodStart, periodEnd);
+        try {
+            final Block block = blockRepository.findById(blockId)
+                    .orElseThrow(() -> {
+                        log.warn("Block not found for ID: {} during meter-based EB split", blockId);
+                        return new RuntimeException("Block not found: " + blockId);
+                    });
 
-        // Sum across all guest readings to compute the block-level total bill amount.
-        final BigDecimal total = readings.stream()
-                .map(r -> {
-                    final BigDecimal prev = new BigDecimal(r.get("previousReading").toString());
-                    final BigDecimal curr = new BigDecimal(r.get("currentReading").toString());
-                    return curr.subtract(prev).multiply(ratePerUnit);
-                })
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+            // Sum across all guest readings to compute the block-level total bill amount.
+            final BigDecimal total = readings.stream()
+                    .map(r -> {
+                        final BigDecimal prev = new BigDecimal(r.get("previousReading").toString());
+                        final BigDecimal curr = new BigDecimal(r.get("currentReading").toString());
+                        return curr.subtract(prev).multiply(ratePerUnit);
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
 
-        EbBill bill = EbBill.builder()
-                .block(block)
-                .totalAmount(total)
-                .ratePerUnit(ratePerUnit)
-                .splitMethod(EbSplitMethod.METER_BASED.name())
-                .billingPeriodStart(periodStart)
-                .billingPeriodEnd(periodEnd)
-                .build();
-        bill = ebBillRepository.save(bill);
+            EbBill bill = EbBill.builder()
+                    .block(block)
+                    .totalAmount(total)
+                    .ratePerUnit(ratePerUnit)
+                    .splitMethod(EbSplitMethod.METER_BASED.name())
+                    .billingPeriodStart(periodStart)
+                    .billingPeriodEnd(periodEnd)
+                    .build();
+            bill = ebBillRepository.save(bill);
 
-        final List<EbBillGuest> shares = new ArrayList<>();
-        for (final Map<String, Object> r : readings) {
-            final String  guestId = r.get("guestId").toString();
-            final Guest   guest   = guestRepository.findById(guestId)
-                    .orElseThrow(() -> new RuntimeException("Guest not found: " + guestId));
+            final List<EbBillGuest> shares = new ArrayList<>();
+            for (final Map<String, Object> r : readings) {
+                final String  guestId = r.get("guestId").toString();
+                final Guest   guest   = guestRepository.findById(guestId)
+                        .orElseThrow(() -> {
+                            log.warn("Guest not found for ID: {} during meter-based EB split", guestId);
+                            return new RuntimeException("Guest not found: " + guestId);
+                        });
 
-            final BigDecimal prev  = new BigDecimal(r.get("previousReading").toString());
-            final BigDecimal curr  = new BigDecimal(r.get("currentReading").toString());
-            final BigDecimal units = curr.subtract(prev).setScale(2, RoundingMode.HALF_UP);
-            final BigDecimal share = units.multiply(ratePerUnit).setScale(2, RoundingMode.HALF_UP);
+                final BigDecimal prev  = new BigDecimal(r.get("previousReading").toString());
+                final BigDecimal curr  = new BigDecimal(r.get("currentReading").toString());
+                final BigDecimal units = curr.subtract(prev).setScale(2, RoundingMode.HALF_UP);
+                final BigDecimal share = units.multiply(ratePerUnit).setScale(2, RoundingMode.HALF_UP);
 
-            shares.add(EbBillGuest.builder()
-                    .ebBill(bill)
-                    .guest(guest)
-                    .previousReading(prev)
-                    .currentReading(curr)
-                    .unitsConsumed(units)
-                    .shareAmount(share)
-                    .build());
+                shares.add(EbBillGuest.builder()
+                        .ebBill(bill)
+                        .guest(guest)
+                        .previousReading(prev)
+                        .currentReading(curr)
+                        .unitsConsumed(units)
+                        .shareAmount(share)
+                        .build());
+            }
+
+            ebBillGuestRepository.saveAll(shares);
+            log.info("Successfully recorded meter-based EB bill ID: {} (Block ID: {}), total amount: {}, shares: {}",
+                    bill.getId(), blockId, total, shares.size());
+            return bill;
+        } catch (Exception e) {
+            log.error("Error recording meter-based EB bill for block ID: {}", blockId, e);
+            throw e;
         }
-
-        ebBillGuestRepository.saveAll(shares);
-        return bill;
     }
 
     // ── Query ─────────────────────────────────────────────────────────────────

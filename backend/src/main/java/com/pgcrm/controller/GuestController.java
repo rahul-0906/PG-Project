@@ -22,10 +22,12 @@ import org.springframework.http.MediaType;
 
 import com.pgcrm.mapper.GuestMapper;
 import com.pgcrm.mapper.InvoiceMapper;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/guest")
 @RequiredArgsConstructor
+@Slf4j
 public class GuestController {
 
     private final GuestService guestService;
@@ -59,6 +61,7 @@ public class GuestController {
     @PutMapping("/profile")
     public ResponseEntity<GuestResponse> updateProfile(Authentication auth,
                                                 @RequestBody Map<String, String> body) {
+        log.info("Guest '{}' requested profile update. Updated fields: {}", auth.getName(), body.keySet());
         Guest guest = guestService.getByUserId(auth.getName());
         // Only editable basic fields
         if (body.containsKey("phone"))               guest.setPhone(body.get("phone"));
@@ -75,7 +78,9 @@ public class GuestController {
     public ResponseEntity<?> requestEmailChange(Authentication auth,
                                                                  @RequestBody Map<String, String> body) {
         String newEmail = body.get("newEmail");
+        log.info("Guest '{}' requested email verification code for email change to {}", auth.getName(), newEmail);
         if (newEmail == null || newEmail.isBlank()) {
+            log.warn("New email value is empty/null for guest '{}'", auth.getName());
             return ResponseEntity.badRequest().body(Map.of("error", "New email is required"));
         }
         newEmail = newEmail.trim();
@@ -83,11 +88,13 @@ public class GuestController {
         // Check if email is already in use by another user
         Optional<User> existingUser = userRepository.findByEmailIgnoreCase(newEmail);
         if (existingUser.isPresent()) {
+            log.warn("Email {} is already in use by another account", newEmail);
             return ResponseEntity.badRequest().body(Map.of("error", "Email is already in use by another account"));
         }
 
         Guest guest = guestService.getByUserId(auth.getName());
         if (newEmail.equalsIgnoreCase(guest.getEmail())) {
+            log.warn("New email {} is the same as current email for guest '{}'", newEmail, auth.getName());
             return ResponseEntity.badRequest().body(Map.of("error", "New email is same as current email"));
         }
 
@@ -97,6 +104,7 @@ public class GuestController {
 
         // Send email
         emailService.sendEmailVerificationCode(newEmail, code, guest.getFullName());
+        log.info("Email verification code sent successfully to {}", newEmail);
 
         return ResponseEntity.ok(Map.of("message", "Verification code sent to " + newEmail));
     }
@@ -106,7 +114,9 @@ public class GuestController {
                                                             @RequestBody Map<String, String> body) {
         String newEmail = body.get("newEmail");
         String code = body.get("code");
+        log.info("Guest '{}' requested verification of email change to {}", auth.getName(), newEmail);
         if (newEmail == null || newEmail.isBlank() || code == null || code.isBlank()) {
+            log.warn("Verification details missing for guest '{}'", auth.getName());
             return ResponseEntity.badRequest().body(Map.of("error", "Email and verification code are required"));
         }
         newEmail = newEmail.trim();
@@ -114,6 +124,7 @@ public class GuestController {
 
         boolean verified = emailVerificationService.verifyCode(auth.getName(), newEmail, code);
         if (!verified) {
+            log.warn("Invalid or expired verification code submitted for email: {} by guest '{}'", newEmail, auth.getName());
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid or expired verification code"));
         }
 
@@ -131,6 +142,7 @@ public class GuestController {
         // Audit Log
         auditService.log(com.pgcrm.entity.enums.AuditAction.GUEST_CHECKIN, "Guest", guest.getId(),
             "Guest " + guest.getFullName() + " changed email to " + newEmail);
+        log.info("Successfully verified and changed email to {} for guest '{}'", newEmail, auth.getName());
 
         return ResponseEntity.ok(guestMapper.toResponse(guest));
     }
@@ -145,6 +157,7 @@ public class GuestController {
     public ResponseEntity<DailyLog> upsertLog(Authentication auth,
                                                @PathVariable String date,
                                                @RequestBody DailyLog body) {
+        log.info("Guest '{}' requested upsert of daily log for date: {}", auth.getName(), date);
         Guest guest = guestService.getByUserId(auth.getName());
         return ResponseEntity.ok(dailyLogService.upsertLog(guest.getId(), LocalDate.parse(date), body));
     }
@@ -195,6 +208,7 @@ public class GuestController {
 
     @PutMapping("/notifications/{id}/read")
     public ResponseEntity<Void> markRead(@PathVariable String id) {
+        log.info("Guest marking notification ID: {} as read", id);
         notificationRepository.findById(id).ifPresent(n -> {
             n.setRead(true);
             notificationRepository.save(n);
@@ -204,6 +218,7 @@ public class GuestController {
 
     @PutMapping("/notifications/read-all")
     public ResponseEntity<Void> markAllRead(Authentication auth) {
+        log.info("Guest '{}' marking all notifications as read", auth.getName());
         String userId = auth.getName();
         List<Notification> unread = notificationRepository.findByUserIdAndReadFalse(userId);
         unread.forEach(n -> n.setRead(true));
@@ -319,6 +334,7 @@ public class GuestController {
 
     @PostMapping("/maintenance")
     public ResponseEntity<MaintenanceTicket> createTicket(Authentication auth, @RequestBody Map<String, String> body) {
+        log.info("Guest '{}' requested creation of maintenance ticket", auth.getName());
         Guest guest = guestService.getByUserId(auth.getName());
         
         String title = body.get("title");
@@ -326,6 +342,7 @@ public class GuestController {
         String priorityStr = body.getOrDefault("priority", "MEDIUM");
         
         if (title == null || title.isBlank() || description == null || description.isBlank()) {
+            log.warn("Title or description is missing for maintenance ticket by guest '{}'", auth.getName());
             throw new IllegalArgumentException("Title and description are required");
         }
         
@@ -351,6 +368,7 @@ public class GuestController {
                 .build();
                 
         MaintenanceTicket savedTicket = maintenanceTicketRepository.save(ticket);
+        log.info("Successfully created maintenance ticket ID: {} for guest '{}'", savedTicket.getId(), auth.getName());
         if (buildingId != null) {
             notificationService.alertManager(buildingId, 
                 "New maintenance ticket raised by Guest " + guest.getFullName() + ": " + title + " (Priority: " + priorityStr + ")");
@@ -366,13 +384,19 @@ public class GuestController {
 
     @PostMapping("/invoices/{id}/pay-cash")
     public ResponseEntity<InvoiceResponse> payCash(Authentication auth, @PathVariable String id) {
+        log.info("Guest '{}' requested cash payment verification for invoice ID: {}", auth.getName(), id);
         Guest guest = guestService.getByUserId(auth.getName());
         Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + id));
+                .orElseThrow(() -> {
+                    log.warn("Invoice not found for ID: {} during cash payment request", id);
+                    return new ResourceNotFoundException("Invoice not found: " + id);
+                });
         if (!invoice.getGuest().getId().equals(guest.getId())) {
+            log.warn("Unauthorized cash payment request for invoice ID: {} by guest '{}'", id, auth.getName());
             throw new RuntimeException("Unauthorized");
         }
         if (invoice.getStatus() == com.pgcrm.entity.enums.InvoiceStatus.PAID) {
+            log.warn("Invoice ID: {} is already paid, cannot request cash verification", id);
             throw new RuntimeException("Invoice is already paid");
         }
         invoice.setStatus(com.pgcrm.entity.enums.InvoiceStatus.PENDING_CASH_VERIFICATION);
@@ -381,6 +405,7 @@ public class GuestController {
         // Audit Log
         auditService.log(com.pgcrm.entity.enums.AuditAction.PAYMENT_RECEIVED, "Invoice", id,
             "Guest requested cash payment verification for Invoice " + id + " amount: ₹" + invoice.getTotalAmount());
+        log.info("Invoice ID: {} status updated to PENDING_CASH_VERIFICATION", id);
 
         // Alert Manager
         String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null

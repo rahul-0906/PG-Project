@@ -14,6 +14,7 @@ import com.pgcrm.repository.EbBillGuestRepository;
 import com.pgcrm.repository.GuestRepository;
 import com.pgcrm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +55,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class SettlementService {
 
     private final GuestRepository          guestRepository;
@@ -85,22 +87,33 @@ public class SettlementService {
      */
     @Transactional
     public Guest initiateCheckout(final String guestId) {
-        Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
+        log.info("Initiating checkout notice registration for guest ID: {}", guestId);
+        try {
+            Guest guest = guestRepository.findById(guestId)
+                    .orElseThrow(() -> {
+                        log.warn("Guest not found during checkout notice registration for guest ID: {}", guestId);
+                        return new RuntimeException("Guest not found");
+                    });
 
-        final LocalDate today = LocalDate.now();
-        guest.setNoticeDate(today);
-        guest.setExitDate(today.plusDays(systemConfig.getRules().getNoticePeriodDays()));
-        guest = guestRepository.save(guest);
+            final LocalDate today = LocalDate.now();
+            guest.setNoticeDate(today);
+            guest.setExitDate(today.plusDays(systemConfig.getRules().getNoticePeriodDays()));
+            guest = guestRepository.save(guest);
 
-        final String msg = String.format(
-                "Dear %s, your checkout notice has been registered. "
-                + "Notice period: %d days. Expected exit date: %s.",
-                guest.getFullName(),
-                systemConfig.getRules().getNoticePeriodDays(),
-                guest.getExitDate());
-        notificationService.sendBoth(guest, msg);
-        return guest;
+            final String msg = String.format(
+                    "Dear %s, your checkout notice has been registered. "
+                    + "Notice period: %d days. Expected exit date: %s.",
+                    guest.getFullName(),
+                    systemConfig.getRules().getNoticePeriodDays(),
+                    guest.getExitDate());
+            notificationService.sendBoth(guest, msg);
+            log.info("Successfully registered checkout notice for guest: {} (ID: {}). Expected exit date: {}",
+                    guest.getFullName(), guestId, guest.getExitDate());
+            return guest;
+        } catch (Exception e) {
+            log.error("Error initiating checkout notice for guest ID: {}", guestId, e);
+            throw e;
+        }
     }
 
     /**
@@ -132,102 +145,114 @@ public class SettlementService {
      */
     @Transactional
     public SettlementResult confirmCheckout(final String guestId) {
-        Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
+        log.info("Confirming checkout and settlement for guest ID: {}", guestId);
+        try {
+            Guest guest = guestRepository.findById(guestId)
+                    .orElseThrow(() -> {
+                        log.warn("Guest not found during checkout confirmation for guest ID: {}", guestId);
+                        return new RuntimeException("Guest not found");
+                    });
 
-        final LocalDate  today        = LocalDate.now();
-        final YearMonth  currentMonth = YearMonth.now();
+            final LocalDate  today        = LocalDate.now();
+            final YearMonth  currentMonth = YearMonth.now();
 
-        // ── 1. Pro-rated rent ─────────────────────────────────────────────────
-        BigDecimal baseRent = BigDecimal.ZERO;
-        if (guest.getBed() != null) {
-            final com.pgcrm.entity.Room room = guest.getBed().getRoom();
-            baseRent = room.getBaseRent();
-            if (guest.isBookEntireRoom()) {
-                baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
+            // ── 1. Pro-rated rent ─────────────────────────────────────────────────
+            BigDecimal baseRent = BigDecimal.ZERO;
+            if (guest.getBed() != null) {
+                final com.pgcrm.entity.Room room = guest.getBed().getRoom();
+                baseRent = room.getBaseRent();
+                if (guest.isBookEntireRoom()) {
+                    baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
+                }
             }
-        }
-        final int        daysInMonth  = currentMonth.lengthOfMonth();
-        final long       daysStayed   = today.getDayOfMonth();
-        final BigDecimal proratedRent = baseRent
-                .multiply(BigDecimal.valueOf(daysStayed))
-                .divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
+            final int        daysInMonth  = currentMonth.lengthOfMonth();
+            final long       daysStayed   = today.getDayOfMonth();
+            final BigDecimal proratedRent = baseRent
+                    .multiply(BigDecimal.valueOf(daysStayed))
+                    .divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
 
-        // ── 2. Pending food & laundry this month ──────────────────────────────
-        final LocalDate      monthStart = currentMonth.atDay(1);
-        final List<DailyLog> logs       = dailyLogRepository.findByGuestIdAndLogDateBetween(
-                guest.getId(), monthStart, today);
+            // ── 2. Pending food & laundry this month ──────────────────────────────
+            final LocalDate      monthStart = currentMonth.atDay(1);
+            final List<DailyLog> logs       = dailyLogRepository.findByGuestIdAndLogDateBetween(
+                    guest.getId(), monthStart, today);
 
-        final String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
-                && guest.getBed().getRoom().getFloor() != null)
-                ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
-        final PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
+            final String buildingId = (guest.getBed() != null && guest.getBed().getRoom() != null
+                    && guest.getBed().getRoom().getFloor() != null)
+                    ? guest.getBed().getRoom().getFloor().getBuilding().getId() : null;
+            final PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
 
-        // Resolve whether food is included — building config overrides YAML default.
-        boolean foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
-        if (buildingId != null) {
-            foodIncluded = buildingConfigRepository.findById(buildingId)
-                    .map(BuildingConfig::isFoodIncludedInRent)
-                    .orElse(foodIncluded);
-        }
-
-        BigDecimal pendingFood    = BigDecimal.ZERO;
-        BigDecimal pendingLaundry = BigDecimal.ZERO;
-
-        if (!foodIncluded) {
-            for (final DailyLog log : logs) {
-                if (log.isBreakfastOpted()) pendingFood = pendingFood.add(pricing.breakfast());
-                if (log.isLunchOpted())     pendingFood = pendingFood.add(pricing.lunch());
-                if (log.isDinnerOpted())    pendingFood = pendingFood.add(pricing.dinner());
-                pendingFood = pendingFood.add(pricing.omelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
-                pendingFood = pendingFood.add(pricing.boiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
+            // Resolve whether food is included — building config overrides YAML default.
+            boolean foodIncluded = systemConfig.getRules().isFoodIncludedInRent();
+            if (buildingId != null) {
+                foodIncluded = buildingConfigRepository.findById(buildingId)
+                        .map(BuildingConfig::isFoodIncludedInRent)
+                        .orElse(foodIncluded);
             }
-        }
 
-        if (systemConfig.getRules().isHasWashingMachine()) {
-            final int wmUses = logs.stream().mapToInt(DailyLog::getWashingMachineCount).sum();
-            pendingLaundry   = pricing.washingMachine().multiply(BigDecimal.valueOf(wmUses));
-        }
+            BigDecimal pendingFood    = BigDecimal.ZERO;
+            BigDecimal pendingLaundry = BigDecimal.ZERO;
 
-        // ── 3. Net settlement ─────────────────────────────────────────────────
-        final BigDecimal totalDue   = proratedRent.add(pendingFood).add(pendingLaundry);
-        final BigDecimal settlement = guest.getAdvanceDeposit().subtract(totalDue);
-
-        // ── 4. Deactivate guest, user, and vacate bed ─────────────────────────
-        guest.setActive(false);
-        guest.setActualCheckOutDate(today);
-        guest.setExpectedCheckOutDate(null);
-        guest.setNoticeDate(null);
-        guest.setExitDate(null);
-        if (guest.getBeds() != null && !guest.getBeds().isEmpty()) {
-            for (final Bed b : guest.getBeds()) {
-                b.setStatus(BedStatus.VACANT);
-                bedRepository.save(b);
+            if (!foodIncluded) {
+                for (final DailyLog log : logs) {
+                    if (log.isBreakfastOpted()) pendingFood = pendingFood.add(pricing.breakfast());
+                    if (log.isLunchOpted())     pendingFood = pendingFood.add(pricing.lunch());
+                    if (log.isDinnerOpted())    pendingFood = pendingFood.add(pricing.dinner());
+                    pendingFood = pendingFood.add(pricing.omelette().multiply(BigDecimal.valueOf(log.getOmeletteCount())));
+                    pendingFood = pendingFood.add(pricing.boiledEgg().multiply(BigDecimal.valueOf(log.getBoiledEggCount())));
+                }
             }
-            guest.getBeds().clear();
+
+            if (systemConfig.getRules().isHasWashingMachine()) {
+                final int wmUses = logs.stream().mapToInt(DailyLog::getWashingMachineCount).sum();
+                pendingLaundry   = pricing.washingMachine().multiply(BigDecimal.valueOf(wmUses));
+            }
+
+            // ── 3. Net settlement ─────────────────────────────────────────────────
+            final BigDecimal totalDue   = proratedRent.add(pendingFood).add(pendingLaundry);
+            final BigDecimal settlement = guest.getAdvanceDeposit().subtract(totalDue);
+
+            // ── 4. Deactivate guest, user, and vacate bed ─────────────────────────
+            guest.setActive(false);
+            guest.setActualCheckOutDate(today);
+            guest.setExpectedCheckOutDate(null);
+            guest.setNoticeDate(null);
+            guest.setExitDate(null);
+            if (guest.getBeds() != null && !guest.getBeds().isEmpty()) {
+                for (final Bed b : guest.getBeds()) {
+                    b.setStatus(BedStatus.VACANT);
+                    bedRepository.save(b);
+                }
+                guest.getBeds().clear();
+            }
+            guestRepository.save(guest);
+
+            final User user = guest.getUser();
+            if (user != null) {
+                user.setActive(false);
+                userRepository.save(user);
+            }
+
+            // ── 5. Dispatch settlement summary notification ───────────────────────
+            final String msg = String.format(
+                    "Dear %s, your settlement summary:\n"
+                    + "Pro-rated Rent: ₹%s | Food: ₹%s | Laundry: ₹%s\n"
+                    + "Total Due: ₹%s | Advance Paid: ₹%s | Settlement: ₹%s\n%s",
+                    guest.getFullName(), proratedRent, pendingFood, pendingLaundry,
+                    totalDue, guest.getAdvanceDeposit(), settlement,
+                    settlement.compareTo(BigDecimal.ZERO) >= 0
+                            ? "You will receive ₹" + settlement + " back."
+                            : "You owe ₹" + settlement.abs() + " additionally.");
+            notificationService.sendBoth(guest, msg);
+
+            log.info("Checkout confirmed for guest: {} (ID: {}). Total Due: {}, Advance Paid: {}, Net Settlement: {}",
+                    guest.getFullName(), guestId, totalDue, guest.getAdvanceDeposit(), settlement);
+
+            return new SettlementResult(proratedRent, pendingFood, pendingLaundry,
+                    totalDue, guest.getAdvanceDeposit(), settlement);
+        } catch (Exception e) {
+            log.error("Error confirming checkout for guest ID: {}", guestId, e);
+            throw e;
         }
-        guestRepository.save(guest);
-
-        final User user = guest.getUser();
-        if (user != null) {
-            user.setActive(false);
-            userRepository.save(user);
-        }
-
-        // ── 5. Dispatch settlement summary notification ───────────────────────
-        final String msg = String.format(
-                "Dear %s, your settlement summary:\n"
-                + "Pro-rated Rent: ₹%s | Food: ₹%s | Laundry: ₹%s\n"
-                + "Total Due: ₹%s | Advance Paid: ₹%s | Settlement: ₹%s\n%s",
-                guest.getFullName(), proratedRent, pendingFood, pendingLaundry,
-                totalDue, guest.getAdvanceDeposit(), settlement,
-                settlement.compareTo(BigDecimal.ZERO) >= 0
-                        ? "You will receive ₹" + settlement + " back."
-                        : "You owe ₹" + settlement.abs() + " additionally.");
-        notificationService.sendBoth(guest, msg);
-
-        return new SettlementResult(proratedRent, pendingFood, pendingLaundry,
-                totalDue, guest.getAdvanceDeposit(), settlement);
     }
 
     // ── Nested Record ─────────────────────────────────────────────────────────

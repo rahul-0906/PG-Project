@@ -7,6 +7,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 
 @Component
+@Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
@@ -36,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
         String token = extractToken(request);
-        System.out.println("JwtAuthenticationFilter: Path=" + path + ", Token present=" + (token != null));
+        log.info("Incoming request path: {} | Token present: {}", path, token != null);
 
         if (token != null) {
             try {
@@ -45,7 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     String userId = claims.getSubject();
                     String role = claims.get("role", String.class);
                     String branchId = claims.get("branch_id", String.class);
-                    System.out.println("JwtAuthenticationFilter: Token valid. User=" + userId + ", Role=" + role);
+                    log.info("Token validated successfully. Subject/User ID: {} | Role: {}", userId, role);
 
                     String selectedBranchId = request.getHeader("X-Selected-Branch-Id");
                     String activeBranchId = null;
@@ -78,11 +80,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 } else {
-                    System.out.println("JwtAuthenticationFilter: jwtUtil.isTokenValid returned false");
+                    log.warn("JWT validation returned false (invalid token) for path: {}", path);
                 }
             } catch (Exception e) {
-                System.out.println("JwtAuthenticationFilter: Exception validating token: " + e.getMessage());
-                e.printStackTrace();
+                log.error("Exception occurred while parsing/validating JWT for path {}: {}", path, e.getMessage(), e);
             }
         }
 

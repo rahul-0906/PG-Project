@@ -17,10 +17,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import com.pgcrm.mapper.GuestMapper;
+import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/manager")
 @RequiredArgsConstructor
+@Slf4j
 public class PgManagerController {
 
     private final GuestService guestService;
@@ -97,10 +99,7 @@ public class PgManagerController {
 
     @PostMapping("/guests")
     public ResponseEntity<GuestResponse> checkIn(@RequestBody GuestCheckInRequest body) {
-        System.out.println("=== INCOMING CHECK-IN REQUEST ===");
-        System.out.println("React Sent Breakfast: " + body.isBreakfastOpted());
-        System.out.println("React Sent Dinner: " + body.isDinnerOpted());
-        System.out.println("=================================");
+        log.info("Manager requested check-in for guest: '{}', email: '{}', bedIds: {}", body.getFullName(), body.getEmail(), body.getBedIds());
 
         LocalDate checkInDate = body.getCheckInDate() != null
                 ? body.getCheckInDate() : LocalDate.now();
@@ -145,7 +144,7 @@ public class PgManagerController {
         guest.setDinnerPreference(dinnerOpted);
         guestRepository.save(guest);
 
-        DailyLog log = DailyLog.builder()
+        DailyLog logEntry = DailyLog.builder()
                 .guest(guest)
                 .logDate(checkInDate)
                 .isVeg(isVeg)
@@ -153,16 +152,21 @@ public class PgManagerController {
                 .lunchOpted(lunchOpted)
                 .dinnerOpted(dinnerOpted)
                 .build();
-        dailyLogRepository.save(log);
+        dailyLogRepository.save(logEntry);
 
+        log.info("Successfully checked in guest: '{}' (ID: {})", guest.getFullName(), guest.getId());
         return ResponseEntity.ok(guestMapper.toResponse(guest));
     }
 
     @PutMapping("/guests/{guestId}")
     public ResponseEntity<GuestResponse> updateGuestDetails(@PathVariable String guestId,
                                                     @RequestBody Map<String, Object> body) {
+        log.info("Manager requested guest details update for guest ID: {}. Updated fields: {}", guestId, body.keySet());
         Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Guest not found: " + guestId));
+                .orElseThrow(() -> {
+                    log.warn("Guest not found: {}", guestId);
+                    return new ResourceNotFoundException("Guest not found: " + guestId);
+                });
 
         if (body.containsKey("fullName")) guest.setFullName((String) body.get("fullName"));
         if (body.containsKey("phone")) guest.setPhone((String) body.get("phone"));
@@ -180,6 +184,7 @@ public class PgManagerController {
             if (!newEmail.equalsIgnoreCase(guest.getEmail())) {
                 java.util.Optional<User> existingUser = userRepository.findByEmailIgnoreCase(newEmail);
                 if (existingUser.isPresent() && (user == null || !existingUser.get().getId().equals(user.getId()))) {
+                    log.warn("Email {} is already in use by another account during guest update", newEmail);
                     throw new IllegalArgumentException("Email is already in use by another account");
                 }
                 guest.setEmail(newEmail);
@@ -195,50 +200,67 @@ public class PgManagerController {
             userRepository.save(user);
         }
 
-        return ResponseEntity.ok(guestMapper.toResponse(guestRepository.save(guest)));
+        Guest savedGuest = guestRepository.save(guest);
+        log.info("Successfully updated guest details for guest ID: {}", guestId);
+        return ResponseEntity.ok(guestMapper.toResponse(savedGuest));
     }
 
     @PutMapping("/guests/{guestId}/switch-bed/{newBedId}")
     public ResponseEntity<GuestResponse> switchBed(@PathVariable String guestId,
                                                     @PathVariable String newBedId) {
-        return ResponseEntity.ok(guestService.switchBed(guestId, newBedId));
+        log.info("Manager requested bed switch for guest ID: {} to new bed ID: {}", guestId, newBedId);
+        GuestResponse response = guestService.switchBed(guestId, newBedId);
+        log.info("Successfully switched bed for guest ID: {} to bed ID: {}", guestId, newBedId);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/guests/{guestId}/initiate-checkout")
     public ResponseEntity<Guest> initiateCheckout(@PathVariable String guestId) {
-        return ResponseEntity.ok(settlementService.initiateCheckout(guestId));
+        log.info("Manager requested checkout notice initiation for guest ID: {}", guestId);
+        Guest guest = settlementService.initiateCheckout(guestId);
+        log.info("Successfully initiated checkout notice for guest ID: {}", guestId);
+        return ResponseEntity.ok(guest);
     }
 
     @PostMapping("/guests/{guestId}/confirm-checkout")
     public ResponseEntity<SettlementService.SettlementResult> confirmCheckout(@PathVariable String guestId) {
-        return ResponseEntity.ok(settlementService.confirmCheckout(guestId));
+        log.info("Manager requested checkout confirmation and settlement for guest ID: {}", guestId);
+        SettlementService.SettlementResult result = settlementService.confirmCheckout(guestId);
+        log.info("Successfully confirmed checkout and computed settlement for guest ID: {}", guestId);
+        return ResponseEntity.ok(result);
     }
 
     // ── EB Bill ───────────────────────────────────────────────────
 
     @PostMapping("/eb-bill")
     public ResponseEntity<EbBill> recordEbBill(@RequestBody Map<String, Object> body) {
-        return ResponseEntity.ok(ebBillService.recordAndSplit(
+        log.info("Manager requested recording of EB bill for block ID: {}, amount: {}", body.get("blockId"), body.get("totalAmount"));
+        EbBill bill = ebBillService.recordAndSplit(
                 (String) body.get("blockId"),
                 new BigDecimal(body.get("totalAmount").toString()),
                 LocalDate.parse(body.get("periodStart").toString()),
                 LocalDate.parse(body.get("periodEnd").toString())
-        ));
+        );
+        log.info("Successfully recorded EB bill ID: {}", bill.getId());
+        return ResponseEntity.ok(bill);
     }
 
     /** Meter-based EB: manager provides previous + current reading per guest */
     @PostMapping("/eb-bill/meter")
     public ResponseEntity<EbBill> recordMeterBasedEbBill(@RequestBody Map<String, Object> body) {
+        log.info("Manager requested meter-based EB bill for block ID: {}, rate: {}", body.get("blockId"), body.get("ratePerUnit"));
         @SuppressWarnings("unchecked")
         java.util.List<Map<String, Object>> readings =
             (java.util.List<Map<String, Object>>) body.get("readings");
-        return ResponseEntity.ok(ebBillService.recordMeterBased(
+        EbBill bill = ebBillService.recordMeterBased(
                 (String) body.get("blockId"),
                 new BigDecimal(body.get("ratePerUnit").toString()),
                 LocalDate.parse(body.get("periodStart").toString()),
                 LocalDate.parse(body.get("periodEnd").toString()),
                 readings
-        ));
+        );
+        log.info("Successfully recorded meter-based EB bill ID: {}", bill.getId());
+        return ResponseEntity.ok(bill);
     }
 
     // ── Manager-side Daily Add-ons (egg/omelette/veg/WM) ─────────
@@ -247,18 +269,22 @@ public class PgManagerController {
     @GetMapping("/guest-log/{guestId}/{date}")
     public ResponseEntity<DailyLog> getGuestLog(@PathVariable String guestId,
                                                  @PathVariable String date) {
-        DailyLog log = dailyLogService.getLog(guestId, java.time.LocalDate.parse(date));
-        return ResponseEntity.ok(log);
+        DailyLog logVal = dailyLogService.getLog(guestId, java.time.LocalDate.parse(date));
+        return ResponseEntity.ok(logVal);
     }
 
     @PutMapping("/guest-log/{guestId}/{date}")
     public ResponseEntity<DailyLog> updateGuestAddons(@PathVariable String guestId,
                                                         @PathVariable String date,
                                                         @RequestBody Map<String, Object> body) {
+        log.info("Manager requested updating guest add-ons for guest ID: {} on date: {}. Updates: {}", guestId, date, body.keySet());
         java.time.LocalDate logDate = java.time.LocalDate.parse(date);
         Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
-        DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
+                .orElseThrow(() -> {
+                    log.warn("Guest not found: {}", guestId);
+                    return new RuntimeException("Guest not found");
+                });
+        DailyLog logVal = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
                 .orElseGet(() -> {
                     DailyLog dailyLog = DailyLog.builder()
                             .guest(guest)
@@ -271,15 +297,17 @@ public class PgManagerController {
                     return dailyLog;
                 });
 
-        if (body.containsKey("isVeg"))              log.setVeg((Boolean) body.get("isVeg"));
-        if (body.containsKey("breakfastOpted"))      log.setBreakfastOpted((Boolean) body.get("breakfastOpted"));
-        if (body.containsKey("lunchOpted"))          log.setLunchOpted((Boolean) body.get("lunchOpted"));
-        if (body.containsKey("dinnerOpted"))         log.setDinnerOpted((Boolean) body.get("dinnerOpted"));
-        if (body.containsKey("omeletteCount"))      log.setOmeletteCount(Integer.parseInt(body.get("omeletteCount").toString()));
-        if (body.containsKey("boiledEggCount"))     log.setBoiledEggCount(Integer.parseInt(body.get("boiledEggCount").toString()));
-        if (body.containsKey("washingMachineCount")) log.setWashingMachineCount(Integer.parseInt(body.get("washingMachineCount").toString()));
+        if (body.containsKey("isVeg"))              logVal.setVeg((Boolean) body.get("isVeg"));
+        if (body.containsKey("breakfastOpted"))      logVal.setBreakfastOpted((Boolean) body.get("breakfastOpted"));
+        if (body.containsKey("lunchOpted"))          logVal.setLunchOpted((Boolean) body.get("lunchOpted"));
+        if (body.containsKey("dinnerOpted"))         logVal.setDinnerOpted((Boolean) body.get("dinnerOpted"));
+        if (body.containsKey("omeletteCount"))      logVal.setOmeletteCount(Integer.parseInt(body.get("omeletteCount").toString()));
+        if (body.containsKey("boiledEggCount"))     logVal.setBoiledEggCount(Integer.parseInt(body.get("boiledEggCount").toString()));
+        if (body.containsKey("washingMachineCount")) logVal.setWashingMachineCount(Integer.parseInt(body.get("washingMachineCount").toString()));
 
-        return ResponseEntity.ok(dailyLogRepository.save(log));
+        DailyLog savedLog = dailyLogRepository.save(logVal);
+        log.info("Successfully updated guest add-ons for guest ID: {} on date: {}", guestId, date);
+        return ResponseEntity.ok(savedLog);
     }
 
     /**
@@ -345,16 +373,23 @@ public class PgManagerController {
     public ResponseEntity<MaintenanceTicket> createTicket(
             @RequestBody MaintenanceTicket ticket,
             @RequestAttribute(required = false) String branchId) {
+        log.info("Manager requested creation of maintenance ticket for building ID: {}", branchId);
         if (ticket.getBuildingId() == null && branchId != null) {
             ticket.setBuildingId(branchId);
         }
-        return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
+        MaintenanceTicket savedTicket = maintenanceTicketRepository.save(ticket);
+        log.info("Successfully created maintenance ticket ID: {}", savedTicket.getId());
+        return ResponseEntity.ok(savedTicket);
     }
 
     @PutMapping("/maintenance/{ticketId}/resolve")
     public ResponseEntity<MaintenanceTicket> resolveTicket(@PathVariable String ticketId) {
+        log.info("Manager requested resolution of ticket ID: {}", ticketId);
         MaintenanceTicket ticket = maintenanceTicketRepository.findById(ticketId)
-                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found"));
+                .orElseThrow(() -> {
+                    log.warn("Ticket not found: {}", ticketId);
+                    return new ResourceNotFoundException("Ticket not found");
+                });
         ticket.setStatus(com.pgcrm.entity.enums.MaintenanceStatus.RESOLVED);
         ticket.setResolvedAt(java.time.LocalDateTime.now());
         
@@ -364,19 +399,29 @@ public class PgManagerController {
                 ticketId, 
                 "Ticket status updated to RESOLVED");
                  
-        return ResponseEntity.ok(maintenanceTicketRepository.save(ticket));
+        MaintenanceTicket savedTicket = maintenanceTicketRepository.save(ticket);
+        log.info("Successfully resolved ticket ID: {}", ticketId);
+        return ResponseEntity.ok(savedTicket);
     }
 
     @PostMapping("/invoices/{id}/verify-cash")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<Invoice> verifyCash(Authentication auth, @PathVariable String id) {
+        log.info("Manager '{}' requested verification of cash payment for invoice ID: {}", auth.getName(), id);
         User manager = userRepository.findById(auth.getName())
-                .orElseThrow(() -> new ResourceNotFoundException("Manager not found"));
+                .orElseThrow(() -> {
+                    log.warn("Manager not found: {}", auth.getName());
+                    return new ResourceNotFoundException("Manager not found");
+                });
         
         Invoice invoice = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Invoice not found: " + id));
+                .orElseThrow(() -> {
+                    log.warn("Invoice not found: {}", id);
+                    return new ResourceNotFoundException("Invoice not found: " + id);
+                });
         
         if (invoice.getStatus() == com.pgcrm.entity.enums.InvoiceStatus.PAID) {
+            log.warn("Invoice ID: {} is already paid, cannot verify cash", id);
             throw new RuntimeException("Invoice is already paid");
         }
         
@@ -453,9 +498,15 @@ public class PgManagerController {
         String guestId = (String) body.get("guestId");
         int month = Integer.parseInt(body.get("month").toString());
         int year  = Integer.parseInt(body.get("year").toString());
+        log.info("Manager requested manual invoice generation for guest ID: {}, month: {}/{}", guestId, month, year);
         com.pgcrm.entity.Guest guest = guestRepository.findById(guestId)
-                .orElseThrow(() -> new RuntimeException("Guest not found"));
-        return ResponseEntity.ok(invoiceService.generateInvoiceForGuest(guest, month, year));
+                .orElseThrow(() -> {
+                    log.warn("Guest not found: {}", guestId);
+                    return new RuntimeException("Guest not found");
+                });
+        Invoice inv = invoiceService.generateInvoiceForGuest(guest, month, year);
+        log.info("Successfully generated manual invoice ID: {}", inv.getId());
+        return ResponseEntity.ok(inv);
     }
 
     // ── Invoice Generator Module ──────────────────────────────────
@@ -493,6 +544,7 @@ public class PgManagerController {
 
         int month = Integer.parseInt(body.get("month").toString());
         int year  = Integer.parseInt(body.get("year").toString());
+        log.info("Manager requested generation of all invoices for month: {}/{} and branch: {}", month, year, branchId);
 
         List<com.pgcrm.entity.Guest> guests = branchId != null
                 ? guestRepository.findActiveGuestsByBuildingId(branchId)
@@ -516,6 +568,9 @@ public class PgManagerController {
                 errors.add(guest.getFullName() + ": " + e.getMessage());
             }
         }
+
+        log.info("Batch invoice generation summary: total: {}, generated: {}, skipped: {}, failed: {}",
+                guests.size(), generated, skipped, failed);
 
         return ResponseEntity.ok(Map.of(
                 "generated", generated,

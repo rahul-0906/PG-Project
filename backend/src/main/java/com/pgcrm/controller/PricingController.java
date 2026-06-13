@@ -1,21 +1,21 @@
 package com.pgcrm.controller;
 
 import com.pgcrm.entity.Room;
+import com.pgcrm.entity.BuildingConfig;
 import com.pgcrm.repository.BuildingRepository;
 import com.pgcrm.repository.FloorRepository;
 import com.pgcrm.repository.BlockRepository;
 import com.pgcrm.repository.RoomRepository;
+import com.pgcrm.repository.BuildingConfigRepository;
 import com.pgcrm.service.PricingService;
+import com.pgcrm.config.SystemConfigProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.*;
-
-import com.pgcrm.entity.BuildingConfig;
-import com.pgcrm.repository.BuildingConfigRepository;
-import com.pgcrm.config.SystemConfigProperties;
 
 /**
  * Manager Pricing API — view and update per-building price overrides.
@@ -23,6 +23,7 @@ import com.pgcrm.config.SystemConfigProperties;
 @RestController
 @RequestMapping("/api/manager/pricing")
 @RequiredArgsConstructor
+@Slf4j
 public class PricingController {
 
     private final PricingService pricingService;
@@ -161,12 +162,15 @@ public class PricingController {
             @RequestBody Map<String, Object> body) {
 
         String effectiveBuildingId = buildingId != null ? buildingId : branchId;
+        log.info("Manager '{}' requested food price override update for key: {} in building: {}", userId, key, effectiveBuildingId);
         if (effectiveBuildingId == null) {
+            log.warn("Building ID is missing during food price update");
             return ResponseEntity.badRequest().body(Map.of("error", "Building ID required"));
         }
 
         Object valObj = body.get("value");
         if (valObj == null) {
+            log.warn("Value field missing in food price update request");
             return ResponseEntity.badRequest().body(Map.of("error", "'value' field required"));
         }
 
@@ -174,10 +178,13 @@ public class PricingController {
         try {
             value = new BigDecimal(valObj.toString());
         } catch (NumberFormatException e) {
+            log.warn("Invalid value '{}' for food price update", valObj);
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid numeric value"));
         }
 
-        return ResponseEntity.ok(pricingService.upsert(effectiveBuildingId, key, value, userId));
+        Object res = pricingService.upsert(effectiveBuildingId, key, value, userId);
+        log.info("Successfully updated food price override for key: {} to value: {} in building: {}", key, value, effectiveBuildingId);
+        return ResponseEntity.ok(res);
     }
 
     /**
@@ -191,7 +198,9 @@ public class PricingController {
             @RequestAttribute(required = false) String branchId,
             @RequestBody Map<String, Object> body) {
         String effectiveBuildingId = buildingId != null ? buildingId : branchId;
+        log.info("Manager requested update to building config for building: {}. Fields: {}", effectiveBuildingId, body.keySet());
         if (effectiveBuildingId == null) {
+            log.warn("Building ID is missing during building config update");
             return ResponseEntity.badRequest().body(Map.of("error", "Building ID required"));
         }
 
@@ -232,7 +241,9 @@ public class PricingController {
             cfg.setOfferBoiledEgg(Boolean.parseBoolean(body.get("offerBoiledEgg").toString()));
         }
 
-        return ResponseEntity.ok(buildingConfigRepository.save(cfg));
+        BuildingConfig savedCfg = buildingConfigRepository.save(cfg);
+        log.info("Successfully updated building config for building: {}", effectiveBuildingId);
+        return ResponseEntity.ok(savedCfg);
     }
 
     /**
@@ -243,12 +254,17 @@ public class PricingController {
     public ResponseEntity<?> updateRoomRent(
             @PathVariable String roomId,
             @RequestBody Map<String, Object> body) {
+        log.info("Manager requested base rent update for room ID: {}", roomId);
 
         Optional<Room> opt = roomRepository.findById(roomId);
-        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        if (opt.isEmpty()) {
+            log.warn("Room ID: {} not found during rent update", roomId);
+            return ResponseEntity.notFound().build();
+        }
 
         Object valObj = body.get("baseRent");
         if (valObj == null) {
+            log.warn("baseRent field missing for room ID: {}", roomId);
             return ResponseEntity.badRequest().body(Map.of("error", "'baseRent' field required"));
         }
 
@@ -256,12 +272,15 @@ public class PricingController {
         try {
             rent = new BigDecimal(valObj.toString());
         } catch (NumberFormatException e) {
+            log.warn("Invalid rent value '{}' for room ID: {}", valObj, roomId);
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid numeric value"));
         }
 
         Room room = opt.get();
         room.setBaseRent(rent);
-        return ResponseEntity.ok(roomToMap(roomRepository.save(room)));
+        Room savedRoom = roomRepository.save(room);
+        log.info("Successfully updated rent for room ID: {} to {}", roomId, rent);
+        return ResponseEntity.ok(roomToMap(savedRoom));
     }
 
     /**
@@ -277,12 +296,15 @@ public class PricingController {
             @RequestBody Map<String, Object> body) {
 
         String effectiveBuildingId = buildingId != null ? buildingId : branchId;
+        log.info("Manager requested rent update for sharing type {} in building: {}, floor: {}", sharingType, effectiveBuildingId, floorId);
         if (effectiveBuildingId == null) {
+            log.warn("Building ID is missing during sharing rent update");
             return ResponseEntity.badRequest().body(Map.of("error", "Building ID required"));
         }
 
         Object valObj = body.get("baseRent");
         if (valObj == null) {
+            log.warn("baseRent field missing in sharing rent update request");
             return ResponseEntity.badRequest().body(Map.of("error", "'baseRent' field required"));
         }
 
@@ -290,6 +312,7 @@ public class PricingController {
         try {
             rent = new BigDecimal(valObj.toString());
         } catch (NumberFormatException e) {
+            log.warn("Invalid rent value '{}' for sharing rent update", valObj);
             return ResponseEntity.badRequest().body(Map.of("error", "Invalid numeric value"));
         }
 
@@ -308,6 +331,7 @@ public class PricingController {
             }
         }
 
+        log.info("Successfully updated rent for sharing type {} in building: {}. Rooms updated: {}", sharingType, effectiveBuildingId, updated.size());
         return ResponseEntity.ok(Map.of("updatedCount", updated.size(), "baseRent", rent));
     }
 
