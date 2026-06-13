@@ -47,8 +47,12 @@ export default defineConfig({
       '/api': 'http://127.0.0.1:8080'
     }
   },
+  esbuild: {
+    drop: ['console', 'debugger'],
+  },
   build: {
     outDir: '../backend/src/main/resources/static',
-    emptyOutDir: true
+    emptyOutDir: true,
+    minify: 'esbuild'
   }
 });
