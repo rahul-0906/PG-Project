@@ -19,7 +19,7 @@ Use this approach if your local development machine has full developer tooling i
 
 #### Database Setup & Profiles
 
-The system supports two active profiles for local testing:
+The system supports three active profiles for local testing:
 
 1. **Development Profile (`dev`)**: 
    - Activated by setting `SPRING_PROFILES_ACTIVE=dev` in your `.env`.
@@ -31,6 +31,11 @@ The system supports two active profiles for local testing:
    - **Schema Protection**: Configures `ddl-auto: validate` to ensure no database schema elements are dropped or altered automatically.
    - Runs Flyway migrations automatically.
    - Skips the `DatabaseSeeder` class.
+3. **Test Profile (`test`)**:
+   - Activated by setting `SPRING_PROFILES_ACTIVE=test` in your `.env`.
+   - **Pure Empty Database**: Configures `ddl-auto: create` to physically drop all tables and recreate them completely empty.
+   - Disables Flyway migrations (`flyway.enabled: false`) to bypass all migration SQL scripts.
+   - Prevents all data seeders (both the legacy `DataSeeder` and the new `DatabaseSeeder`) from running, guaranteeing a 100% empty database on startup.
 
 #### Database Setup
 1. Spin up the postgres container:

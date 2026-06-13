@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Test Profile — active when SPRING_PROFILES_ACTIVE=test
+# Guarantees a 100% empty, freshly created database on startup.
+# Disables Flyway migrations and forces Hibernate to drop and recreate the schema.
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+  flyway:
+    enabled: false

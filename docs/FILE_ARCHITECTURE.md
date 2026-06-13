@@ -317,11 +317,11 @@ JwtAuthenticationFilter ──► Verify Signature & Claims ──► Set Securi
 
 #### `DataSeeder.java`
 * **Purpose**: Auto-populates sample data on clean startups.
-* **Internal Logic**: Looks up `./pg-layout.yml` from classpath structures to build buildings, floors, and rooms. Adds users, initializes logs, generates invoices, and handles pre-seeding logic.
+* **Internal Logic**: Looks up `./pg-layout.yml` from classpath structures to build buildings, floors, and rooms. Adds users, initializes logs, generates invoices, and handles pre-seeding logic. Guarded with `@Profile("!test")` to prevent execution in tests.
 
 #### `DatabaseSeeder.java`
 * **Purpose**: Initializes the database with a master Owner account (`owner@pgcrm.com`) when the users table is empty.
-* **Internal Logic**: Implements `CommandLineRunner` and is guarded with `@Profile("!prod")`. Checks if the user count is `0`, and if so, seeds the master `PG_OWNER` account with encoded credentials and default flags set to false. Logs success status banners to the console on startup.
+* **Internal Logic**: Implements `CommandLineRunner` and is guarded with `@Profile("!prod & !test")`. Checks if the user count is `0`, and if so, seeds the master `PG_OWNER` account with encoded credentials and default flags set to false. Logs success status banners to the console on startup.
 
 ---
 

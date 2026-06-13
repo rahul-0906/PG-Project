@@ -129,7 +129,7 @@ Create an `.env` file in the root or set these parameters in your operating syst
 
 ### 4.1 Server Configuration
 * `SERVER_PORT`: Port on which the Spring Boot application runs. Default is `8080`.
-* `SPRING_PROFILES_ACTIVE`: Active runtime profile (`dev` to wipe/rebuild development schema, `prod` for production schema validation mode).
+* `SPRING_PROFILES_ACTIVE`: Active runtime profile (`dev` to wipe/rebuild development schema, `prod` for production schema validation mode, or `test` for a completely empty database and no seeders).
 
 ### 4.2 Database Settings
 * `SPRING_DATASOURCE_URL`: JDBC database connection string (e.g. `jdbc:postgresql://localhost:5432/pgcrmdb`).
@@ -183,8 +183,9 @@ npm run dev
 On startup, default credentials are seeded for local testing depending on the active profile:
 * **PG Owner (dev profile)**: `owner@pgcrm.com` / `Admin@123` (seeded by `DatabaseSeeder`)
 * **PG Owner (prod profile)**: `owner@pgcrm.com` / `Owner@123` (seeded by `DataSeeder`)
-* **PG Manager**: `manager@pgcrm.com` / `Manager@123` (seeded by `DataSeeder`)
-* **Guest**: `guest@pgcrm.com` / `Guest@123` (seeded by `DataSeeder`)
+* **PG Manager (dev/prod profiles)**: `manager@pgcrm.com` / `Manager@123` (seeded by `DataSeeder`)
+* **Guest (dev/prod profiles)**: `guest@pgcrm.com` / `Guest@123` (seeded by `DataSeeder`)
+* **Test Profile (`test`)**: No credentials or layout metadata are seeded, starting with a 100% empty database.
 
 > [!IMPORTANT]
 > **Direct Authentication Enforcement**
