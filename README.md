@@ -71,7 +71,7 @@ graph TD
     end
 
     subgraph Infrastructure [Data & Comms]
-        DB[(PostgreSQL / H2)]
+        DB[(PostgreSQL)]
         Mail[SMTP Mail Server]
         MetaWhatsApp[Meta WhatsApp Cloud API]
     end
@@ -94,7 +94,7 @@ graph TD
 * **Flyway (Database Migrations)**: Standardizes database versioning, executing automated schema migrations (`V1` through `V5`) cleanly on server start.
 * **MapStruct (DTO Mapping)**: Facilitates type-safe, high-performance object conversion between JPA entity objects and REST data transfer objects (DTOs).
 * **Spring Security & JSON Web Tokens (JWT)**: Secures REST endpoints and verifies request authenticity stateless.
-* **H2 / PostgreSQL**: In-memory H2 database for local development and PostgreSQL 18+ for production durability.
+* **PostgreSQL**: PostgreSQL 18+ for both development and production durability.
 
 ### 2.2 Frontend Client
 * **React 18 & Vite**: Component-driven UI framework with fast building compilation.
@@ -129,7 +129,7 @@ Create an `.env` file in the root or set these parameters in your operating syst
 
 ### 4.1 Server Configuration
 * `SERVER_PORT`: Port on which the Spring Boot application runs. Default is `8080`.
-* `SPRING_PROFILES_ACTIVE`: Active runtime profile (`dev` for H2 database, `prod` for PostgreSQL).
+* `SPRING_PROFILES_ACTIVE`: Active runtime profile (`dev` to wipe/rebuild development schema, `prod` for production schema validation mode).
 
 ### 4.2 Database Settings
 * `SPRING_DATASOURCE_URL`: JDBC database connection string (e.g. `jdbc:postgresql://localhost:5432/pgcrmdb`).
@@ -154,15 +154,21 @@ Create an `.env` file in the root or set these parameters in your operating syst
 * **Node.js (v24+)** and **npm** installed.
 * **Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used).
 
-### 5.1 Local Execution (H2 Database - Development Mode)
+### 5.1 Local Execution (PostgreSQL Database - Development & Production Modes)
+
+The application uses PostgreSQL exclusively. To run the application locally, choose between the following active profiles to configure database schema behavior:
+
+* **Development Profile (`dev`)**: Set `SPRING_PROFILES_ACTIVE=dev` to drop the existing database schema, recreate the tables from JPA entities, and run the `DatabaseSeeder` to seed the master Owner account (`owner@pgcrm.com` / `Admin@123`). Flyway is disabled in this profile to prevent constraints conflicts.
+* **Production / Validation Profile (`prod`)**: Set `SPRING_PROFILES_ACTIVE=prod` to run safe schema validations (`ddl-auto: validate`). Hibernate will not make automatic changes, and Flyway migrations run to apply updates incrementally.
 
 #### Step 1: Start Backend Server
-Navigate to the backend directory and launch the application using the default `dev` profile:
+Navigate to the backend directory and launch the application (using the `dev` profile for initial startup or schema resets):
 ```bash
 cd backend
-../apache-maven-3.9.16/bin/mvn spring-boot:run
+# On Windows PowerShell:
+$env:SPRING_PROFILES_ACTIVE="dev"; ../apache-maven-3.9.16/bin/mvn spring-boot:run
 ```
-*The backend automatically boots on port `8080`, spins up an in-memory H2 database, and runs the `DataSeeder` runner to populate initial sample layout data.*
+*The backend boots on port `8080`, wipes and rebuilds the local database structures, and seeds the master admin account.*
 
 #### Step 2: Start Frontend Dev Server
 Navigate to the frontend directory, install dependencies, and launch Vite:
@@ -174,10 +180,11 @@ npm run dev
 *The frontend dev server launches on port `5173`. Access the web portal in your browser at `http://localhost:5173`.*
 
 ### 5.2 Seeded Demo Credentials
-On startup, the system seeds default credentials for testing:
-* **PG Owner**: `owner@pgcrm.com` / `Owner@123`
-* **PG Manager**: `manager@pgcrm.com` / `Manager@123`
-* **Guest**: `guest@pgcrm.com` / `Guest@123`
+On startup, default credentials are seeded for local testing depending on the active profile:
+* **PG Owner (dev profile)**: `owner@pgcrm.com` / `Admin@123` (seeded by `DatabaseSeeder`)
+* **PG Owner (prod profile)**: `owner@pgcrm.com` / `Owner@123` (seeded by `DataSeeder`)
+* **PG Manager**: `manager@pgcrm.com` / `Manager@123` (seeded by `DataSeeder`)
+* **Guest**: `guest@pgcrm.com` / `Guest@123` (seeded by `DataSeeder`)
 
 > [!IMPORTANT]
 > **Direct Authentication Enforcement**

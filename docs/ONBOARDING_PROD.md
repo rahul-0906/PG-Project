@@ -20,18 +20,21 @@ The application uses `tenant-config.yml` in the project root to load whitelabel 
 
 ---
 
-## 2. Database Preparation (Demo Data Toggle)
-To ensure the client starts with a completely clean database without test users, mock invoices, or dummy logs, disable the data seeder.
+## 2. Database Preparation & Security Safeguards
 
-1. In your production `.env` file, set the seeder toggle to `false`:
-   ```ini
-   APP_SEED-DEMO=false
-   ```
-2. Keep the backend profile set to `prod` to connect to your live PostgreSQL database:
-   ```ini
-   SPRING_PROFILES_ACTIVE=prod
-   ```
-   *Note: The seeder will still automatically create the root Owner admin account and build the physical building, floor, room, and bed layout skeleton, but all transaction history and guest profiles will remain completely clean.*
+To ensure production database integrity, the system implements profile-specific database configurations and seeder guards:
+
+1. **Schema Protection**:
+   * The `prod` profile (activated via `SPRING_PROFILES_ACTIVE=prod`) explicitly configures `spring.jpa.hibernate.ddl-auto=validate`. This ensures that Hibernate only validates the database schema against JPA entities and never executes destructive schema updates or drop commands.
+   * Flyway migrations are enabled to safely run incremental database changes.
+2. **Seeder Component Guard**:
+   * The development `DatabaseSeeder` component is annotated with `@Profile("!prod")` and will **never** execute when the `prod` profile is active, protecting production tables from arbitrary user updates.
+3. **Demo Data Toggle**:
+   * In your production `.env` file, set the seeder toggle to `false` to prevent mock transaction data (invoices, logs, check-ins) from being seeded:
+     ```ini
+     APP_SEED-DEMO=false
+     ```
+   * *Note: The system `DataSeeder` will still automatically create the root Owner admin account and build the physical building, floor, room, and bed layout skeleton, but all transaction history and guest profiles will remain completely clean.*
 
 ---
 

@@ -319,6 +319,10 @@ JwtAuthenticationFilter ──► Verify Signature & Claims ──► Set Securi
 * **Purpose**: Auto-populates sample data on clean startups.
 * **Internal Logic**: Looks up `./pg-layout.yml` from classpath structures to build buildings, floors, and rooms. Adds users, initializes logs, generates invoices, and handles pre-seeding logic.
 
+#### `DatabaseSeeder.java`
+* **Purpose**: Initializes the database with a master Owner account (`owner@pgcrm.com`) when the users table is empty.
+* **Internal Logic**: Implements `CommandLineRunner` and is guarded with `@Profile("!prod")`. Checks if the user count is `0`, and if so, seeds the master `PG_OWNER` account with encoded credentials and default flags set to false. Logs success status banners to the console on startup.
+
 ---
 
 ### 1.7 Service Package (`com.pgcrm.service`)

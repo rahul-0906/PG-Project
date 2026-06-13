@@ -17,19 +17,34 @@ Use this approach if your local development machine has full developer tooling i
 - **Apache Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used)
 - **Local PostgreSQL 18** (or run containerized via Docker)
 
+#### Database Setup & Profiles
+
+The system supports two active profiles for local testing:
+
+1. **Development Profile (`dev`)**: 
+   - Activated by setting `SPRING_PROFILES_ACTIVE=dev` in your `.env`.
+   - **Destructive Schema Reset**: Configures `ddl-auto: create` to drop and recreate the schema and tables on startup.
+   - Disables Flyway migrations (`flyway.enabled: false`) to avoid conflicting constraints.
+   - Triggers the `DatabaseSeeder` to automatically insert the default Owner login (`owner@pgcrm.com` / `Admin@123`) if the database is empty.
+2. **Production Profile (`prod`)**:
+   - Activated by setting `SPRING_PROFILES_ACTIVE=prod` in your `.env`.
+   - **Schema Protection**: Configures `ddl-auto: validate` to ensure no database schema elements are dropped or altered automatically.
+   - Runs Flyway migrations automatically.
+   - Skips the `DatabaseSeeder` class.
+
 #### Database Setup
 1. Spin up the postgres container:
    ```bash
    docker compose up postgres -d
    ```
-2. Drop and recreate the local test database to ensure a clean slate:
+2. Drop and recreate the local database to ensure a clean slate:
    ```sql
    DROP DATABASE IF EXISTS pgcrmdb;
    CREATE DATABASE pgcrmdb;
    ```
 3. Configure your local `.env` file in the workspace root:
    ```ini
-   SPRING_PROFILES_ACTIVE=prod
+   SPRING_PROFILES_ACTIVE=dev      # Set to 'dev' to wipe/rebuild schema and seed owner account
    APP_SEED-DEMO=false             # Set to true if you want to seed mock guest records
    DB_PASSWORD=pgcrm123            # Match your local Postgres password
    ```
@@ -40,6 +55,7 @@ Use this approach if your local development machine has full developer tooling i
    - **Frontend URL**: `http://localhost:5173`
    - **Backend API URL**: `http://localhost:8080`
    - **Postgres URL**: `localhost:5432`
+5. **Post-Reset Lock**: After running the destructive schema wipe successfully under the `dev` profile once, switch `SPRING_PROFILES_ACTIVE=prod` in your local `.env` to prevent accidental future data loss.
 
 ---
 
@@ -87,7 +103,7 @@ Perform these manual test scenarios to verify that the core system works correct
 1. Navigate to the application in your browser.
 2. Log in using the default seeded owner credentials:
    - **Email**: `owner@pgcrm.com`
-   - **Password**: `Owner@123`
+   - **Password**: `Admin@123` (if seeded under `dev` profile) or `Owner@123` (if seeded under `prod` profile)
 3. Navigate to **Profile Settings** and update the owner account:
    - Update the email to a test owner email (e.g. `testowner@domain.com`).
    - Change the password to a secure custom password.
