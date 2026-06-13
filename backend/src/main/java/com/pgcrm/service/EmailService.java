@@ -93,6 +93,11 @@ public class EmailService {
             ctx.setVariable("tempPassword", tempPassword);
             ctx.setVariable("pgName",      fromName);
             ctx.setVariable("loginUrl",    "http://localhost:5173/login");
+            String assignedBeds = guest.getBeds() != null
+                    ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(", "))
+                    : "Unassigned";
+            ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
+            ctx.setVariable("assignedBeds", assignedBeds);
 
             final String html = templateEngine.process("welcome-email", ctx);
             sendHtmlMail(guest.getEmail(), "🏠 Welcome to " + fromName + " — Your Login Details", html);
@@ -121,7 +126,11 @@ public class EmailService {
             ctx.setVariable("guestName",   guest.getFullName());
             ctx.setVariable("email",       guest.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
-            ctx.setVariable("bedLabel",    guest.getBed() != null ? guest.getBed().getBedLabel() : "Unassigned");
+            String assignedBeds = guest.getBeds() != null
+                    ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(", "))
+                    : "Unassigned";
+            ctx.setVariable("bedLabel",    assignedBeds.isEmpty() ? "Unassigned" : assignedBeds);
+            ctx.setVariable("assignedBeds", assignedBeds);
             ctx.setVariable("loginUrl",    "http://localhost:5173/login");
 
             final String html = templateEngine.process("welcome-back-email", ctx);

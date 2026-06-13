@@ -97,10 +97,28 @@ public class PgManagerController {
 
     @PostMapping("/guests")
     public ResponseEntity<GuestResponse> checkIn(@RequestBody GuestCheckInRequest body) {
+        System.out.println("=== INCOMING CHECK-IN REQUEST ===");
+        System.out.println("React Sent Breakfast: " + body.isBreakfastOpted());
+        System.out.println("React Sent Dinner: " + body.isDinnerOpted());
+        System.out.println("=================================");
+
         LocalDate checkInDate = body.getCheckInDate() != null
                 ? body.getCheckInDate() : LocalDate.now();
+
+        java.util.List<String> bedIds = body.getBedIds();
+        if (bedIds == null || bedIds.isEmpty()) {
+            bedIds = body.getRoomBedIds();
+        }
+        if (bedIds == null || bedIds.isEmpty()) {
+            if (body.getBedId() != null) {
+                bedIds = java.util.List.of(body.getBedId());
+            } else {
+                bedIds = java.util.Collections.emptyList();
+            }
+        }
+
         Guest guest = guestService.checkIn(
-                body.getBedId(),
+                bedIds,
                 body.getFullName(),
                 body.getEmail(),
                 body.getPhone(),
@@ -109,7 +127,11 @@ public class PgManagerController {
                         ? body.getAdvanceDeposit() : BigDecimal.ZERO,
                 checkInDate,
                 body.getVehicleRegistration(),
-                body.isBookEntireRoom()
+                body.isBookEntireRoom(),
+                body.isVeg(),
+                body.isBreakfastOpted(),
+                body.isLunchOpted(),
+                body.isDinnerOpted()
         );
 
         boolean isVeg = body.isVeg();
@@ -225,8 +247,7 @@ public class PgManagerController {
     @GetMapping("/guest-log/{guestId}/{date}")
     public ResponseEntity<DailyLog> getGuestLog(@PathVariable String guestId,
                                                  @PathVariable String date) {
-        DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, java.time.LocalDate.parse(date))
-                .orElse(DailyLog.builder().logDate(java.time.LocalDate.parse(date)).build());
+        DailyLog log = dailyLogService.getLog(guestId, java.time.LocalDate.parse(date));
         return ResponseEntity.ok(log);
     }
 
@@ -238,7 +259,17 @@ public class PgManagerController {
         Guest guest = guestRepository.findById(guestId)
                 .orElseThrow(() -> new RuntimeException("Guest not found"));
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
-                .orElse(DailyLog.builder().guest(guest).logDate(logDate).build());
+                .orElseGet(() -> {
+                    DailyLog dailyLog = DailyLog.builder()
+                            .guest(guest)
+                            .logDate(logDate)
+                            .isVeg(guest.isVegPreference())
+                            .build();
+                    dailyLog.setBreakfastOpted(guest.isBreakfastPreference());
+                    dailyLog.setLunchOpted(guest.isLunchPreference());
+                    dailyLog.setDinnerOpted(guest.isDinnerPreference());
+                    return dailyLog;
+                });
 
         if (body.containsKey("isVeg"))              log.setVeg((Boolean) body.get("isVeg"));
         if (body.containsKey("breakfastOpted"))      log.setBreakfastOpted((Boolean) body.get("breakfastOpted"));

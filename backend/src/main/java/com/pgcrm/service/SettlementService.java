@@ -199,19 +199,12 @@ public class SettlementService {
         guest.setExpectedCheckOutDate(null);
         guest.setNoticeDate(null);
         guest.setExitDate(null);
-        if (guest.getBed() != null) {
-            final Bed bed = guest.getBed();
-            if (guest.isBookEntireRoom()) {
-                final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
-                for (final Bed b : roomBeds) {
-                    b.setStatus(BedStatus.VACANT);
-                    bedRepository.save(b);
-                }
-            } else {
-                bed.setStatus(BedStatus.VACANT);
-                bedRepository.save(bed);
+        if (guest.getBeds() != null && !guest.getBeds().isEmpty()) {
+            for (final Bed b : guest.getBeds()) {
+                b.setStatus(BedStatus.VACANT);
+                bedRepository.save(b);
             }
-            guest.setBed(null);
+            guest.getBeds().clear();
         }
         guestRepository.save(guest);
 

@@ -104,7 +104,17 @@ public class DailyLogService {
         validateLockouts(guest, logDate, incoming);
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
-                .orElse(DailyLog.builder().guest(guest).logDate(logDate).build());
+                .orElseGet(() -> {
+                    DailyLog dailyLog = DailyLog.builder()
+                            .guest(guest)
+                            .logDate(logDate)
+                            .isVeg(guest.isVegPreference())
+                            .build();
+                    dailyLog.setBreakfastOpted(guest.isBreakfastPreference());
+                    dailyLog.setLunchOpted(guest.isLunchPreference());
+                    dailyLog.setDinnerOpted(guest.isDinnerPreference());
+                    return dailyLog;
+                });
 
         // Only update meal opts if cancellations are permitted or this is the first entry for the date.
         if (systemConfig.getRules().isAllowMealCancellations() || log.getId() == null) {

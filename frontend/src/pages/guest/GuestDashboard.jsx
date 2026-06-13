@@ -216,7 +216,16 @@ export default function GuestDashboard() {
               </h1>
               <div className="flex flex-wrap gap-2 mt-2">
                 <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
-                  Bed: {data?.bedLabel || '—'}
+                  BED(S): {(() => {
+                    if (!data) return '—';
+                    const bedsData = data.beds || data.allocatedBeds;
+                    if (Array.isArray(bedsData)) return bedsData.join(', ');
+                    if (typeof bedsData === 'string' && bedsData.trim() !== '') return bedsData;
+                    if (data.bedLabel) return data.bedLabel;
+                    if (data.bed && typeof data.bed === 'object') return data.bed.bedLabel || '—';
+                    if (data.bed) return data.bed;
+                    return '—';
+                  })()}
                 </span>
                 <span className="bg-white/10 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border border-white/5">
                   Checked In: {data?.checkInDate || '—'}
@@ -312,7 +321,16 @@ export default function GuestDashboard() {
                             <div>
                               <span className="text-slate-400 font-medium block">Room Assignment</span>
                               <span className="font-semibold text-slate-700">
-                                Bed {profileData.bedLabel || '—'} (Room {profileData.roomNumber || '—'}, {profileData.floorName || '—'})
+                                Bed(s) {(() => {
+                                  if (!profileData) return '—';
+                                  const bedsData = profileData.beds || profileData.allocatedBeds;
+                                  if (Array.isArray(bedsData)) return bedsData.join(', ');
+                                  if (typeof bedsData === 'string' && bedsData.trim() !== '') return bedsData;
+                                  if (profileData.bedLabel) return profileData.bedLabel;
+                                  if (profileData.bed && typeof profileData.bed === 'object') return profileData.bed.bedLabel || '—';
+                                  if (profileData.bed) return profileData.bed;
+                                  return '—';
+                                })()} (Room {profileData.roomNumber || '—'}, {profileData.floorName || '—'})
                               </span>
                             </div>
                             <div>

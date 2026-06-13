@@ -16,7 +16,7 @@ spring:
     database: POSTGRESQL
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update   # Auto-create/update tables on startup
+      ddl-auto: validate   # Validate the schema; do not make schema changes in production
     show-sql: false
 
 # ─── Production Logging ───────────────────────────────────────────────────────

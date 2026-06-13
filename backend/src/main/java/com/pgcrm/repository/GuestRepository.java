@@ -54,7 +54,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -78,7 +78,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -106,7 +106,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -146,7 +146,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -215,7 +215,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -229,7 +229,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block
@@ -248,7 +248,7 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     @Query("""
             SELECT g FROM Guest g
             LEFT JOIN FETCH g.user
-            LEFT JOIN FETCH g.bed b
+            LEFT JOIN FETCH g.beds b
             LEFT JOIN FETCH b.room r
             LEFT JOIN FETCH r.floor f
             LEFT JOIN FETCH r.block

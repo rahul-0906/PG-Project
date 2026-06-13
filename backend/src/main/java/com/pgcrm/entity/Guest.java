@@ -10,6 +10,9 @@ import org.hibernate.annotations.SQLRestriction;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
+
 
 /**
  * Core domain entity representing a PG accommodation guest.
@@ -91,10 +94,33 @@ public class Guest {
      * The {@code room} sub-association on {@code Bed} is suppressed to prevent
      * unnecessary deep serialisation.
      */
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bed_id")
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "guest_beds",
+        joinColumns = @JoinColumn(name = "guest_id"),
+        inverseJoinColumns = @JoinColumn(name = "bed_id")
+    )
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "room"})
-    private Bed bed;
+    @Singular("bed")
+    private List<Bed> beds;
+
+    public Bed getBed() {
+        if (beds == null || beds.isEmpty()) {
+            return null;
+        }
+        return beds.get(0);
+    }
+
+    public void setBed(Bed bed) {
+        if (this.beds == null) {
+            this.beds = new ArrayList<>();
+        }
+        this.beds.clear();
+        if (bed != null) {
+            this.beds.add(bed);
+        }
+    }
+
 
     // ── Personal Details ───────────────────────────────────────────────────────
 

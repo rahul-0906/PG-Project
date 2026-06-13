@@ -51,6 +51,11 @@ public class GuestController {
         return ResponseEntity.ok(guestMapper.toResponse(guestService.getByUserId(auth.getName())));
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<GuestResponse> getMe(Authentication auth) {
+        return ResponseEntity.ok(guestMapper.toResponse(guestService.getByUserId(auth.getName())));
+    }
+
     @PutMapping("/profile")
     public ResponseEntity<GuestResponse> updateProfile(Authentication auth,
                                                 @RequestBody Map<String, String> body) {
@@ -227,9 +232,21 @@ public class GuestController {
         List<Invoice> invoices = invoiceRepository.findByGuestId(guest.getId());
         long unread = notificationRepository.countByUserIdAndReadFalse(guest.getUser().getId());
 
+        java.util.List<String> bedsList = new java.util.ArrayList<>();
+        String assignedBedsStr = "";
+        if (guest.getBeds() != null && !guest.getBeds().isEmpty()) {
+            for (com.pgcrm.entity.Bed b : guest.getBeds()) {
+                bedsList.add(b.getBedLabel());
+            }
+            assignedBedsStr = String.join(", ", bedsList);
+        }
+        String bedLabelVal = assignedBedsStr.isEmpty() ? "N/A" : assignedBedsStr;
+
         return ResponseEntity.ok(Map.of(
-                "guestName", guest.getFullName(),
-                "bedLabel", guest.getBed() != null ? guest.getBed().getBedLabel() : "N/A",
+                "guestName", guest.getFullName() != null ? guest.getFullName() : "",
+                "bedLabel", bedLabelVal,
+                "beds", bedsList,
+                "assignedBeds", assignedBedsStr,
                 "checkInDate", guest.getCheckInDate() != null ? guest.getCheckInDate().toString() : "",
                 "totalInvoices", invoices.size(),
                 "unreadNotifications", unread,

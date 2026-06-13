@@ -184,6 +184,16 @@ public class GuestResponse {
     private boolean isBookEntireRoom;
 
     /**
+     * List of all bed labels assigned to this guest.
+     */
+    private java.util.List<String> beds;
+
+    /**
+     * Comma-separated list of assigned bed labels.
+     */
+    private String assignedBeds;
+
+    /**
      * Null-safe static factory method that maps a {@link Guest} entity
      * (and its lazily-loaded associations) to a flat {@code GuestResponse} DTO.
      *
@@ -205,7 +215,17 @@ public class GuestResponse {
         }
 
         final String bedId    = guest.getBed() != null ? guest.getBed().getId() : null;
-        final String bedLabel = guest.getBed() != null ? guest.getBed().getBedLabel() : null;
+
+        java.util.List<String> bedsList = new java.util.ArrayList<>();
+        String assignedBedsStr = "";
+        if (guest.getBeds() != null && !guest.getBeds().isEmpty()) {
+            for (com.pgcrm.entity.Bed b : guest.getBeds()) {
+                bedsList.add(b.getBedLabel());
+            }
+            assignedBedsStr = String.join(", ", bedsList);
+        }
+
+        final String bedLabel = assignedBedsStr.isEmpty() ? null : assignedBedsStr;
 
         String roomNumber = null;
         String floorName  = null;
@@ -226,6 +246,8 @@ public class GuestResponse {
                 .userId(guest.getUser() != null ? guest.getUser().getId() : null)
                 .bedId(bedId)
                 .bedLabel(bedLabel)
+                .beds(bedsList)
+                .assignedBeds(assignedBedsStr)
                 .roomNumber(roomNumber)
                 .floorName(floorName)
                 .baseRent(baseRent)

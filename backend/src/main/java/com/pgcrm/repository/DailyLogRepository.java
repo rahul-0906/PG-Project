@@ -87,8 +87,7 @@ public interface DailyLogRepository extends JpaRepository<DailyLog, String> {
      *
      * <p>Used by the kitchen management view to display the total number of each
      * meal type and add-on service to prepare for a given day, scoped to a single building.
-     * The association path {@code d.guest.bed.room.floor.building.id} traverses the full
-     * spatial hierarchy to filter by building.</p>
+     * The association path {@code d.guest.building.id} is used to filter by building.</p>
      *
      * <p><strong>Result array column mapping (index-based):</strong></p>
      * <ol start="0">
@@ -113,7 +112,7 @@ public interface DailyLogRepository extends JpaRepository<DailyLog, String> {
                 SUM(d.boiledEggCount)                             AS boiledEggs,
                 SUM(d.washingMachineCount)                        AS laundry
             FROM DailyLog d
-            WHERE d.guest.bed.room.floor.building.id = :buildingId
+            WHERE d.guest.building.id = :buildingId
               AND d.logDate = :date
             """)
     Object[] getFoodCountByBuildingAndDate(

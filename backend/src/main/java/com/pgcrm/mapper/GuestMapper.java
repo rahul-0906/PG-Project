@@ -11,7 +11,9 @@ public interface GuestMapper {
 
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "bedId", source = "bed.id")
-    @Mapping(target = "bedLabel", source = "bed.bedLabel")
+    @Mapping(target = "bedLabel", expression = "java(guest.getBeds() != null && !guest.getBeds().isEmpty() ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(\", \")) : null)")
+    @Mapping(target = "beds", expression = "java(guest.getBeds() != null ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.toList()) : java.util.Collections.emptyList())")
+    @Mapping(target = "assignedBeds", expression = "java(guest.getBeds() != null && !guest.getBeds().isEmpty() ? guest.getBeds().stream().map(com.pgcrm.entity.Bed::getBedLabel).collect(java.util.stream.Collectors.joining(\", \")) : \"\")")
     @Mapping(target = "roomNumber", source = "bed.room.roomNumber")
     @Mapping(target = "floorName", source = "bed.room.floor.floorLabel")
     @Mapping(target = "baseRent", source = "bed.room.baseRent")

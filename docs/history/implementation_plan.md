@@ -1,107 +1,63 @@
-# Iconography Refactoring & Minimalist Design Standard
+# Implementation Plan: Database Profile Configuration and Guarded Database Seeder
 
-Enforce a strict, uniform, minimalist aesthetic across the React frontend and Spring Boot Thymeleaf email templates by standardizing icons to thin line-art, removing background container fills, and replacing legacy emojis/images with inline SVGs.
+This plan outlines the design and steps to configure a profile-specific database strategy. We will ensure that the destructive schema wipe (`ddl-auto: create`) runs only in the `dev` profile, while the `prod` profile explicitly uses the production-safe standard. Furthermore, a profile-guarded `DatabaseSeeder` will seed the master Owner account only outside of production.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> - All Lucide icons across the 19 React frontend components will be standardized to a thin stroke width (`strokeWidth={1.5}`).
-> - Emojis inside the HTML email templates (such as `🔑`, `🔐`, `🔄`, `🏠`, `⚠️`, `📅`, and `💳`) will be replaced with clean, raw inline SVGs that match the Lucide styling exactly.
-> - Dashboard `StatCard` circular/square colored backgrounds (`iconBg`) will be removed, allowing the thin line-art icons to sit directly on the whitespace.
+> [!WARNING]
+> - **Destructive Wipe in Dev Profile**: The `dev` profile (defined in `application-dev.yml`) will set `spring.jpa.hibernate.ddl-auto=create` and disable Flyway (`spring.flyway.enabled=false`). This drops and recreates the database schema every time the application is started in `dev` mode.
+> - **Production Safe Guard**: The `prod` profile (defined in `application-prod.yml`) will explicitly set `spring.jpa.hibernate.ddl-auto=validate` (or `update`) to prevent any accidental schema dropping.
+> - **Seeder Execution Guard**: The new `DatabaseSeeder` will be annotated with `@Profile("!prod")` to prevent execution in production.
+
+---
 
 ## Proposed Changes
 
----
+### Configuration
 
-### React Frontend Icon Standardization
+#### [NEW] [application-dev.yml](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/resources/application-dev.yml)
+- Configure `spring.jpa.hibernate.ddl-auto` to `create` to cleanly wipe and rebuild tables on startup in the `dev` environment.
+- Disable Flyway migrations (`spring.flyway.enabled: false`) to avoid conflicts with Hibernate-driven schema generation.
+- Add warning comments to remind developers that this profile is destructive.
 
-All Lucide React icon instances will be updated to include `strokeWidth={1.5}`. Complex icons will be swapped with geometric equivalents (e.g. `Building2` to `Building`).
+#### [MODIFY] [application-prod.yml](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/resources/application-prod.yml)
+- Explicitly set/confirm `spring.jpa.hibernate.ddl-auto` to `validate` (or `update`) to protect the database structure from destructive changes.
 
-#### [MODIFY] [Sidebar.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/components/Sidebar.jsx)
-- Swap `Building2` import and usage with `Building`.
-- Apply `strokeWidth={1.5}` to all sidebar navigation icons.
-
-#### [MODIFY] [TopHeader.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/components/TopHeader.jsx)
-- Set `strokeWidth={1.5}` to top header icons.
-
-#### [MODIFY] [Reports.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/Reports.jsx)
-- Set `strokeWidth={1.5}` to all `StatCard` and tab icons.
-
-#### [MODIFY] [Settings.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/Settings.jsx)
-- Set `strokeWidth={1.5}` to settings icons.
-
-#### [MODIFY] [GuestDashboard.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/guest/GuestDashboard.jsx)
-- Refactor `StatCard` to remove `iconBg` wrapper class and style icon to be `w-5 h-5` and `strokeWidth={1.5}` directly on whitespace.
-- Apply `strokeWidth={1.5}` to all other dashboard icons.
-
-#### [MODIFY] [ManagerDashboard.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/manager/ManagerDashboard.jsx)
-- Refactor `StatCard` to remove `iconBg` background wrapper, allowing icons to sit cleanly on whitespace.
-- Set `strokeWidth={1.5}` to dashboard icons.
-
-#### [MODIFY] [OwnerDashboard.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/owner/OwnerDashboard.jsx)
-- Refactor `StatCard` to remove `iconBg` wrapper background.
-- Set `strokeWidth={1.5}` to dashboard icons.
-
-#### [MODIFY] [ManagerPricing.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/manager/ManagerPricing.jsx)
-- Swap `Building2` with `Building`.
-- Enforce `strokeWidth={1.5}`.
-
-#### [MODIFY] [OwnerBuildingCreator.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/owner/OwnerBuildingCreator.jsx)
-- Swap `Building2` with `Building`.
-- Enforce `strokeWidth={1.5}`.
-
-#### [MODIFY] [ManagerEbBill.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/manager/ManagerEbBill.jsx)
-- Swap `Building2` with `Building`.
-- Enforce `strokeWidth={1.5}`.
-
-#### [MODIFY] [ManagerGuests.jsx](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/manager/ManagerGuests.jsx)
-- Audit buttons (e.g. "Edit", "Checkout", "Switch Bed") to ensure they use `flex items-center gap-2` with `strokeWidth={1.5}` icons.
-
-#### [MODIFY] [All Other Page Components](file:///e:/Antigravity%20Project/PG%20Project/frontend/src/pages/)
-- Traverse remaining page components (`AuditLog.jsx`, `ForgotPassword.jsx`, `DailyLog.jsx`, `GuestInvoices.jsx`, `GuestMaintenance.jsx`, `ManagerGuestAddons.jsx`, `ManagerInvoiceGenerator.jsx`, `ManagerMaintenance.jsx`) and set `strokeWidth={1.5}` on Lucide icons.
+#### [MODIFY] [application.yml](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/resources/application.yml)
+- Keep default `spring.jpa.hibernate.ddl-auto` to `validate` (or `update`) for out-of-the-box safe running without profiles.
 
 ---
 
-### Spring Boot Thymeleaf Email Templates
+### Seeder Component
 
-Replace legacy emojis in headers and text with inline minimalist SVGs styled via inline CSS.
-
-#### [MODIFY] [email-verification.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/email-verification.html)
-- Replace `🔑` with a clean `Key` SVG (stroke-width 1.5, stroke currentColor, no fill).
-- Replace `⚠️` with an `AlertTriangle` SVG.
-
-#### [MODIFY] [password-reset-email.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/password-reset-email.html)
-- Replace `🔐` with a `Lock` SVG.
-- Replace `⚠️` with an `AlertTriangle` SVG.
-- Replace `🔑` in the login button with a `Key` SVG.
-
-#### [MODIFY] [bed-switch-email.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/bed-switch-email.html)
-- Replace `🔄` in the header with a `RefreshCw` SVG.
-
-#### [MODIFY] [welcome-back-email.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/welcome-back-email.html)
-- Replace `🏠` with a `Home` SVG.
-- Replace `🔑` in the button with a `Key` SVG.
-
-#### [MODIFY] [welcome-email.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/welcome-email.html)
-- Replace `🏠` with a `Home` SVG.
-- Replace `⚠️` with an `AlertTriangle` SVG.
-- Replace `🔑` in the button with a `Key` SVG.
-
-#### [MODIFY] [payment-reminder.html](file:///e:/Antigravity%20Project/PG%20Project/backend/src/main/resources/templates/payment-reminder.html)
-- Replace `⚠️` with an `AlertTriangle` SVG.
-- Replace `📅` with a `Calendar` SVG.
-- Replace `💳` in the button with a `CreditCard` SVG.
+#### [NEW] [DatabaseSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DatabaseSeeder.java)
+- Create a new `@Component` named `DatabaseSeeder` implementing `CommandLineRunner`.
+- Annotate the class with `@Profile("!prod")` to prevent execution when the `prod` profile is active.
+- Inject `UserRepository` and `PasswordEncoder`.
+- Implement `run(String... args)` method:
+  - Check if `userRepository.count() == 0`.
+  - If `0`, instantiate and save a master `User` entity using Lombok `@Builder` or setters:
+    - `fullName`: `"System Owner"`
+    - `email`: `"owner@pgcrm.com"`
+    - `password`: `passwordEncoder.encode("Admin@123")`
+    - `role`: `Role.PG_OWNER`
+    - `active`: `true`
+    - `firstLogin`: `false`
+    - `mustChangePassword`: `false`
+  - Print clearly formatted `System.out.println` startup logs:
+    - `"========================================="`
+    - `"DATABASE INITIALIZED & OWNER SEEDED"`
+    - `"Email: owner@pgcrm.com"`
+    - `"Role: PG_OWNER"`
+    - `"========================================="`
 
 ---
 
 ## Verification Plan
 
-## Automated Tests
-- Build the frontend project via `npm run build` to verify there are no compilation errors or missing/unused Lucide imports.
+### Automated Tests
+- Run `mvn clean test` to verify the codebase builds and compiles correctly with the new files.
 
-## Manual Verification
-1. Run the frontend application and inspect all dashboards (`GuestDashboard`, `ManagerDashboard`, `OwnerDashboard`) to confirm that:
-   - All icons are thin, minimalist (`strokeWidth={1.5}`).
-   - Dashboard stat cards no longer have filled background containers and sit cleanly on the whitespace.
-   - Button icons are centered and use a consistent `gap-2` space.
-2. Render or check the HTML email templates to confirm that SVGs display correctly across headers and buttons, matching the branding aesthetic.
+### Manual Verification
+- Run the application with `-Dspring.profiles.active=dev` and confirm the tables are recreated and the seeder initializes the Owner account.
+- Run the application with `-Dspring.profiles.active=prod` and confirm the seeder is bypassed and `ddl-auto` is set to the safe standard (`validate`/`update`).

@@ -103,27 +103,43 @@ public class GuestService {
      * @throws DuplicateEmailException    if a guest with this email is already actively checked in.
      */
     @Transactional
-    public Guest checkIn(final String bedId, final String fullName, final String email,
+    public Guest checkIn(final List<String> bedIds, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
-                         final String vehicleRegistration, final boolean isBookEntireRoom) {
+                         final String vehicleRegistration, final boolean isBookEntireRoom,
+                         final boolean isVeg, final boolean breakfastPreference,
+                         final boolean lunchPreference, final boolean dinnerPreference) {
 
-        final Bed bed = bedRepository.findById(bedId)
-                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + bedId));
-
-        if (bed.getStatus() != BedStatus.VACANT) {
-            throw new BedUnavailableException("Bed is not vacant: " + bed.getBedLabel());
+        if (bedIds == null || bedIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one bed must be selected for check-in.");
         }
 
-        final Building building = bed.getRoom().getFloor().getBuilding();
+        final String primaryBedId = bedIds.get(0);
+        final Bed primaryBed = bedRepository.findById(primaryBedId)
+                .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + primaryBedId));
 
+        final Building building = primaryBed.getRoom().getFloor().getBuilding();
+
+        // Resolve and validate all beds to check in
+        final List<String> targetBedIds = new java.util.ArrayList<>();
         if (isBookEntireRoom) {
-            final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
+            // Fetch all beds in the room
+            final List<Bed> roomBeds = bedRepository.findByRoomId(primaryBed.getRoom().getId());
             for (final Bed b : roomBeds) {
-                if (b.getStatus() != BedStatus.VACANT) {
-                    throw new BedUnavailableException("All beds in the room must be vacant to book the entire room.");
-                }
+                targetBedIds.add(b.getId());
             }
+        } else {
+            targetBedIds.addAll(bedIds);
+        }
+
+        final List<Bed> targetBeds = new java.util.ArrayList<>();
+        for (final String bid : targetBedIds) {
+            final Bed b = bedRepository.findById(bid)
+                    .orElseThrow(() -> new ResourceNotFoundException("Bed not found: " + bid));
+            if (b.getStatus() != BedStatus.VACANT) {
+                throw new BedUnavailableException("Bed is not vacant: " + b.getBedLabel());
+            }
+            targetBeds.add(b);
         }
 
         final Optional<User> existingUserOpt = userRepository.findByEmailIgnoreCase(email);
@@ -145,7 +161,6 @@ public class GuestService {
                 if (guest == null) {
                     guest = Guest.builder()
                             .user(existingUser)
-                            .bed(bed)
                             .fullName(fullName)
                             .email(email)
                             .phone(phone)
@@ -156,7 +171,12 @@ public class GuestService {
                             .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
                             .building(building)
                             .isBookEntireRoom(isBookEntireRoom)
+                            .vegPreference(isVeg)
+                            .breakfastPreference(breakfastPreference)
+                            .lunchPreference(lunchPreference)
+                            .dinnerPreference(dinnerPreference)
                             .build();
+                    guest.setBeds(targetBeds);
                 } else {
                     // Refresh the existing guest profile for re-check-in.
                     guest.setFullName(fullName);
@@ -164,7 +184,7 @@ public class GuestService {
                     guest.setPhone(phone);
                     guest.setWhatsappNumber(whatsappNumber != null ? whatsappNumber : phone);
                     guest.setVehicleRegistration(vehicleRegistration);
-                    guest.setBed(bed);
+                    guest.setBeds(targetBeds);
                     guest.setBuilding(building);
                     guest.setBookEntireRoom(isBookEntireRoom);
                     guest.setAdvanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO);
@@ -174,6 +194,10 @@ public class GuestService {
                     guest.setExitDate(null);
                     guest.setActualCheckOutDate(null);
                     guest.setActive(true);
+                    guest.setVegPreference(isVeg);
+                    guest.setBreakfastPreference(breakfastPreference);
+                    guest.setLunchPreference(lunchPreference);
+                    guest.setDinnerPreference(dinnerPreference);
                 }
 
                 // Reactivate the user account with fresh credentials.
@@ -188,15 +212,9 @@ public class GuestService {
 
                 guest = guestRepository.save(guest);
 
-                if (isBookEntireRoom) {
-                    final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
-                    for (final Bed b : roomBeds) {
-                        b.setStatus(BedStatus.OCCUPIED);
-                        bedRepository.save(b);
-                    }
-                } else {
-                    bed.setStatus(BedStatus.OCCUPIED);
-                    bedRepository.save(bed);
+                for (final Bed b : targetBeds) {
+                    b.setStatus(BedStatus.OCCUPIED);
+                    bedRepository.save(b);
                 }
 
                 // Dispatch welcome-back email — failure is non-fatal.
@@ -208,8 +226,8 @@ public class GuestService {
                 }
 
                 auditService.log(AuditAction.GUEST_CHECKIN, "Guest", guest.getId(),
-                        String.format("Returning Guest '%s' checked back into bed '%s'", fullName, bed.getBedLabel()),
-                        String.format("{\"bedId\":\"%s\",\"checkInDate\":\"%s\"}", bedId, checkInDate));
+                        String.format("Returning Guest '%s' checked back into room beds '%s'", fullName, primaryBed.getBedLabel()),
+                        String.format("{\"bedIds\":\"%s\",\"checkInDate\":\"%s\"}", targetBedIds, checkInDate));
 
                 return guest;
             } else {
@@ -234,7 +252,6 @@ public class GuestService {
 
         Guest guest = guestRepository.save(Guest.builder()
                 .user(user)
-                .bed(bed)
                 .fullName(fullName)
                 .email(email)
                 .phone(phone)
@@ -245,17 +262,17 @@ public class GuestService {
                 .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
                 .building(building)
                 .isBookEntireRoom(isBookEntireRoom)
+                .vegPreference(isVeg)
+                .breakfastPreference(breakfastPreference)
+                .lunchPreference(lunchPreference)
+                .dinnerPreference(dinnerPreference)
                 .build());
+        guest.setBeds(targetBeds);
+        guest = guestRepository.save(guest);
 
-        if (isBookEntireRoom) {
-            final List<Bed> roomBeds = bedRepository.findByRoomId(bed.getRoom().getId());
-            for (final Bed b : roomBeds) {
-                b.setStatus(BedStatus.OCCUPIED);
-                bedRepository.save(b);
-            }
-        } else {
-            bed.setStatus(BedStatus.OCCUPIED);
-            bedRepository.save(bed);
+        for (final Bed b : targetBeds) {
+            b.setStatus(BedStatus.OCCUPIED);
+            bedRepository.save(b);
         }
 
         // Dispatch welcome email — failure is non-fatal.
@@ -267,8 +284,8 @@ public class GuestService {
         }
 
         auditService.log(AuditAction.GUEST_CHECKIN, "Guest", guest.getId(),
-                String.format("Guest '%s' checked into bed '%s'", fullName, bed.getBedLabel()),
-                String.format("{\"bedId\":\"%s\",\"checkInDate\":\"%s\"}", bedId, checkInDate));
+                String.format("Guest '%s' checked into room beds '%s'", fullName, primaryBed.getBedLabel()),
+                String.format("{\"bedIds\":\"%s\",\"checkInDate\":\"%s\"}", targetBedIds, checkInDate));
 
         return guest;
     }
@@ -277,15 +294,23 @@ public class GuestService {
     public Guest checkIn(final String bedId, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
+                         final String vehicleRegistration, final boolean isBookEntireRoom) {
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, isBookEntireRoom, true, true, true, true);
+    }
+
+    @Transactional
+    public Guest checkIn(final String bedId, final String fullName, final String email,
+                         final String phone, final String whatsappNumber,
+                         final BigDecimal advanceDeposit, final LocalDate checkInDate,
                          final String vehicleRegistration) {
-        return checkIn(bedId, fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, false);
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, false, true, true, true, true);
     }
 
     @Transactional
     public Guest checkIn(final String bedId, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate) {
-        return checkIn(bedId, fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, null, false);
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, null, false, true, true, true, true);
     }
 
     /**

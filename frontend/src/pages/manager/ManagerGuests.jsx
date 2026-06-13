@@ -702,7 +702,18 @@ export default function ManagerGuests() {
                     <div className="text-xs text-slate-500 font-normal mt-0.5">{g.email}</div>
                   </td>
                   <td>
-                    <span className="badge badge-accent border border-violet-100">{g.bedLabel ?? 'N/A'}</span>
+                    <span className="badge badge-accent border border-violet-100 whitespace-normal break-all max-w-[150px] inline-block">
+                      {(() => {
+                        if (!g) return 'N/A';
+                        const bedsData = g.beds || g.allocatedBeds;
+                        if (Array.isArray(bedsData)) return bedsData.join(', ');
+                        if (typeof bedsData === 'string' && bedsData.trim() !== '') return bedsData;
+                        if (g.bedLabel) return g.bedLabel;
+                        if (g.bed && typeof g.bed === 'object') return g.bed.bedLabel || 'N/A';
+                        if (g.bed) return g.bed;
+                        return 'N/A';
+                      })()}
+                    </span>
                   </td>
                   <td className="text-slate-500 font-normal">
                     <div>{g.checkInDate}</div>
@@ -813,7 +824,16 @@ export default function ManagerGuests() {
                           <div>
                             <span className="text-slate-400 font-medium block">Room Assignment</span>
                             <span className="font-semibold text-slate-700">
-                              Bed {editingGuest.bedLabel || '—'} (Room {editingGuest.roomNumber || '—'}, {editingGuest.floorName || '—'})
+                              Bed(s) {(() => {
+                                if (!editingGuest) return '—';
+                                const bedsData = editingGuest.beds || editingGuest.allocatedBeds;
+                                if (Array.isArray(bedsData)) return bedsData.join(', ');
+                                if (typeof bedsData === 'string' && bedsData.trim() !== '') return bedsData;
+                                if (editingGuest.bedLabel) return editingGuest.bedLabel;
+                                if (editingGuest.bed && typeof editingGuest.bed === 'object') return editingGuest.bed.bedLabel || '—';
+                                if (editingGuest.bed) return editingGuest.bed;
+                                return '—';
+                              })()} (Room {editingGuest.roomNumber || '—'}, {editingGuest.floorName || '—'})
                             </span>
                           </div>
                           <div>

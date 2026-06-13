@@ -1,0 +1,12 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Development Profile — active when SPRING_PROFILES_ACTIVE=dev
+# Performs a clean wipe and recreation of the database schema on startup.
+# WARNING: NEVER run this profile in production as it drops all tables!
+# ─────────────────────────────────────────────────────────────────────────────
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: create
+  flyway:
+    enabled: false
