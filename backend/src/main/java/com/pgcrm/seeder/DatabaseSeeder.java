@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
  * This runs on application startup only when the "prod" profile is NOT active.
  */
 @Component
-@Profile("!prod & !test")
+@Profile("!prod")
 @RequiredArgsConstructor
 public class DatabaseSeeder implements CommandLineRunner {
 

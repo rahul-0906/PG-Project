@@ -14,6 +14,10 @@ This walkthrough details the changes made to switch the default server execution
 - **Modified** [.env.example](file:///E:/Antigravity%20Project/PG%20Project/.env.example):
   - Appended `SPRING_PROFILES_ACTIVE=test` to the variables template file.
 
+### 3. Database Seeder Component Profile Update
+- **Modified** [DatabaseSeeder.java](file:///E:/Antigravity%20Project/PG%20Project/backend/src/main/java/com/pgcrm/seeder/DatabaseSeeder.java):
+  - Configured `@Profile("!prod")` per explicit user request. This allows the seeder to run under the `test` profile.
+
 ---
 
 ## Verification & Build Results
@@ -24,4 +28,4 @@ This walkthrough details the changes made to switch the default server execution
 
 ### 2. Frontend Production Build
 - Executed `npm run build` in the `frontend` directory.
-- **Result**: Frontend compiled and bundled successfully in `13.41s` with no warnings/errors.
+- **Result**: Frontend compiled and bundled successfully in `11.27s` with no warnings/errors.
