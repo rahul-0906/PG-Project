@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -54,6 +54,43 @@ function RoleRedirect() {
 }
 
 export default function App() {
+  useEffect(() => {
+    fetch('/api/config/public')
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch public config');
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (data.pgName) {
+          document.title = data.pgName;
+        }
+        if (data.primaryColor) {
+          document.documentElement.style.setProperty('--brand-primary', data.primaryColor);
+          
+          // Generate hover color dynamically by darkening hex color by 10%
+          const darkenHex = (hex, percent) => {
+            const num = parseInt(hex.replace("#",""), 16),
+            amt = Math.round(2.55 * percent),
+            R = (num >> 16) - amt,
+            G = (num >> 8 & 0x00FF) - amt,
+            B = (num & 0x0000FF) - amt;
+            return "#" + (0x1000000 + (R<255?R<0?0:R:255)*0x10000 + (G<255?G<0?0:G:255)*0x100 + (B<255?B<0?0:B:255)).toString(16).slice(1);
+          };
+          try {
+            const hoverColor = darkenHex(data.primaryColor, 10);
+            document.documentElement.style.setProperty('--brand-primary-hover', hoverColor);
+          } catch (e) {
+            document.documentElement.style.setProperty('--brand-primary-hover', data.primaryColor);
+          }
+        }
+      })
+      .catch(err => {
+        console.error('Error fetching public config:', err);
+      });
+  }, []);
+
   return (
     <Routes>
       <Route path="/" element={<RoleRedirect />} />

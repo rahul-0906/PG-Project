@@ -12,8 +12,8 @@ export default {
       },
       colors: {
         primary: {
-          DEFAULT: 'var(--color-primary)',
-          hover: 'var(--color-primary-hover)',
+          DEFAULT: 'var(--brand-primary)',
+          hover: 'var(--brand-primary-hover)',
         },
         surface: 'var(--bg-surface)',
         app: 'var(--bg-app)',

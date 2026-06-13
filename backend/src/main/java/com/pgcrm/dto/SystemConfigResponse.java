@@ -79,6 +79,11 @@ public class SystemConfigResponse {
          * Example: {@code "Sunrise PG"}.
          */
         private String shortTitle;
+
+        /**
+         * Dynamic primary branding color.
+         */
+        private String primaryColor;
     }
 
     /**
@@ -224,6 +229,7 @@ public class SystemConfigResponse {
                 .branding(BrandingDto.builder()
                         .name(properties.getBranding().getName())
                         .shortTitle(properties.getBranding().getShortTitle())
+                        .primaryColor(properties.getBranding().getPrimaryColor())
                         .build())
                 .rules(RulesDto.builder()
                         .foodIncludedInRent(properties.getRules().isFoodIncludedInRent())

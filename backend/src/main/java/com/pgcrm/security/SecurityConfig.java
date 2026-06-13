@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook
                 .requestMatchers("/api/system/config").permitAll()    // Public branding endpoint
+                .requestMatchers("/api/config/public").permitAll()    // New public config endpoint
                 .requestMatchers("/api/owner/**").hasRole("PG_OWNER")
                 .requestMatchers("/api/manager/**").hasAnyRole("PG_MANAGER", "PG_OWNER")
                 .requestMatchers("/api/guest/**").hasAnyRole("GUEST", "PG_MANAGER", "PG_OWNER")

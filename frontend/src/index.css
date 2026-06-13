@@ -5,8 +5,8 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
+  --brand-primary: #2563eb;
+  --brand-primary-hover: #1d4ed8;
   --bg-app: #f8fafc;
   --bg-surface: #ffffff;
   

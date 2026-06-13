@@ -21,6 +21,7 @@ public class SystemConfigProperties {
     public static class Branding {
         private String name = "PG CRM";
         private String shortTitle = "PG";
+        private String primaryColor = "#2563eb";
     }
 
     @Data

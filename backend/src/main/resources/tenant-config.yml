@@ -1,5 +1,6 @@
 pg:
   system:
     branding:
-      name: "PG CRM"
-      short-title: "PG"
+      name: ${PG_NAME:PG CRM}
+      short-title: ${PG_SHORT_NAME:PG}
+      primary-color: ${PG_PRIMARY_COLOR:#2563eb}
