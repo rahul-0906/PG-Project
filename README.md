@@ -281,7 +281,6 @@ e:/Antigravity Project/PG Project/
 ├── .env                           # Local development environment variables
 ├── .env.example                   # Template environment variables
 ├── .gitignore                     # Git ignore file
-├── client_onboarding_sop.md       # Client onboarding Standard Operating Procedure (root duplicate)
 ├── Dockerfile                     # Multi-stage production build configuration
 ├── docker-compose.yml             # Local docker compose environment
 ├── README.md                      # Primary repository entry point documentation
