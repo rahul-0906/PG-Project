@@ -262,21 +262,27 @@ e:/Antigravity Project/PG Project/
 ├── backend/                       # Java/Spring Boot backend source
 ├── frontend/                      # React/Vite frontend source
 ├── apache-maven-3.9.16/           # Bundled Maven distribution
+├── deploy/                        # Production deployment configuration templates
+│   ├── docker-compose.prod.yml    # Production Docker Compose stack definition
+│   ├── nginx-site.conf            # Nginx reverse proxy configuration template
+│   └── .env.example               # Production environment variables template
 ├── docs/                          # Project documentation and test walkthroughs
 │   ├── history/                   # Legacy planning and task files
 │   ├── media/                     # Testing & tutorial media recordings
 │   ├── CALCULATIONS_ENGINE.md     # Business calculation specs
 │   ├── FILE_ARCHITECTURE.md       # Directory and file mapping
 │   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
-│   ├── ONBOARDING_PROD.md         # Production deployment steps
-│   └── ONBOARDING_TEST.md         # Local verification guide
+│   ├── ONBOARDING_PROD.md         # Production onboarding & setup guide
+│   ├── ONBOARDING_TEST.md         # Local testing & verification guide
+│   └── client_onboarding_sop.md   # Client onboarding Standard Operating Procedure
 ├── scripts/                       # Maintenance and helper scripts
 │   └── backup.sh                  # Postgres backup utility script
-├── .env                           # Local environment variables
+├── .env                           # Local development environment variables
 ├── .env.example                   # Template environment variables
 ├── .gitignore                     # Git ignore file
+├── client_onboarding_sop.md       # Client onboarding Standard Operating Procedure (root duplicate)
 ├── Dockerfile                     # Multi-stage production build configuration
-├── docker-compose.yml             # Local production compose environment
+├── docker-compose.yml             # Local docker compose environment
 ├── README.md                      # Primary repository entry point documentation
 ├── start_project.bat              # Dev launcher script
 └── tenant-config.yml              # White-label branding setup properties
