@@ -36,8 +36,8 @@ sequenceDiagram
 
 ---
 
-## 2. Guest Check-In & Provisioning Flow
-Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail.
+## 2. Guest Check-In & Multi-Bed Provisioning Flow
+Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail. Supports booking single beds or "Whole Room Bookings" (occupying all beds in a room).
 
 ```mermaid
 sequenceDiagram
@@ -49,23 +49,34 @@ sequenceDiagram
     participant DB as PostgreSQL DB
     participant Mail as EmailService
 
-    Manager->>App: Submits check-in form (fullName, email, phone, bedId, advanceDeposit)
+    Manager->>App: Submits check-in form (fullName, email, phone, targetBedIds[], isBookEntireRoom)
     App->>Controller: POST /api/manager/guests
     Controller->>Service: checkIn(...)
-    Service->>DB: Verify Bed is VACANT
+    alt Whole Room Booking Enabled
+        Service->>DB: Fetch all beds in target room
+        Service->>Service: Add all bed IDs to check-in list
+    else Single Bed Booking
+        Service->>Service: Use selected bed IDs list
+    end
+    loop For Each Target Bed
+        Service->>DB: Verify Bed status is VACANT
+    end
     Service->>DB: Create User account (Generate random temp password)
-    Service->>DB: Create Guest profile linked to User and Bed
-    Service->>DB: Update Bed status to OCCUPIED
-    Service->>Mail: sendGuestWelcomeEmail(...) (asynchronous welcome)
+    Service->>DB: Create Guest profile linked to User
+    Service->>DB: Associate List<Bed> in guest_beds table
+    loop For Each Allocated Bed
+        Service->>DB: Update Bed status to OCCUPIED
+    end
+    Service->>Mail: sendGuestWelcomeEmail(...) (asynchronous welcome with credentials & bed labels list)
     Service->>DB: Write GUEST_CHECKIN Audit Log
-    Service->>Controller: Return Guest response
+    Service->>Controller: Return Guest response DTO
     Controller->>Manager: Check-In confirmed (displays in Guests table)
 ```
 
 ---
 
 ## 3. Checkout Notice & Financial Settlement Flow
-Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation, and bed release.
+Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds.
 
 ```mermaid
 sequenceDiagram
@@ -77,23 +88,28 @@ sequenceDiagram
     participant DB as PostgreSQL DB
 
     Note over Manager, DB: Phase 1: Notice Period Registration
-    Manager->>App: Clicks "Notice" & Confirms
+    Manager->>App: Clicks "Notice" & Confirms Exit Date
     App->>Controller: POST /api/manager/guests/{id}/initiate-checkout
     Controller->>Service: initiateCheckout(...)
-    Service->>DB: Set noticeDate = today, exitDate = today + noticePeriodDays
-    Service->>DB: Dispatch welcome check-out notification
+    Service->>DB: Set noticeDate = today, exitDate = noticeDate + 30 days
+    loop For Each Bed in Guest.getBeds()
+        Service->>DB: Set Bed status to NOTICE
+    end
+    Service->>DB: Dispatch check-out notice in-app notification
     Service->>Manager: Return updated Guest (shows yellow notice indicator)
 
     Note over Manager, DB: Phase 2: Final Checkout & Account Settlement
     Manager->>App: Clicks "Checkout" & Confirms
     App->>Controller: POST /api/manager/guests/{id}/confirm-checkout
     Controller->>Service: confirmCheckout(...)
-    Service->>DB: Calculate pro-rated rent for current month days
+    Service->>DB: Calculate pro-rated rent for current month (Room Rent * Sharing Type if isBookEntireRoom = true)
     Service->>DB: Calculate pending unbilled meal & laundry logs
-    Service->>DB: Settle: advanceDeposit - (proratedRent + dues)
-    Service->>DB: Release bed (Update Bed status to VACANT)
-    Service->>DB: Set active = false, clear bed relation
-    Service->>Manager: Return SettlementResult receipt (Displays final totals)
+    Service->>DB: Settle account: advanceDeposit - (proratedRent + dues)
+    loop For Each Allocated Bed in Guest.getBeds()
+        Service->>DB: Update Bed status to VACANT
+    end
+    Service->>DB: Clear guest_beds mappings, set guest active = false
+    Service->>Manager: Return SettlementResult receipt (Displays final balance / refunds)
 ```
 
 ---
@@ -166,7 +182,7 @@ sequenceDiagram
     Controller->>Service: Generate invoices for active building guests
     loop For Each Active Guest
         Service->>DB: Verify no invoice exists for target month/year
-        Service->>DB: Calculate base rent of bed
+        Service->>DB: Calculate base rent (prorated if mid-month check-in / multiplied if isBookEntireRoom)
         Service->>DB: Load split EB bill costs & unbilled meals/add-ons
         Service->>DB: Create Invoice line items
         Service->>DB: Save Invoice record (GENERATED state)
@@ -178,7 +194,7 @@ sequenceDiagram
     App->>Controller: GET /api/manager/invoices/{id}/pdf
     Controller->>PDF: generateInvoicePdf(...)
     PDF->>DB: Retrieve invoice details & guest info
-    PDF->>PDF: Render layout using iText PDF Library
+    PDF->>PDF: Render layout using OpenPDF Library
     PDF->>Manager: Return PDF byte stream for local download
 ```
 
@@ -193,7 +209,7 @@ sequenceDiagram
     actor Guest
     participant Portal as Guest Portal
     participant Controller as GuestController
-    actor Manager
+    participant Manager as PgManager
     participant MgrApp as ManagerMaintenance
     participant DB as PostgreSQL DB
 
@@ -286,7 +302,6 @@ sequenceDiagram
     Controller->>DB: Lookup Manager User
     DB->>Controller: Return assignments (branchIds: [1,2])
     Controller->>Manager: Yields JWT Token (claims: branchIds)
-    Manager->>MgrApp: Selects active branch (Building 1) from TopHeader
     Manager->>MgrApp: Selects active branch (Building 1) from TopHeader
     MgrApp->>Filter: GET /api/manager/guests (Headers: X-Selected-Branch-Id = 1, JWT Bearer)
     Filter->>Filter: Verify selected branch is in user JWT claims list
@@ -535,7 +550,7 @@ sequenceDiagram
         Service->>Controller: Complete silently (No action logged)
         Controller->>App: Return 200 OK (Generic success message)
     else Active User Found
-        Service->>Service: Generate 10-char high-entropy tempPassword
+        Service->>Service: Generate 10-char tempPassword
         Service->>DB: Update user: password = encode(tempPassword), mustChangePassword = true, firstLogin = true
         Service->>Mail: sendPasswordResetEmail(user, tempPassword)
         Service->>Controller: Done
@@ -574,9 +589,9 @@ sequenceDiagram
 
     Manager->>App: Selects Guest and clicks "Switch Bed"
     App->>Controller: GET /api/inventory/buildings (fetches all layout structures)
-    Controller->>App: Return Building layout (all floors, blocks, rooms, beds)
-    Note over App: App groups beds by Floor/Block/Room and opens visual selector modal (2-column layout)
-    Manager->>App: Selects a VACANT bed (displays dynamic price impact preview) & clicks "Confirm"
+    Controller->>App: Return Building layout
+    Note over App: App opens visual selector modal
+    Manager->>App: Selects a VACANT bed & clicks "Confirm"
     App->>Controller: PUT /api/manager/guests/{id}/switch-bed?bedId={bedId}
     Controller->>Service: switchBed(guestId, bedId)
     
@@ -593,7 +608,7 @@ sequenceDiagram
     
     Service->>Controller: Return updated GuestResponse
     Controller->>App: Return success status
-    App->>Manager: Displays success toast and refreshes guests list
+    App->>Manager: Displays success toast
     
     Note over Guest, DB: Guest receives In-App Alert
     actor Guest
@@ -601,7 +616,6 @@ sequenceDiagram
     App->>Controller: GET /api/guest/dashboard / GET /api/guest/notifications
     Controller->>DB: Count unread notifications & fetch feed
     DB->>App: Returns notifications list & unread count
-    Note over App: Bell icon in header displays red count badge. Guest opens notifications menu and clicks "Mark Read"
     Guest->>App: Clicks notification item / "Mark all read"
     App->>Controller: PUT /api/guest/notifications/{id}/read
     Controller->>DB: Set Notification isRead = true
@@ -631,11 +645,10 @@ sequenceDiagram
     Note over Portal: Renders a static Clock icon indicating pending approval status
 
     Note over Manager, DB: Manager Verification Dashboard Notification
-    Manager->>Dashboard: Navigates to Dashboard / Logs In
+    Manager->>Dashboard: Loads Dashboard
     Dashboard->>Controller: GET /api/manager/invoices/pending-cash
-    Controller->>DB: Query invoices with status = PENDING_CASH_VERIFICATION for manager's authorized branches
+    Controller->>DB: Query invoices with status = PENDING_CASH_VERIFICATION
     DB->>Dashboard: Yields pending cash handover list
-    Note over Dashboard: Renders high-priority "Pending Cash Verifications" card directly under stats grid
     
     Manager->>Dashboard: Clicks "Verify Cash" button
     Dashboard->>Controller: POST /api/manager/invoices/{id}/verify-cash
@@ -643,7 +656,6 @@ sequenceDiagram
     Service->>DB: Set Invoice status = PAID, paymentMode = CASH, paymentDate = today
     Service->>DB: Write CASH_VERIFICATION Audit Log entry
     Service->>Dashboard: Returns success confirmation
-    Dashboard->>Manager: Triggers green success toast & refreshes pending queue
 ```
 
 ---
@@ -665,8 +677,39 @@ sequenceDiagram
     App->>Controller: PUT /api/manager/guests/{id} (editForm payload)
     Controller->>DB: Check if email is in use by another user account
     DB->>Controller: Email matches an existing active account
-    Controller->>App: Return 400 Bad Request ("Email is already in use by another account")
-    Note over App: App catches error, sets editError state, and renders red warning banner inside the modal
-    App->>Manager: Displays warning banner: "Email is already in use by another account"
+    Controller->>App: Return 400 Bad Request
+    Note over App: App catches error and renders red warning banner inside the modal
 ```
 
+---
+
+## 21. System-Wide SLF4J Observability Pipelines
+Details how logging levels and data flows transition across application layers during execution, separating security logs, error logs, and metrics logs.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Client Request
+    participant Controller as Controller Layer (@Slf4j)
+    participant Service as Service Layer (@Slf4j)
+    participant Scheduler as Scheduler Layer (@Slf4j)
+    participant File as Server Log Files (console/boot_log.txt)
+
+    Note over User, File: 1. Controller Request Audit Flow
+    User->>Controller: Mutation Requests (POST, PUT, DELETE)
+    Controller->>File: log.info("Entering endpoint X with params (excluding secrets)")
+    Controller->>Service: Invoke Business Operation
+    
+    Note over User, File: 2. Service Exception & Warning Logging
+    alt Business Validation Fails / Warning State
+        Service->>File: log.warn("Validation failed for guest check-in: bed occupied")
+    else Core Runtime Exception / Failure State
+        Service->>File: log.error("SMTP dispatch failed to host X: MessagingException")
+    end
+    Service->>Controller: Return execution result
+    
+    Note over User, File: 3. Background Scheduler Execution Metrics
+    Scheduler->>File: log.info("Cron Job MonthlyBilling started for building X")
+    Scheduler->>Service: Run batch calculations
+    Scheduler->>File: log.info("Cron Job finished. Invoices generated: 45")
+```

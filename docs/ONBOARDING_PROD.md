@@ -116,12 +116,39 @@ docker compose up -d --build
 
 ---
 
-## 6. Client Handoff Procedure
+## 6. Vite Production Build Security (Log & Debugger Stripping)
+
+To ensure the highest standard of security for production client browsers and prevent data leakage (such as authentication JWT tokens, session metadata, or customer PII) into browser developer tools:
+
+1. **Native Esbuild Log Stripping**: The production build pipeline compiles frontend assets using Vite's native `esbuild` minifier, configured to completely drop logging and debugging statements.
+2. **Configuration Block**:
+   ```javascript
+   esbuild: {
+     drop: ['console', 'debugger'],
+   }
+   ```
+3. **Automatic Compilation Action**: During `npm run build`, all occurrences of `console.log`, `console.warn`, `console.error`, and `debugger` statements are stripped from the resulting production bundles.
+
+---
+
+## 7. Dynamic Owner Onboarding Credentials Injection
+
+When onboarding a new tenant, initial administrative credentials do not need to be hardcoded or seeded via SQL scripts. Instead:
+1. **Dynamic Environment Injections**: The system reads the variables `PG_DEFAULT_OWNER_EMAIL`, `PG_DEFAULT_OWNER_NAME`, and `PG_DEFAULT_OWNER_PASSWORD` from the `.env` configuration file on startup.
+2. **Seeder Verification**: In the `dev` or `test` profiles, the master `DatabaseSeeder` component reads these values via Spring's `@Value` annotation:
+   - `@Value("${pg.default-owner.email:owner@pgcrm.com}")`
+   - `@Value("${pg.default-owner.name:System Owner}")`
+   - `@Value("${pg.default-owner.password:Owner@123}")`
+3. **Fallback Defaults**: Safe fallbacks are provided directly inside the annotations to ensure the system boots cleanly even if environment variables are missing.
+
+---
+
+## 8. Client Handoff Procedure
 Perform the following steps immediately after launching the application:
 
-1. **Initial Login**: Log in with the default seeded owner credentials:
+1. **Initial Login**: Log in with the dynamically injected owner credentials (configured in `.env`). If none were specified, use the fallback defaults:
    - **Email**: `owner@pgcrm.com`
-   - **Password**: `Owner@123`
+   - **Password**: `Owner@123` (or `Admin@123` depending on profile)
 2. **Update Admin Settings**:
    - Go to Profile Settings and change the email to the client's email (e.g., `owner@srisaipg.in`).
    - Change the password to a secure custom password.

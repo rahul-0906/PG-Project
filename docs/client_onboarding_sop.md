@@ -1,275 +1,180 @@
 # Standard Operating Procedure (SOP): Single-Tenant Client Onboarding
+### Official Deployment Reference for DevOps Engineers and Infrastructure Architects
 
-This document defines the Standard Operating Procedure (SOP) for deploying and onboarding new clients to the single-tenant PG CRM platform. It serves as the official deployment reference for DevOps Engineers and Infrastructure Architects to ensure consistent, secure, and isolated client instances.
+This document defines the step-by-step Standard Operating Procedure (SOP) for deploying and onboarding new clients to isolated, single-tenant instances of the PG CRM platform. It utilizes the standardized templates located in the `deploy/` directory to provision the PostgreSQL 18 database, build the Spring Boot application container, configure SSL certifications, and route traffic via an Nginx reverse proxy.
 
 ---
 
-## Pre-Deployment Gathering: Client Parameters Checklist
+## 1. Pre-Deployment: Client Parameter Gathering
 
-Before beginning any deployment phase, the onboarding coordinator must collect the following configurations from the client:
+Before initiating the onboarding pipeline, the coordinator must collect the following whitelabel configuration parameters from the client:
 
 | Parameter Key | Description | Example / Format |
 | :--- | :--- | :--- |
-| **PG Name** | The full display name of the PG Accommodation. | `Sri Sai PG Residency` |
-| **PG Short Name** | Abbreviation used for SMS/WhatsApp headers. | `Sri Sai` |
-| **Primary Theme Color** | Hex code for buttons, headers, and UI components. | `#4F46E5` |
-| **Target Domains** | Domains assigned for UAT and Production. | UAT: `uat.srisaipg.in`<br>Prod: `portal.srisaipg.in` |
-| **Razorpay API Keys** | Key ID and Key Secret credentials. | Test: `rzp_test_...` / `sec_test_...`<br>Live: `rzp_live_...` / `sec_live_...` |
+| **PG Name** | Full branding name displayed on dashboards and browser tabs. | `Sri Sai Luxury PG` |
+| **PG Short Name** | Abbreviated name used for system-wide headers. | `Sri Sai` |
+| **Primary Theme Color** | Hex code driving UI styling variables. | `#2563eb` |
+| **Target Domain** | Domains assigned for UAT and production environments. | UAT: `uat.srisaipg.in`<br>Prod: `portal.srisaipg.in` |
+| **Razorpay API Keys** | Credentials for payment gateway transactions. | Test: `rzp_test_...` / `sec_test_...`<br>Live: `rzp_live_...` / `sec_live_...` |
+| **Meta WhatsApp API Keys** | Meta Developer configurations for mobile messages. | `META_WHATSAPP_PHONE_NUMBER_ID`<br>`META_WHATSAPP_ACCESS_TOKEN` |
 
 ---
 
-## Phase 1: Testing/UAT Environment Deployment
+## 2. Infrastructure Setup & Directory Provisioning
 
-The Testing/UAT phase deploys the application to a staging subdomain to allow client review, training, and configuration validation using dummy data and mock payments.
-
-### 1. UAT Environment Setup (`.env`)
-1. Create a dedicated directory on the target staging virtual machine (VM) at `/opt/pgcrm/uat`.
-2. Save the following configuration as `/opt/pgcrm/uat/.env`. Modify placeholders with the gathered client parameters:
-
-```bash
-# ─── Environment Profile ──────────────────────────────────────────
-SPRING_PROFILES_ACTIVE=dev
-
-# ─── Database Credentials ─────────────────────────────────────────
-DB_URL=jdbc:postgresql://postgres-db-uat:5432/pgcrmdb_uat
-DB_USERNAME=pgcrm_uat_user
-DB_PASSWORD=SecureUatPassword2026
-
-# ─── Razorpay Credentials (Mock/Test Keys) ─────────────────────────
-RAZORPAY_KEY_ID=rzp_test_ClientMockKeyId
-RAZORPAY_KEY_SECRET=ClientMockKeySecret123
-RAZORPAY_ENABLED=true
-
-# ─── Tenant Branding ──────────────────────────────────────────────
-PG_NAME="Sri Sai PG Residency (UAT)"
-PG_SHORT_NAME="Sri Sai Staging"
-PG_PRIMARY_COLOR="#4F46E5"
-
-# ─── Initial Owner/Super Admin Credentials ───────────────────────
-PG_DEFAULT_OWNER_EMAIL=owner.test@srisaipg.in
-PG_DEFAULT_OWNER_NAME="System Owner"
-PG_DEFAULT_OWNER_PASSWORD="TemporaryUatPassword123"
-```
-
-### 2. Docker Compose Deployment
-1. Create `/opt/pgcrm/uat/docker-compose.yml` with the following configuration:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres-db-uat:
-    image: postgres:15-alpine
-    container_name: pgcrm-db-uat
-    restart: always
-    environment:
-      POSTGRES_DB: pgcrmdb_uat
-      POSTGRES_USER: pgcrm_uat_user
-      POSTGRES_PASSWORD: SecureUatPassword2026
-    volumes:
-      - uat_pg_data:/var/lib/postgresql/data
-    networks:
-      - pgcrm-uat-network
-
-  pgcrm-backend-uat:
-    image: pgcrm-backend:latest
-    container_name: pgcrm-app-uat
-    restart: always
-    ports:
-      - "8081:8080"
-    env_file:
-      - .env
-    depends_on:
-      - postgres-db-uat
-    networks:
-      - pgcrm-uat-network
-
-volumes:
-  uat_pg_data:
-
-networks:
-  pgcrm-uat-network:
-    driver: bridge
-```
-
-2. Run the deployment container stack:
+1. Connect to the target Linux VPS / virtual machine (VM) via SSH.
+2. Initialize the project workspace directory structure under `/opt/pgcrm`:
    ```bash
-   docker-compose -f /opt/pgcrm/uat/docker-compose.yml up -d
+   sudo mkdir -p /opt/pgcrm/deploy
+   sudo chown -R $USER:$USER /opt/pgcrm
    ```
-3. Verify the container status and inspect the backend logs to confirm the database seeder executed:
+3. Copy the production deployment artifacts from the repository's `deploy/` root directory to the host VM directory `/opt/pgcrm/deploy`:
+   - `deploy/docker-compose.prod.yml`
+   - `deploy/.env.example`
+   - `deploy/nginx-site.conf`
+4. Copy the application `Dockerfile` and `tenant-config.yml` from the project root into `/opt/pgcrm/` so they are accessible by the Docker build context.
+
+---
+
+## 3. Phase 1: Testing / UAT Environment Deployment
+
+Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) allows client testing, manager training, and verification using mock API keys.
+
+### Step 3.1: Configure UAT Environment (`.env`)
+1. Create a copy of the template file in your UAT directory:
    ```bash
-   docker logs -f pgcrm-app-uat
+   cp /opt/pgcrm/deploy/.env.example /opt/pgcrm/deploy/.env
    ```
-   > [!NOTE]
-   > You should see a startup console printout indicating that the database was initialized and the default owner account was seeded with the credentials provided in the `.env` file.
-
-### 3. Nginx Reverse Proxy Setup
-1. Create a configuration file at `/etc/nginx/sites-available/uat.srisaipg.in`:
-
-```nginx
-server {
-    listen 80;
-    server_name uat.srisaipg.in;
-
-    location / {
-        proxy_pass http://127.0.0.1:8081;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-2. Enable the site and restart the Nginx service:
-   ```bash
-   ln -s /etc/nginx/sites-available/uat.srisaipg.in /etc/nginx/sites-enabled/
-   nginx -t
-   systemctl restart nginx
+2. Open `/opt/pgcrm/deploy/.env` and update the variables for the UAT scope:
+   ```ini
+   SPRING_PROFILES_ACTIVE=dev      # Enables schema resets and seeder runs
+   DB_URL=jdbc:postgresql://postgres:5432/pgcrmdb
+   DB_USERNAME=postgres
+   DB_PASSWORD=SecureUatPassword2026!
+   JWT_SECRET=UatJwtSecretKeyPlaceholderAtLeast256BitsLong
+   
+   PG_NAME="Sri Sai Luxury PG (UAT)"
+   PG_SHORT_NAME="Sri Sai UAT"
+   PG_PRIMARY_COLOR="#2563eb"
+   
+   # Dynamic UAT Initial Owner Credentials
+   PG_DEFAULT_OWNER_EMAIL=owner.uat@srisaipg.in
+   PG_DEFAULT_OWNER_NAME="UAT System Owner"
+   PG_DEFAULT_OWNER_PASSWORD="UatPassword@123!"
+   
+   RAZORPAY_ENABLED=true
+   RAZORPAY_KEY_ID=rzp_test_UatKeyPlaceholder
+   RAZORPAY_KEY_SECRET=UatSecretPlaceholder
+   
+   # Optional SMTP and WhatsApp credentials for UAT notification testing
+   MAIL_ENABLED=false
    ```
 
-### 4. Let's Encrypt SSL Configuration
-1. Run Certbot to generate and apply SSL certificates automatically for the subdomain:
+### Step 3.2: Run UAT Container Stack
+1. Start the stack from `/opt/pgcrm`:
+   ```bash
+   docker compose -f /opt/pgcrm/deploy/docker-compose.prod.yml --env-file /opt/pgcrm/deploy/.env up -d --build
+   ```
+2. Verify startup execution logs:
+   ```bash
+   docker logs -f pgcrm-backend-prod
+   ```
+   *Verify that the log outputs show the DatabaseSeeder executing and printing the dynamic credentials to the console.*
+
+### Step 3.3: Configure Nginx Routing
+1. Copy `deploy/nginx-site.conf` to Nginx directories:
+   ```bash
+   sudo cp /opt/pgcrm/deploy/nginx-site.conf /etc/nginx/sites-available/uat.srisaipg.in
+   ```
+2. Open the file and update `server_name` to target `uat.srisaipg.in`.
+3. Enable the config:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/uat.srisaipg.in /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl restart nginx
+   ```
+4. Generate SSL Certificates using Certbot:
    ```bash
    sudo certbot --nginx -d uat.srisaipg.in
    ```
-2. Follow the prompt to automatically redirect HTTP traffic to HTTPS.
-
-### 5. Handover Procedure
-1. Verify the site loads at `https://uat.srisaipg.in`.
-2. Provide the client with their temporary staging login credentials:
-   - **URL:** `https://uat.srisaipg.in`
-   - **Username:** `owner.test@srisaipg.in` (matching `PG_DEFAULT_OWNER_EMAIL`)
-   - **Password:** `TemporaryUatPassword123` (matching `PG_DEFAULT_OWNER_PASSWORD`)
-3. **WARNING: Inform the client that all data in this environment is temporary and will be cleared upon the final production release.**
 
 ---
 
-## Phase 2: Production Deployment & Go-Live
+## 4. Phase 2: Production Deployment & Go-Live
 
-The Production Phase deploys the application to the live server on the client's official portal subdomain. It runs with real database validation, live Razorpay integrations, and permanent security keys.
+The production deployment runs on the client's official portal subdomain (e.g. `portal.srisaipg.in`) with real database validation, live Razorpay integrations, and permanent security keys.
 
-### 1. Production Environment Setup (`.env`)
-1. Create a directory on the production server at `/opt/pgcrm/prod`.
-2. Save the following configuration as `/opt/pgcrm/prod/.env`. Input the client's official production details:
-
-```bash
-# ─── Environment Profile ──────────────────────────────────────────
-SPRING_PROFILES_ACTIVE=prod
-
-# ─── Database Credentials (Production Isolated) ────────────────────
-DB_URL=jdbc:postgresql://postgres-db-prod:5432/pgcrmdb_prod
-DB_USERNAME=pgcrm_prod_admin
-DB_PASSWORD=SuperComplexProductionDbPassword987!
-
-# ─── Razorpay Credentials (Live Account API Keys) ─────────────────
-RAZORPAY_KEY_ID=rzp_live_ClientRealKeyId
-RAZORPAY_KEY_SECRET=ClientRealKeySecret456
-RAZORPAY_ENABLED=true
-
-# ─── Tenant Branding ──────────────────────────────────────────────
-PG_NAME="Sri Sai PG Residency"
-PG_SHORT_NAME="Sri Sai"
-PG_PRIMARY_COLOR="#4F46E5"
-
-# ─── Initial Production Owner Credentials ────────────────────────
-PG_DEFAULT_OWNER_EMAIL=owner@srisaipg.in
-PG_DEFAULT_OWNER_NAME="Sri Sai Accommodation Owner"
-PG_DEFAULT_OWNER_PASSWORD="LiveDefaultInitPassword99!"
-```
-
-### 2. Docker Compose Deployment
-1. Create `/opt/pgcrm/prod/docker-compose.yml` with the following configuration:
-
-```yaml
-version: '3.8'
-
-services:
-  postgres-db-prod:
-    image: postgres:15-alpine
-    container_name: pgcrm-db-prod
-    restart: always
-    environment:
-      POSTGRES_DB: pgcrmdb_prod
-      POSTGRES_USER: pgcrm_prod_admin
-      POSTGRES_PASSWORD: SuperComplexProductionDbPassword987!
-    volumes:
-      - prod_pg_data:/var/lib/postgresql/data
-    networks:
-      - pgcrm-prod-network
-
-  pgcrm-backend-prod:
-    image: pgcrm-backend:latest
-    container_name: pgcrm-app-prod
-    restart: always
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    depends_on:
-      - postgres-db-prod
-    networks:
-      - pgcrm-prod-network
-
-volumes:
-  prod_pg_data:
-
-networks:
-  pgcrm-prod-network:
-    driver: bridge
-```
-
-2. Run the deployment container stack:
-   ```bash
-   docker-compose -f /opt/pgcrm/prod/docker-compose.yml up -d
-   ```
-3. Confirm Flyway database migrations successfully completed by running:
-   ```bash
-   docker logs pgcrm-app-prod | grep "Flyway"
-   ```
-   > [!IMPORTANT]
-   > Ensure that the application console log shows `Flyway Community Edition ... Schema is up to date` and that no migrations failed.
-
-### 3. Nginx Reverse Proxy Setup
-1. Create a configuration file at `/etc/nginx/sites-available/portal.srisaipg.in`:
-
-```nginx
-server {
-    listen 80;
-    server_name portal.srisaipg.in;
-
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-2. Enable the site and reload Nginx:
-   ```bash
-   ln -s /etc/nginx/sites-available/portal.srisaipg.in /etc/nginx/sites-enabled/
-   nginx -t
-   systemctl restart nginx
+### Step 4.1: Configure Production Environment (`.env`)
+1. Create a production directory `/opt/pgcrm/prod/deploy` and copy the artifacts inside.
+2. Initialize `/opt/pgcrm/prod/deploy/.env` with secure production values:
+   ```ini
+   SPRING_PROFILES_ACTIVE=prod     # Enforces database validation (ddl-auto: validate)
+   DB_URL=jdbc:postgresql://postgres:5432/pgcrmdb
+   DB_USERNAME=postgres
+   DB_PASSWORD=SuperComplexProductionDbPassword987!
+   JWT_SECRET=CryptographicallySecureRandom256BitHexCodeForProductionSigning
+   
+   PG_NAME="Sri Sai Luxury PG"
+   PG_SHORT_NAME="Sri Sai"
+   PG_PRIMARY_COLOR="#2563eb"
+   
+   # Production Super Admin
+   PG_DEFAULT_OWNER_EMAIL=owner@srisaipg.in
+   PG_DEFAULT_OWNER_NAME="Sri Sai Owner"
+   PG_DEFAULT_OWNER_PASSWORD="SecureProductionInitialPassword99!"
+   
+   # Live Integrations
+   RAZORPAY_ENABLED=true
+   RAZORPAY_KEY_ID=rzp_live_LiveKeyIdFromRazorpayDashboard
+   RAZORPAY_KEY_SECRET=LiveSecretFromRazorpayDashboard
+   
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USERNAME=notifications@srisaipg.in
+   MAIL_PASSWORD=ProductionGmailAppPassword
+   MAIL_FROM=noreply@srisaipg.in
+   MAIL_ENABLED=true
+   
+   META_WHATSAPP_PHONE_NUMBER_ID=MetaPhoneID
+   META_WHATSAPP_ACCESS_TOKEN=MetaSystemToken
+   META_WEBHOOK_VERIFY_TOKEN=CustomWebhookToken
    ```
 
-### 4. Let's Encrypt SSL Configuration
-1. Run Certbot for SSL certificate generation:
+### Step 4.2: Build and Launch Production Stack
+1. Start the production containers:
+   ```bash
+   docker compose -f /opt/pgcrm/prod/deploy/docker-compose.prod.yml --env-file /opt/pgcrm/prod/deploy/.env up -d --build
+   ```
+2. Confirm Flyway database migrations successfully completed:
+   ```bash
+   docker logs pgcrm-backend-prod | grep "Flyway"
+   ```
+
+### Step 4.3: Configure Production Domain and SSL
+1. Set up the Nginx configuration file at `/etc/nginx/sites-available/portal.srisaipg.in`:
+   - Copy `deploy/nginx-site.conf` and update `server_name` to target `portal.srisaipg.in`.
+2. Enable and reload Nginx:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/portal.srisaipg.in /etc/nginx/sites-enabled/
+   sudo nginx -t && sudo systemctl restart nginx
+   ```
+3. Generate the live SSL Certificate:
    ```bash
    sudo certbot --nginx -d portal.srisaipg.in
    ```
-2. Test the auto-renewal process:
+4. Test certificate auto-renewal:
    ```bash
    sudo certbot renew --dry-run
    ```
 
-### 5. Production Handover Procedure
-1. Navigate to `https://portal.srisaipg.in` in an incognito window.
-2. Verify that the login page displays the correct title (`Sri Sai PG Residency`) and that the primary theme color is applied to buttons/elements.
-3. Hand over the production super admin account details using a secure vault/password sharing manager:
-   - **URL:** `https://portal.srisaipg.in`
-   - **Admin Username/Email:** `owner@srisaipg.in`
-   - **Admin Password:** `LiveDefaultInitPassword99!`
-4. **CAUTION: Instruct the owner to log in immediately and navigate to Settings to change this password.**
+---
+
+## 5. System Handoff & Security Checklist
+
+Before delivering credentials to the client, the system administrator must verify the following security checkpoints:
+
+- [ ] **HTTPS Enforced**: Accessing `http://portal.srisaipg.in` redirects automatically to `https://portal.srisaipg.in`.
+- [ ] **Log Stripping Active**: Inspect the Chrome Developer Console on the login page. Verify that no logs, warnings, or debug messages appear.
+- [ ] **Database Profile Validation**: Verify backend startup logs read `ddl-auto=validate` (not `create`).
+- [ ] **Secure Temporary Password**: Log in as the Owner (`owner@srisaipg.in` / `SecureProductionInitialPassword99!`).
+- [ ] **Verify Forced Change-Password Check**: Verify the UI directs the owner to `/change-password` immediately upon authentication.
+- [ ] **Register Manager Accounts**: Verify the owner creates separate profiles for their branch managers under the **Manager Management** desk.

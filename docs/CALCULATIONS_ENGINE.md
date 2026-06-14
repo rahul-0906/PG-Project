@@ -58,6 +58,32 @@ A guest checks into a room with a monthly base rent of **₹9,000** on **May 10t
 
 ---
 
+### 1.2b Rent Impact of Multi-Bed & Whole Room Bookings
+When a guest is assigned multiple beds or checks in with the **Whole Room Booking** toggle enabled (`isBookEntireRoom = true`), the monthly base rent is calculated by multiplying the room's base rent by the sharing capacity (sharing type) of that room:
+
+#### Mathematical Formula:
+$$\text{Adjusted Base Rent} = \text{Room Base Rent} \times \text{Room Sharing Type}$$
+
+* **Single Bed Allocation**: The guest is billed only the standard `Room Base Rent`.
+* **Whole Room Booking**: The guest is billed the `Adjusted Base Rent` reflecting the cost of all beds in the room.
+* **Prorated Adjusted Rent**: If checking in mid-month under a whole room booking, the daily rate uses the adjusted base rent:
+  $$\text{Daily Rate} = \frac{\text{Adjusted Base Rent}}{\text{Total Days in Billing Month}}$$
+  $$\text{Prorated Rent} = \text{Daily Rate} \times \text{Active Occupancy Days}$$
+
+#### Numerical Example:
+A guest checks in under a whole room booking for a double-sharing room (sharing type = 2) on **May 10th, 2026** where the room rent is **₹9,000**.
+* **Room Base Rent**: ₹9,000
+* **Room Sharing Type**: 2 (Double-Sharing)
+* **Adjusted Base Rent Calculation**:
+  $$\text{Adjusted Base Rent} = ₹9,000 \times 2 = ₹18,000\text{ per month}$$
+* **Active Occupancy Days (May 10 to May 31)**: 22 Days
+* **Daily Rate Calculation**:
+  $$\text{Daily Rate} = \frac{₹18,000}{31} \approx ₹580.6452\text{ per day}$$
+* **Prorated Rent Calculation**:
+  $$\text{Prorated Rent} = ₹580.6452 \times 22 \approx ₹12,774.19\text{ (Rounded to ₹12,774)}$$
+
+---
+
 ### 1.3 Line Item Aggregation
 The total amount of a generated invoice (`totalAmount` field of the `Invoice` entity) is compile-aggregated as the sum of all individual service and utility line items.
 

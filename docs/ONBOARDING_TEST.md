@@ -23,19 +23,20 @@ The system supports three active profiles for local testing:
 
 1. **Development Profile (`dev`)**: 
    - Activated by setting `SPRING_PROFILES_ACTIVE=dev` in your `.env`.
-   - **Destructive Schema Reset**: Configures `ddl-auto: create` to drop and recreate the schema and tables on startup.
-   - Disables Flyway migrations (`flyway.enabled: false`) to avoid conflicting constraints.
+   - **Destructive Schema Reset**: Configures `spring.jpa.hibernate.ddl-auto=create` to drop and recreate the schema and tables on startup.
+   - Disables Flyway migrations (`spring.flyway.enabled=false`) to avoid conflicting constraints.
    - Triggers the `DatabaseSeeder` to automatically insert the default Owner login (`owner@pgcrm.com` / `Admin@123`) if the database is empty.
 2. **Production Profile (`prod`)**:
    - Activated by setting `SPRING_PROFILES_ACTIVE=prod` in your `.env`.
-   - **Schema Protection**: Configures `ddl-auto: validate` to ensure no database schema elements are dropped or altered automatically.
+   - **Schema Protection**: Configures `spring.jpa.hibernate.ddl-auto=validate` to ensure no database schema elements are dropped or altered automatically.
    - Runs Flyway migrations automatically.
-   - Skips the `DatabaseSeeder` class.
+   - Skips the `DatabaseSeeder` class entirely (`@Profile("!prod")`).
 3. **Test Profile (`test`)**:
-   - Activated by setting `SPRING_PROFILES_ACTIVE=test` in your `.env`.
-   - **Pure Empty Database**: Configures `ddl-auto: create` to physically drop all tables and recreate them completely empty.
-   - Disables Flyway migrations (`flyway.enabled: false`) to bypass all migration SQL scripts.
-   - Prevents all data seeders (both the legacy `DataSeeder` and the new `DatabaseSeeder`) from running, guaranteeing a 100% empty database on startup.
+   - Activated by setting `SPRING_PROFILES_ACTIVE=test` in your `.env` or during test runs.
+   - **Pure Empty Database Reset**: Configures `spring.jpa.hibernate.ddl-auto=create` to physically drop all tables and recreate them completely empty.
+   - **Flyway Disabled**: Disables Flyway migrations (`spring.flyway.enabled=false`) to bypass all migration SQL scripts.
+   - **Legacy Seeders Muted**: Prevents the legacy demo data seeder (`DataSeeder`) from running, guaranteeing that no mock guest records, invoice logs, or transaction histories populate the database.
+   - **Master DatabaseSeeder Active**: The master `DatabaseSeeder` remains **active** (as it runs on `!prod`), automatically provisioning the super-admin Owner account using dynamic environment variables if the database is empty, keeping the blank environment fully secure and authenticable.
 
 #### Database Setup
 1. Spin up the postgres container:

@@ -154,12 +154,29 @@ Create an `.env` file in the root or set these parameters in your operating syst
 * **Node.js (v24+)** and **npm** installed.
 * **Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used).
 
-### 5.1 Local Execution (PostgreSQL Database - Development & Production Modes)
+### 5.1 Local Execution (PostgreSQL Database - Decoupled Environment Profiles)
 
-The application uses PostgreSQL exclusively. To run the application locally, choose between the following active profiles to configure database schema behavior:
+The application implements a profile-based database and data initialization strategy. To run the application, set `SPRING_PROFILES_ACTIVE` to one of the following:
 
-* **Development Profile (`dev`)**: Set `SPRING_PROFILES_ACTIVE=dev` to drop the existing database schema, recreate the tables from JPA entities, and run the `DatabaseSeeder` to seed the master Owner account (`owner@pgcrm.com` / `Admin@123`). Flyway is disabled in this profile to prevent constraints conflicts.
-* **Production / Validation Profile (`prod`)**: Set `SPRING_PROFILES_ACTIVE=prod` to run safe schema validations (`ddl-auto: validate`). Hibernate will not make automatic changes, and Flyway migrations run to apply updates incrementally.
+* **Development Profile (`dev`)**: 
+  - **Destructive Rebuild**: Drops the existing database schema and recreates all tables (`spring.jpa.hibernate.ddl-auto=create`).
+  - **Flyway Disabled**: Skips Flyway migrations (`spring.flyway.enabled=false`) to avoid schema constraint conflicts.
+  - **DatabaseSeeder Active**: Provisions the initial Owner account (`owner@pgcrm.com` / `Admin@123` or custom `.env` overrides).
+* **Production Profile (`prod`)**:
+  - **Schema Validation**: Validates the database schema matches entity mappings (`spring.jpa.hibernate.ddl-auto=validate`) without executing auto-alterations.
+  - **Flyway Enabled**: Automatically applies incremental SQL schema migrations.
+  - **DatabaseSeeder Disabled**: Mutes the `DatabaseSeeder` component (`@Profile("!prod")`) to protect live data tables.
+* **Pure Test Profile (`test`)**:
+  - **Destructive Wipe**: Wipes all tables cleanly (`spring.jpa.hibernate.ddl-auto=create`) to ensure a blank baseline.
+  - **Flyway Disabled**: Skips migration scripts (`spring.flyway.enabled=false`) to speed up setup.
+  - **Demo Data Muted**: Mutes all demo/guest seeding (`DataSeeder`), starting with a 100% empty database.
+  - **DatabaseSeeder Active**: Retains the master `DatabaseSeeder` to dynamically provision the admin Owner login from environment variables, ensuring secure auth is immediately available.
+
+#### Dynamic Super Admin Onboarding
+The initial PG Owner login credentials are not hardcoded. The master `DatabaseSeeder` injects values dynamically from the host environment:
+- `PG_DEFAULT_OWNER_EMAIL` (Default: `owner@pgcrm.com`)
+- `PG_DEFAULT_OWNER_NAME` (Default: `System Owner`)
+- `PG_DEFAULT_OWNER_PASSWORD` (Default: `Owner@123` or `Admin@123`)
 
 #### Step 1: Start Backend Server
 Navigate to the backend directory and launch the application (using the `dev` profile for initial startup or schema resets):
@@ -185,11 +202,12 @@ On startup, default credentials are seeded for local testing depending on the ac
 * **PG Owner (prod profile)**: `owner@pgcrm.com` / `Owner@123` (seeded by `DataSeeder`)
 * **PG Manager (dev/prod profiles)**: `manager@pgcrm.com` / `Manager@123` (seeded by `DataSeeder`)
 * **Guest (dev/prod profiles)**: `guest@pgcrm.com` / `Guest@123` (seeded by `DataSeeder`)
-* **Test Profile (`test`)**: No credentials or layout metadata are seeded, starting with a 100% empty database.
+* **Test Profile (`test`)**: Dynamic Owner account generated; all other credentials and layout metadata are blank.
 
 > [!IMPORTANT]
-> **Direct Authentication Enforcement**
-> The "QUICK LOGIN (DEMO)" panel and buttons have been removed from the login screen to strictly enforce real API-driven authentication. You must manually type the credentials above into the login inputs to sign in. In case the backend or database is unreachable, a clear server offline warning banner is displayed.
+> **Direct Authentication Enforcement & Build-Time Security**
+> - **Authentication**: The "QUICK LOGIN (DEMO)" panel and buttons have been removed from the login screen to strictly enforce real API-driven authentication. You must manually type the credentials above into the login inputs to sign in. In case the backend or database is unreachable, a clear server offline warning banner is displayed.
+> - **Production Build Security**: The frontend production build pipeline utilizes Vite's native `esbuild` minifier, configured to completely strip all `console.log`, `console.warn`, `console.error`, and `debugger` statements from the compiled client bundles. This prevents data leakage (JWTs, PII) in browser developer tools.
 
 ### 5.3 Interactive API Documentation
 The backend exposes interactive OpenAPI 3.0 documentation using Swagger UI. When the server is running, navigate to:
