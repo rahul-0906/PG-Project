@@ -9,7 +9,7 @@ This document serves as the single source of truth for all mathematical logic, b
 The billing pipeline operates on an **arrears model** where monthly base rents, utility shares, and daily add-on consumptions are calculated and invoiced in the subsequent month.
 
 ### 1.1 The "Look-Back" Logic
-When a monthly invoice generation runs (either automatically via the `MonthlyBillingScheduler` cron task or manually triggered by a manager on the 1st of a month), the system executes a "look-back" query to capture data from the preceding calendar month. 
+When a monthly invoice generation runs (either automatically via the `MonthlyBillingScheduler` cron task or manually triggered by a Tier 2 Admin (PG Owner) on the 1st of a month), the system executes a "look-back" query to capture data from the preceding calendar month. 
 
 For an invoice generated on Month $M$, Day 1:
 * The billing period begins on **Day 1 of Month $M-1$** (at `00:00:00.000` UTC).
@@ -202,9 +202,9 @@ A guest checks out on May 22nd, 2026.
 * **Total Current Unbilled Dues Calculation**:
   $$\text{Unbilled Dues} = ₹5,000 + ₹300 + ₹200 = ₹5,500$$
 * **Total Deduction Balance Calculation**:
-  $$\text{Deductions} = ₹1,500\text{ (Past Dues)} + ₹5,500\text{ (Current Unbilled Dues)} = ₹7,000$$
+  $$\text{Deductions} = ₹1,500\text (Past Dues) + ₹5,500\text (Current Unbilled Dues) = ₹7,000$$
 * **Settlement Balance Calculation**:
-  $$\text{Settlement Balance} = ₹7,000\text{ (Deposit)} - ₹7,000\text{ (Deductions)} = ₹0$$
+  $$\text{Settlement Balance} = ₹7,000\text (Deposit) - ₹7,000\text (Deductions) = ₹0$$
   *(Neutral Settlement - No refund due, no outstanding balance.)*
 
 #### Numerical Example (Due Case):

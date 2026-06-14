@@ -1,13 +1,24 @@
 # Standard Operating Procedure (SOP): Single-Tenant Client Onboarding
-### Official Deployment Reference for DevOps Engineers and Infrastructure Architects
+### Official Deployment Reference for Tier 4 Super Super Admins (Software Providers)
 
-This document defines the step-by-step Standard Operating Procedure (SOP) for deploying and onboarding new clients to isolated, single-tenant instances of the PG CRM platform. It utilizes the standardized templates located in the `deploy/` directory to provision the PostgreSQL 18 database, build the Spring Boot application container, configure SSL certifications, and route traffic via an Nginx reverse proxy.
+This document defines the step-by-step Standard Operating Procedure (SOP) for deploying and onboarding new clients to isolated, single-tenant instances of the PG CRM platform. It is designed to be executed by **Tier 4 Super Super Admins (Software Providers)** using the standardized configuration templates in the `deploy/` directory to provision the PostgreSQL database, compile the frontend and backend, and secure the proxy routing.
 
 ---
 
-## 1. Pre-Deployment: Client Parameter Gathering
+## 1. The Four-Tier Access Architecture
 
-Before initiating the onboarding pipeline, the coordinator must collect the following whitelabel configuration parameters from the client:
+Every deployment runs on a decoupled database structure governed by four distinct security layers:
+
+1. **Tier 1: Guest (`GUEST`)**: The resident resident. Has access to settings, invoices, meals, and tickets.
+2. **Tier 2: Admin - PG Owner (`PG_MANAGER`)**: The property administrator/operator. Manages guest check-ins, sets room pricing overrides, records EB utility readings, and resolves tickets.
+3. **Tier 3: Super Admin - Owner's Super Admin (`PG_OWNER`)**: The global property administrator. Access to setup buildings, register Admin (PG Owner) accounts, and monitor business analytics.
+4. **Tier 4: Super Super Admin - Software Provider**: System operator. Handles container provisioning, whitelist/color token adjustments, and server reverse proxies.
+
+---
+
+## 2. Pre-Deployment: Client Parameter Gathering
+
+Before initiating the onboarding pipeline, the Tier 4 Super Super Admin must collect the following whitelabel configuration parameters from the client:
 
 | Parameter Key | Description | Example / Format |
 | :--- | :--- | :--- |
@@ -20,7 +31,7 @@ Before initiating the onboarding pipeline, the coordinator must collect the foll
 
 ---
 
-## 2. Infrastructure Setup & Directory Provisioning
+## 3. Infrastructure Setup & Directory Provisioning
 
 1. Connect to the target Linux VPS / virtual machine (VM) via SSH.
 2. Initialize the project workspace directory structure under `/opt/pgcrm`:
@@ -36,11 +47,11 @@ Before initiating the onboarding pipeline, the coordinator must collect the foll
 
 ---
 
-## 3. Phase 1: Testing / UAT Environment Deployment
+## 4. Phase 1: Testing / UAT Environment Deployment
 
 Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) allows client testing, manager training, and verification using mock API keys.
 
-### Step 3.1: Configure UAT Environment (`.env`)
+### Step 4.1: Configure UAT Environment (`.env`)
 1. Create a copy of the template file in your UAT directory:
    ```bash
    cp /opt/pgcrm/deploy/.env.example /opt/pgcrm/deploy/.env
@@ -57,7 +68,7 @@ Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) al
    PG_SHORT_NAME="Sri Sai UAT"
    PG_PRIMARY_COLOR="#2563eb"
    
-   # Dynamic UAT Initial Owner Credentials
+   # Dynamic UAT Initial Super Admin (Tier 3) Credentials
    PG_DEFAULT_OWNER_EMAIL=owner.uat@srisaipg.in
    PG_DEFAULT_OWNER_NAME="UAT System Owner"
    PG_DEFAULT_OWNER_PASSWORD="UatPassword@123!"
@@ -70,7 +81,7 @@ Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) al
    MAIL_ENABLED=false
    ```
 
-### Step 3.2: Run UAT Container Stack
+### Step 4.2: Run UAT Container Stack
 1. Start the stack from `/opt/pgcrm`:
    ```bash
    docker compose -f /opt/pgcrm/deploy/docker-compose.prod.yml --env-file /opt/pgcrm/deploy/.env up -d --build
@@ -81,7 +92,7 @@ Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) al
    ```
    *Verify that the log outputs show the DatabaseSeeder executing and printing the dynamic credentials to the console.*
 
-### Step 3.3: Configure Nginx Routing
+### Step 4.3: Configure Nginx Routing
 1. Copy `deploy/nginx-site.conf` to Nginx directories:
    ```bash
    sudo cp /opt/pgcrm/deploy/nginx-site.conf /etc/nginx/sites-available/uat.srisaipg.in
@@ -99,11 +110,11 @@ Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) al
 
 ---
 
-## 4. Phase 2: Production Deployment & Go-Live
+## 5. Phase 2: Production Deployment & Go-Live
 
 The production deployment runs on the client's official portal subdomain (e.g. `portal.srisaipg.in`) with real database validation, live Razorpay integrations, and permanent security keys.
 
-### Step 4.1: Configure Production Environment (`.env`)
+### Step 5.1: Configure Production Environment (`.env`)
 1. Create a production directory `/opt/pgcrm/prod/deploy` and copy the artifacts inside.
 2. Initialize `/opt/pgcrm/prod/deploy/.env` with secure production values:
    ```ini
@@ -117,7 +128,7 @@ The production deployment runs on the client's official portal subdomain (e.g. `
    PG_SHORT_NAME="Sri Sai"
    PG_PRIMARY_COLOR="#2563eb"
    
-   # Production Super Admin
+   # Production Super Admin (Tier 3)
    PG_DEFAULT_OWNER_EMAIL=owner@srisaipg.in
    PG_DEFAULT_OWNER_NAME="Sri Sai Owner"
    PG_DEFAULT_OWNER_PASSWORD="SecureProductionInitialPassword99!"
@@ -139,7 +150,7 @@ The production deployment runs on the client's official portal subdomain (e.g. `
    META_WEBHOOK_VERIFY_TOKEN=CustomWebhookToken
    ```
 
-### Step 4.2: Build and Launch Production Stack
+### Step 5.2: Build and Launch Production Stack
 1. Start the production containers:
    ```bash
    docker compose -f /opt/pgcrm/prod/deploy/docker-compose.prod.yml --env-file /opt/pgcrm/prod/deploy/.env up -d --build
@@ -149,7 +160,7 @@ The production deployment runs on the client's official portal subdomain (e.g. `
    docker logs pgcrm-backend-prod | grep "Flyway"
    ```
 
-### Step 4.3: Configure Production Domain and SSL
+### Step 5.3: Configure Production Domain and SSL
 1. Set up the Nginx configuration file at `/etc/nginx/sites-available/portal.srisaipg.in`:
    - Copy `deploy/nginx-site.conf` and update `server_name` to target `portal.srisaipg.in`.
 2. Enable and reload Nginx:
@@ -168,13 +179,13 @@ The production deployment runs on the client's official portal subdomain (e.g. `
 
 ---
 
-## 5. System Handoff & Security Checklist
+## 6. System Handoff & Security Checklist
 
-Before delivering credentials to the client, the system administrator must verify the following security checkpoints:
+Before delivering credentials to the client, the Tier 4 Super Super Admin must verify the following security checkpoints:
 
 - [ ] **HTTPS Enforced**: Accessing `http://portal.srisaipg.in` redirects automatically to `https://portal.srisaipg.in`.
 - [ ] **Log Stripping Active**: Inspect the Chrome Developer Console on the login page. Verify that no logs, warnings, or debug messages appear.
 - [ ] **Database Profile Validation**: Verify backend startup logs read `ddl-auto=validate` (not `create`).
-- [ ] **Secure Temporary Password**: Log in as the Owner (`owner@srisaipg.in` / `SecureProductionInitialPassword99!`).
+- [ ] **Secure Temporary Password**: Log in as the Super Admin (Tier 3) (`owner@srisaipg.in` / `SecureProductionInitialPassword99!`).
 - [ ] **Verify Forced Change-Password Check**: Verify the UI directs the owner to `/change-password` immediately upon authentication.
-- [ ] **Register Manager Accounts**: Verify the owner creates separate profiles for their branch managers under the **Manager Management** desk.
+- [ ] **Register Tier 2 Admin Accounts**: Verify the owner creates separate profiles for their property admins under the **Manager Management** desk.

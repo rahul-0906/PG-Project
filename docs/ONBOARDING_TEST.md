@@ -1,23 +1,14 @@
 # Local Testing & Verification Guide (PostgreSQL Production Match)
 
 This document provides step-by-step instructions to locally test the PG CRM application using PostgreSQL. It covers two setup paths:
-* **Approach A**: Testing using host-installed tools (JDK 23, Maven, Node, and local PostgreSQL).
+* **Approach A**: Testing using host-installed developer tools (JDK 23, Maven, Node, and local PostgreSQL).
 * **Approach B**: Testing using **Docker Compose only** (requires only Docker installed on the host).
+
+It utilizes the strict four-tier role architecture for all validation scenarios.
 
 ---
 
-## 1. Environment Selection
-
-### Approach A: Host-Based Local Testing
-Use this approach if your local development machine has full developer tooling installed.
-
-#### Prerequisites
-- **Java JDK 23**
-- **Node.js v24+**
-- **Apache Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used)
-- **Local PostgreSQL 18** (or run containerized via Docker)
-
-#### Database Setup & Profiles
+## 1. Environment Selection & Active Profiles
 
 The system supports three active profiles for local testing:
 
@@ -25,7 +16,7 @@ The system supports three active profiles for local testing:
    - Activated by setting `SPRING_PROFILES_ACTIVE=dev` in your `.env`.
    - **Destructive Schema Reset**: Configures `spring.jpa.hibernate.ddl-auto=create` to drop and recreate the schema and tables on startup.
    - Disables Flyway migrations (`spring.flyway.enabled=false`) to avoid conflicting constraints.
-   - Triggers the `DatabaseSeeder` to automatically insert the default Owner login (`owner@pgcrm.com` / `Admin@123`) if the database is empty.
+   - Triggers the `DatabaseSeeder` to automatically insert the default Super Admin / Owner login (`owner@pgcrm.com` / `Admin@123` or environment overrides) if the database is empty.
 2. **Production Profile (`prod`)**:
    - Activated by setting `SPRING_PROFILES_ACTIVE=prod` in your `.env`.
    - **Schema Protection**: Configures `spring.jpa.hibernate.ddl-auto=validate` to ensure no database schema elements are dropped or altered automatically.
@@ -38,7 +29,17 @@ The system supports three active profiles for local testing:
    - **Legacy Seeders Muted**: Prevents the legacy demo data seeder (`DataSeeder`) from running, guaranteeing that no mock guest records, invoice logs, or transaction histories populate the database.
    - **Master DatabaseSeeder Active**: The master `DatabaseSeeder` remains **active** (as it runs on `!prod`), automatically provisioning the super-admin Owner account using dynamic environment variables if the database is empty, keeping the blank environment fully secure and authenticable.
 
-#### Database Setup
+---
+
+## 2. Approach A: Host-Based Local Testing
+
+### Prerequisites
+- **Java JDK 23**
+- **Node.js v24+**
+- **Apache Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used)
+- **Local PostgreSQL 18** (or run containerized via Docker)
+
+### Database Setup
 1. Spin up the postgres container:
    ```bash
    docker compose up postgres -d
@@ -65,13 +66,14 @@ The system supports three active profiles for local testing:
 
 ---
 
-### Approach B: Docker-Only Local Testing (No Tooling Setup)
+## 3. Approach B: Docker-Only Local Testing (No Tooling Setup)
+
 Use this approach if your testing environment **only has Docker / Docker Compose** installed. All builds, compilations, and runs occur inside containerized layers.
 
-#### Prerequisites
+### Prerequisites
 - **Docker & Docker Compose** installed and running.
 
-#### Setup & Launch
+### Setup & Launch
 1. Configure your local `.env` file in the workspace root:
    ```ini
    SPRING_PROFILES_ACTIVE=prod
@@ -82,15 +84,14 @@ Use this approach if your testing environment **only has Docker / Docker Compose
    ```bash
    docker compose up --build -d
    ```
-   - *This command automatically downloads the Java 23/Node 24 base images, compiles backend/frontend code inside Docker build stages, mounts `tenant-config.yml`, and spins up the stack.*
 
-#### Exposed Ports & Access URLs
+### Exposed Ports & Access URLs
 When running via Docker Compose, Nginx acts as the frontend web server, routing requests.
 - **Web Frontend**: Access via **`http://localhost`** (Port `80` on host).
 - **Backend REST API**: Access via **`http://localhost:8080`**.
 - **PostgreSQL Database**: Accessible via host port **`5432`** (Username: `pgcrm`, Database: `pgcrmdb`, Password: from `.env`).
 
-#### Resetting Database to Clean State
+### Resetting Database to Clean State
 To drop all test data, schema tables, and start completely fresh:
 ```bash
 # Shutdown containers and destroy the persistent database volume
@@ -102,28 +103,29 @@ docker compose up -d
 
 ---
 
-## 2. End-to-End Fresh Onboarding Test Flow
+## 4. End-to-End Fresh Onboarding Test Flow
+
 Perform these manual test scenarios to verify that the core system works correctly (using either URL `http://localhost:5173` for Host-Based or `http://localhost` for Docker-Only):
 
-### Scenario 1: Initial Log In & Admin Security
+### Scenario 1: Initial Log In & Super Admin Security (Tier 3)
 1. Navigate to the application in your browser.
-2. Log in using the default seeded owner credentials:
+2. Log in using the default seeded Super Admin credentials:
    - **Email**: `owner@pgcrm.com`
    - **Password**: `Admin@123` (if seeded under `dev` profile) or `Owner@123` (if seeded under `prod` profile)
-3. Navigate to **Profile Settings** and update the owner account:
+3. Navigate to **Profile Settings** and update the account:
    - Update the email to a test owner email (e.g. `testowner@domain.com`).
    - Change the password to a secure custom password.
 4. Log out and verify you can log back in with the updated credentials.
 
-### Scenario 2: Manager Registration
-1. Log in as the updated **PG Owner**.
+### Scenario 2: Admin - PG Owner Registration (Tier 2)
+1. Log in as the updated **Tier 3 Super Admin**.
 2. Go to **Manager Management** on the sidebar.
-3. Click **Add New Manager** and register a manager account (e.g. `testmanager@domain.com`).
+3. Click **Add New Manager** and register a Tier 2 Admin account (e.g. `testadmin@domain.com`).
 4. Log out.
-5. Log in as the **Manager** you just created (using the default password `Manager@123`).
+5. Log in as the **Tier 2 Admin** you just created (using the default password `Manager@123`).
 
-### Scenario 3: Real Guest Onboarding & Check-in
-1. Log in as the **Manager**.
+### Scenario 3: Real Guest Onboarding & Check-in (Tier 1)
+1. Log in as the **Tier 2 Admin**.
 2. Go to the **Room Layout** view.
 3. Choose a room and click on a vacant bed (marked green).
 4. Click **Check In Guest** and fill in the details:
@@ -135,24 +137,24 @@ Perform these manual test scenarios to verify that the core system works correct
 5. Click **Confirm Check-in**.
 6. **Verify**:
    - The bed indicator changes to OCCUPIED (red).
-   - Log out, then log in as the newly created **Guest** (`testguest@domain.com` / `Guest@123`).
+   - Log out, then log in as the newly created **Tier 1 Guest** (`testguest@domain.com` / `Guest@123`).
 
 ### Scenario 4: Invoice Generation & Payment Processing
-1. Log in as the **Manager**.
+1. Log in as the **Tier 2 Admin**.
 2. Go to **Billing & Invoices**.
 3. Select the check-in guest and click **Generate Invoice** for the current month.
 4. Click **View Invoice** to inspect the items (Rent, EB splits, etc.).
 5. **Verify Payment Simulator**:
-   - Log out and log in as the **Guest**.
+   - Log out and log in as the **Tier 1 Guest**.
    - Navigate to **My Invoices** and click **Pay Online** next to the open invoice.
    - Run the simulation transaction to a successful state.
-   - Log back in as the **Manager** and verify the status has updated to **PAID**.
+   - Log back in as the **Tier 2 Admin** and verify the status has updated to **PAID**.
 
 ### Scenario 5: Guest Services (Meals & Tickets)
-1. Log in as the **Guest**.
+1. Log in as the **Tier 1 Guest**.
 2. Go to **Meal Planner** and toggle your daily preference (e.g., breakfast/lunch opt-outs) for the upcoming days.
 3. Go to **Maintenance Portal** -> click **Raise Ticket** -> describe a mock issue (e.g. "Geyser not working").
-4. Log in as the **Manager**.
+4. Log in as the **Tier 2 Admin**.
 5. **Verify**:
    - In **Daily Logs**, verify the guest's meal headcount updates.
    - In **Maintenance Desk**, change the status of the guest's ticket to **Resolved**.
@@ -160,7 +162,7 @@ Perform these manual test scenarios to verify that the core system works correct
 
 ---
 
-## 3. Final Verification Before Handover
+## 5. Final Verification Before Handover
 Once you are done testing:
 1. For Docker-Only: Shut down and purge the database volume (`docker compose down -v`).
 2. Make sure `APP_SEED-DEMO=false` is set in `.env`.

@@ -113,13 +113,14 @@ graph TD
 
 ## 3. Role-Based Access Control (RBAC)
 
-The application utilizes a strict 3-tier user hierarchy:
+The application utilizes a strict 4-tier role hierarchy to isolate scopes of access:
 
-| Role | Access Tier | Responsibilities & Capabilities |
-| :--- | :--- | :--- |
-| **PG Owner** (`PG_OWNER`) | Global Administrator | Creates and configures buildings, registers/edits property managers, assigns managers to multiple branches, views global audit logs, and monitors system-wide analytics. |
-| **PG Manager** (`PG_MANAGER`) | Property Administrator | Manages checked-in guests, assigns rooms and beds, overrides prices, records sub-meter EB units, tracks daily add-on orders (omelettes, laundry, eggs), and generates monthly invoices. |
-| **Guest** (`GUEST`) | Resident Portal | Views active check-in details, monitors monthly service usage, uses the calendar-based meal planner to schedule future meals, creates maintenance tickets, and pays bills online via Razorpay. |
+| Role Tier | Platform Role | Database Role Mapping | Responsibilities & Capabilities |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | **Guest** | `GUEST` | Resident Portal access. Views active check-ins, tracks service logs, schedules meals on calendar, files maintenance tickets, and pays invoices via Razorpay. |
+| **Tier 2** | **Admin (PG Owner)** | `PG_MANAGER` | Property Administrator scope. Manages checked-in guests, assigns rooms/beds, records sub-meter EB units, tracks add-on orders (meals, laundry), and resolves maintenance tickets. |
+| **Tier 3** | **Super Admin (Owner's Super Admin)** | `PG_OWNER` | Global Administrator scope. Setup and configures buildings/layout grids, creates and assigns PG Owner manager profiles to multiple branches, and monitors global financial collections. |
+| **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | System Operations scope. Provisions host VMs, edits whitelist variables, deploys container stacks, configures proxy servers, and manages SSL certificate renewals. |
 
 ---
 

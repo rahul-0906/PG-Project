@@ -5,11 +5,24 @@ This document acts as a granular registry of the entire codebase, detail by deta
 
 ---
 
-## 1. Backend Registry (`com.pgcrm`)
+## 1. Role-Based Access Control (RBAC) & Mapping
+
+The application enforces a strict four-tier role hierarchy that separates end-user resident portal access from administrative and system operations. The backend enums map directly to this hierarchy as follows:
+
+| Hierarchy Tier | Platform Role | Database Role Enum | Access Scope & Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **Tier 1** | **Guest** | `GUEST` | Resident Portal. Access is limited to their own check-in details, meal calendars, maintenance requests, and payment logs. |
+| **Tier 2** | **Admin (PG Owner)** | `PG_MANAGER` | Property Administration. Operates assigned buildings, registers checked-in guests, logs meals and add-ons, generates monthly invoices, and resolves tickets. |
+| **Tier 3** | **Super Admin (Owner's Super Admin)** | `PG_OWNER` | Global Administration. Manages building setup, registers Admin (PG Owner) accounts, allocates building permissions, and views revenue reports. |
+| **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | Infrastructure Operations. Configures host variables, deploys docker-compose services, updates whitelabel config parameters, and manages SSL certificates. |
+
+---
+
+## 2. Backend Registry (`com.pgcrm`)
 
 The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It follows a Controller-Service-Repository multi-layered architecture.
 
-### 1.1 Config Package (`com.pgcrm.config`)
+### 2.1 Config Package (`com.pgcrm.config`)
 
 #### `JacksonConfig.java`
 * **Structural Purpose**: Overrides default JSON mapping parameters.
@@ -31,19 +44,19 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.2 DTO Package (`com.pgcrm.dto`)
+### 2.2 DTO Package (`com.pgcrm.dto`)
 
 * **`AuthRequest.java`**: Binds incoming user credentials (`email`, `password`) securely. Solves entities exposure during auth and triggers validation check constraints.
-* **`AuthResponse.java`**: Formats login session results including JWT tokens, active roles, names, and the `mustChangePassword` security flag.
-* **`GuestCheckInRequest.java`**: Transports checking-in data (deposit, room ID, check-in date, defaults, meal preferences, list of bed IDs, isBookEntireRoom) to the manager layer.
-* **`GuestResponse.java`**: Formats resident details, room numbers, list of bed labels, check-in status, and KYC records for manager dashboard presentation.
+* **`AuthResponse.java`**: Formats login session results including JWT tokens, active roles (Guest/Admin/Super Admin), names, and the `mustChangePassword` security flag.
+* **`GuestCheckInRequest.java`**: Transports checking-in data (deposit, room ID, check-in date, defaults, meal preferences, list of bed IDs, isBookEntireRoom) to the manager/admin layer.
+* **`GuestResponse.java`**: Formats resident details, room numbers, list of bed labels, check-in status, and KYC records for admin dashboard presentation.
 * **`InvoiceResponse.java`**: Combines tax invoicing calculations, statuses, due dates, building mappings, and structured lists of `InvoiceLineItem` objects.
 * **`SystemConfigResponse.java`**: Delivers whitelabel properties (name, short title, primary CSS color) and active system rule settings to client context.
-* **`UserResponse.java`**: Maps owner profiles and manager account tables for administration lists.
+* **`UserResponse.java`**: Maps Super Admin profiles and Admin (PG Owner) account tables for administration lists.
 
 ---
 
-### 1.3 Exception Package (`com.pgcrm.exception`)
+### 2.3 Exception Package (`com.pgcrm.exception`)
 
 * **`ResourceNotFoundException.java`**: Maps a missing resource (e.g. invalid Bed ID or Guest ID) to an HTTP **404 (NOT_FOUND)** response.
 * **`BedUnavailableException.java`**: Triggered when check-in attempts are made on occupied/notice beds. Yields an HTTP **400 (BAD_REQUEST)**.
@@ -53,7 +66,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.4 Controller Package (`com.pgcrm.controller`)
+### 2.4 Controller Package (`com.pgcrm.controller`)
 
 #### `AuthController.java`
 * **Structural Purpose**: User session entry points.
@@ -69,37 +82,37 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 #### `GuestController.java`
 * **Structural Purpose**: Handles guest portal requests.
-* **Why Created**: Provides self-service APIs for resident dashboards, profile settings, meal planning, and maintenance logs.
+* **Why Created**: Provides self-service APIs for Tier 1 Guest dashboards, profile settings, meal planning, and maintenance logs.
 * **Internal Logic & Dependencies**: Integrates `GuestService`, `DailyLogService`, and `NotificationService`.
 * **Database/UI Interaction**: Reads and updates `Guest`, `DailyLog`, `MaintenanceTicket`, and `Notification` schemas.
 
 #### `InventoryController.java`
 * **Structural Purpose**: Exposes building layouts.
-* **Why Created**: Serves structural occupancy trees to property managers.
+* **Why Created**: Serves structural occupancy trees to property admins (Tier 2 and Tier 3).
 * **Internal Logic & Dependencies**: Queries `BuildingSetupService`.
 * **Database/UI Interaction**: Maps `Building`, `Floor`, `Block`, `Room`, and `Bed` records into JSON representations.
 
 #### `PaymentController.java`
 * **Structural Purpose**: Directs transactions and billing.
-* **Why Created**: Integrates online gateway transactions (Razorpay) and manual cash collection records.
+* **Why Created**: Integrates online gateway payments (Razorpay) and manual cash collection records.
 * **Internal Logic & Dependencies**: Leverages `PaymentService`.
 * **Database/UI Interaction**: Generates Razorpay order IDs and updates invoice status indicators from `PENDING` to `PAID` or `PENDING_CASH_VERIFICATION`.
 
 #### `PgManagerController.java`
 * **Structural Purpose**: Property management operations.
-* **Why Created**: Powers guest check-in, guest switch bed, guest checkout, daily logs, and meal headcount analytics.
+* **Why Created**: Powers guest check-in, guest switch bed, guest checkout, daily logs, and meal headcount analytics for Tier 2 Admins.
 * **Internal Logic & Dependencies**: Integrates `GuestService`, `DailyLogService`, and `SettlementService`.
 * **Database/UI Interaction**: Exposes mutation routes for active resident registries.
 
 #### `PgOwnerController.java`
 * **Structural Purpose**: Global administrative operations.
-* **Why Created**: Allows managing multi-branch managers, configuring buildings, and monitoring global activity.
+* **Why Created**: Allows Tier 3 Super Admins to manage property admins, configure buildings, and monitor global activity.
 * **Internal Logic & Dependencies**: Interfaces `BuildingSetupService` and `AuthService`.
 * **Database/UI Interaction**: Saves new manager profiles and building configuration entities.
 
 #### `PricingController.java`
 * **Structural Purpose**: Pricing overrides controller.
-* **Why Created**: Allows dynamic overrides of defaults (rent, food, washing machine rates) per building.
+* **Why Created**: Allows dynamic overrides of defaults (rent, food, washing machine rates) per building for property admins.
 * **Internal Logic & Dependencies**: Interfaces `PricingService`.
 * **Database/UI Interaction**: Persists configuration updates to `PricingConfig` tables.
 
@@ -111,7 +124,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 #### `ReportController.java`
 * **Structural Purpose**: Exposes operational analytics.
-* **Why Created**: Powers owner analytics dashboards (revenue trends, occupancy rates).
+* **Why Created**: Powers Tier 3 Super Admin reports (revenue trends, occupancy rates).
 * **Internal Logic & Dependencies**: Interfaces `ReportService`.
 * **Database/UI Interaction**: Aggregates datasets using specialized SQL queries.
 
@@ -119,7 +132,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 * **Structural Purpose**: Standardized authenticated setup endpoint.
 * **Why Created**: Exposes details like allowed payment modes and active rules.
 * **Internal Logic & Dependencies**: Resolves configuration structures.
-* **Database/UI Interaction**: Loaded by managers/guests to enforce client side options.
+* **Database/UI Interaction**: Loaded by admins/guests to enforce client side options.
 
 #### `WebhookController.java`
 * **Structural Purpose**: Receives third-party service callbacks.
@@ -129,7 +142,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.5 Entity Package (`com.pgcrm.entity`)
+### 2.5 Entity Package (`com.pgcrm.entity`)
 
 * **`User.java`**: Base user account mapping containing email credentials, BCrypt password hashes, and active roles.
 * **`Guest.java`**: Models check-in status, expected checkouts, advanced deposits, default food preferences, and assigns a `@ManyToMany` mapping representing lists of allocated `Bed` records.
@@ -145,7 +158,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.6 Security Package (`com.pgcrm.security`)
+### 2.6 Security Package (`com.pgcrm.security`)
 
 #### `JwtAuthenticationFilter.java`
 * **Structural Purpose**: Stateless request filter.
@@ -173,7 +186,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.7 Seeder Package (`com.pgcrm.seeder`)
+### 2.7 Seeder Package (`com.pgcrm.seeder`)
 
 #### `DataSeeder.java`
 * **Structural Purpose**: Seeds layout infrastructure and test profiles.
@@ -184,12 +197,12 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 #### `DatabaseSeeder.java`
 * **Structural Purpose**: Master owner account initiator.
 * **Why Created**: Auto-seeds the initial super admin/owner login securely.
-* **Internal Logic & Dependencies**: Active under `dev` profile. Reads values dynamically from environment variables (`@Value` parameters) and injects default credentials if user tables are blank. Muted under `prod` and `test` profiles.
-* **Database/UI Interaction**: Inserts the root `PG_OWNER` account.
+* **Internal Logic & Dependencies**: Active under `dev` and `test` profiles. Reads values dynamically from environment variables (`@Value` parameters) and injects default credentials if user tables are blank. Muted under `prod` profile.
+* **Database/UI Interaction**: Inserts the root Super Admin / Owner account.
 
 ---
 
-### 1.8 Service Package (`com.pgcrm.service`)
+### 2.8 Service Package (`com.pgcrm.service`)
 
 #### `AuditService.java`
 * **Structural Purpose**: Logs backend activities.
@@ -268,14 +281,14 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 1.9 Scheduler Package (`com.pgcrm.scheduler`)
+### 2.9 Scheduler Package (`com.pgcrm.scheduler`)
 
 * **`MonthlyBillingScheduler.java`**: Runs at midnight on the 1st of the month (`0 0 0 1 * *`) to generate arrears invoices.
 * **`PaymentReminderScheduler.java`**: Runs daily at 9:00 AM (`0 0 9 * * *`) to notify users of pending invoices.
 
 ---
 
-## 2. Infrastructure Registry (`deploy/`)
+## 3. Infrastructure Registry (`deploy/`)
 
 #### `docker-compose.prod.yml`
 * **Structural Purpose**: Defines the production service stack.
@@ -296,11 +309,11 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-## 3. Frontend Registry (`frontend/src`)
+## 4. Frontend Registry (`frontend/src`)
 
-### 3.1 Contexts & Client Infrastructure
+### 4.1 Contexts & Client Infrastructure
 
-* **`App.jsx`**: Coordinates routing paths and checks access privileges (`PrivateRoute` route guard).
+* **`App.jsx`**: Coordinates routing paths and checks access privileges (`PrivateRoute` route guard based on tiers).
 * **`main.jsx`**: Bootstraps the application, mounting components to the root DOM node.
 * **`api/index.js`**: Configures Axios, automatically attaching authorization tokens and target building headers from `sessionStorage`.
 * **`context/AuthContext.jsx`**: Manages auth states, credentials, and handles sign-out operations. Uses `sessionStorage` for token security.
@@ -308,15 +321,15 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 3.2 Layout Components (`src/components`)
+### 4.2 Layout Components (`src/components`)
 
 * **`AppLayout.jsx`**: Wraps dashboard panels inside standard layout templates.
 * **`Sidebar.jsx`**: Renders navigation options based on active user roles.
-* **`TopHeader.jsx`**: Manages building branch dropdown selection for managers.
+* **`TopHeader.jsx`**: Manages building branch dropdown selection for Tier 2 admins.
 
 ---
 
-### 3.3 Dashboard & Settings Pages (`src/pages`)
+### 4.3 Dashboard & Settings Pages (`src/pages`)
 
 * **`Login.jsx`**: Login portal. Strips mock login panels and displays system-offline banners if the server is unreachable.
 * **`ForgotPassword.jsx`**: Initiates password recovery requests.
@@ -327,7 +340,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 3.4 Resident Pages (`src/pages/guest`)
+### 4.4 Resident Pages (`src/pages/guest`)
 
 * **`guest/DailyLog.jsx`**: Displays the calendar-based meal planner, enforcing opt-out lockouts.
 * **`guest/GuestDashboard.jsx`**: Displays checked-in info, invoice counts, and active logs.
@@ -336,9 +349,9 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 3.5 Manager Pages (`src/pages/manager`)
+### 4.5 Manager Pages (`src/pages/manager`)
 
-* **`manager/ManagerDashboard.jsx`**: Renders occupancy rates and task alerts.
+* **`manager/ManagerDashboard.jsx`**: Renders occupancy rates and task alerts for Tier 2 Admins.
 * **`manager/ManagerEbBill.jsx`**: Handles recording energy readings and splits.
 * **`manager/ManagerGuestAddons.jsx`**: Ledger for add-on orders (omelettes, laundry) with background Auto-Save status indicators.
 * **`manager/ManagerGuests.jsx`**: Manages check-ins, bed lists, KYC, and check-outs.
@@ -348,7 +361,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-### 3.6 Owner Pages (`src/pages/owner`)
+### 4.6 Owner Pages (`src/pages/owner`)
 
-* **`owner/OwnerBuildingCreator.jsx`**: Multi-step wizard to register or edit properties.
-* **`owner/OwnerDashboard.jsx`**: Registers and configures property managers.
+* **`owner/OwnerBuildingCreator.jsx`**: Multi-step wizard to register or edit properties for Tier 3 Super Admins.
+* **`owner/OwnerDashboard.jsx`**: Registers and configures Tier 2 Admin (PG Owner) accounts.

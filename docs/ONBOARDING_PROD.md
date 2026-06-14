@@ -1,6 +1,6 @@
 # Production Onboarding & Deployment Guide
 
-This document outlines the step-by-step procedure to deploy the PG CRM system in a production-ready, clean state for a PG Owner (Tenant).
+This document outlines the step-by-step procedure to deploy the PG CRM system in a production-ready, clean state for a new client. It utilizes the strict four-tier role architecture.
 
 ---
 
@@ -34,7 +34,7 @@ To ensure production database integrity, the system implements profile-specific 
      ```ini
      APP_SEED-DEMO=false
      ```
-   * *Note: The system `DataSeeder` will still automatically create the root Owner admin account and build the physical building, floor, room, and bed layout skeleton, but all transaction history and guest profiles will remain completely clean.*
+   * *Note: The system `DataSeeder` will still automatically build the physical building, floor, room, and bed layout skeleton, but all transaction history and guest profiles will remain completely clean.*
 
 ---
 
@@ -131,7 +131,7 @@ To ensure the highest standard of security for production client browsers and pr
 
 ---
 
-## 7. Dynamic Owner Onboarding Credentials Injection
+## 7. Dynamic Super Admin Onboarding Credentials Injection
 
 When onboarding a new tenant, initial administrative credentials do not need to be hardcoded or seeded via SQL scripts. Instead:
 1. **Dynamic Environment Injections**: The system reads the variables `PG_DEFAULT_OWNER_EMAIL`, `PG_DEFAULT_OWNER_NAME`, and `PG_DEFAULT_OWNER_PASSWORD` from the `.env` configuration file on startup.
@@ -149,9 +149,9 @@ Perform the following steps immediately after launching the application:
 1. **Initial Login**: Log in with the dynamically injected owner credentials (configured in `.env`). If none were specified, use the fallback defaults:
    - **Email**: `owner@pgcrm.com`
    - **Password**: `Owner@123` (or `Admin@123` depending on profile)
-2. **Update Admin Settings**:
+2. **Update Super Admin Settings (Tier 3)**:
    - Go to Profile Settings and change the email to the client's email (e.g., `owner@srisaipg.in`).
    - Change the password to a secure custom password.
-3. **Register Managers**: Go to **Manager Management** and create logins for their property managers.
+3. **Register Tier 2 Admin (PG Owner) Accounts**: Go to **Manager Management** and create logins for their property admins.
 4. **Layout Check**: Verify the room and bed structure looks correct on the dashboard.
-5. **Begin Guest Onboarding**: Hand over the credentials to the PG owner and manager to begin registering and checking in guests.
+5. **Begin Operations**: Hand over the credentials to the PG owner and manager to begin registering and checking in guests.

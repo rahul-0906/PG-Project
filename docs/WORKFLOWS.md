@@ -1,10 +1,21 @@
 # System Workflows & Visual Models
 
-This document outlines the core business workflows, architectural data transitions, and entity lifecycle states of the Paying Guest CRM platform using visual sequence models.
+This document outlines the core business workflows, architectural data transitions, and entity lifecycle states of the Paying Guest CRM platform using visual sequence models. It explicitly details the actions and access scopes across the four-tier role architecture.
 
 ---
 
-## 1. Authentication & Token Refresh Flow
+## 1. The Four-Tier Role Hierarchy & Access Scopes
+
+The application segregates permissions using a four-tier architecture. Authorisation is enforced dynamically using JWT claim attributes on every REST call:
+
+1. **Tier 1: Guest (`GUEST`)**: The resident resident. Has read-only access to their allocated bed, logs meal preferences, submits maintenance requests, and reviews/pays invoice bills.
+2. **Tier 2: Admin - PG Owner (`PG_MANAGER`)**: The property administrator/operator. Manages assigned properties, handles check-ins, sets room pricing overrides, records EB utility readings, and resolves tickets.
+3. **Tier 3: Super Admin - Owner's Super Admin (`PG_OWNER`)**: The global property administrator. Unrestricted access to setup buildings, register Admin (PG Owner) accounts, associate admins with multiple branches, and monitor business analytics.
+4. **Tier 4: Super Super Admin - Software Provider**: System operator. Handles direct Docker container deployments, edits whitelist/color tokens, provisions server environments, and generates SSL credentials.
+
+---
+
+## 2. Authentication & Token Refresh Flow
 The frontend implements silent token refresh using an Axios interceptor to renew expired access tokens before failing subsequent requests.
 
 ```mermaid
@@ -36,20 +47,20 @@ sequenceDiagram
 
 ---
 
-## 2. Guest Check-In & Multi-Bed Provisioning Flow
-Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail. Supports booking single beds or "Whole Room Bookings" (occupying all beds in a room).
+## 3. Guest Check-In & Multi-Bed Provisioning Flow
+Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail. Supports booking single beds or "Whole Room Bookings" (occupying all beds in a room). Driven by Tier 2 Admins.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as GuestService
     participant DB as PostgreSQL DB
     participant Mail as EmailService
 
-    Manager->>App: Submits check-in form (fullName, email, phone, targetBedIds[], isBookEntireRoom)
+    Admin->>App: Submits check-in form (fullName, email, phone, targetBedIds[], isBookEntireRoom)
     App->>Controller: POST /api/manager/guests
     Controller->>Service: checkIn(...)
     alt Whole Room Booking Enabled
@@ -70,25 +81,25 @@ sequenceDiagram
     Service->>Mail: sendGuestWelcomeEmail(...) (asynchronous welcome with credentials & bed labels list)
     Service->>DB: Write GUEST_CHECKIN Audit Log
     Service->>Controller: Return Guest response DTO
-    Controller->>Manager: Check-In confirmed (displays in Guests table)
+    Controller->>Admin: Check-In confirmed (displays in Guests table)
 ```
 
 ---
 
-## 3. Checkout Notice & Financial Settlement Flow
-Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds.
+## 4. Checkout Notice & Financial Settlement Flow
+Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds. Managed by Tier 2 Admins.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as SettlementService
     participant DB as PostgreSQL DB
 
-    Note over Manager, DB: Phase 1: Notice Period Registration
-    Manager->>App: Clicks "Notice" & Confirms Exit Date
+    Note over Admin, DB: Phase 1: Notice Period Registration
+    Admin->>App: Clicks "Notice" & Confirms Exit Date
     App->>Controller: POST /api/manager/guests/{id}/initiate-checkout
     Controller->>Service: initiateCheckout(...)
     Service->>DB: Set noticeDate = today, exitDate = noticeDate + 30 days
@@ -96,10 +107,10 @@ sequenceDiagram
         Service->>DB: Set Bed status to NOTICE
     end
     Service->>DB: Dispatch check-out notice in-app notification
-    Service->>Manager: Return updated Guest (shows yellow notice indicator)
+    Service->>Admin: Return updated Guest (shows yellow notice indicator)
 
-    Note over Manager, DB: Phase 2: Final Checkout & Account Settlement
-    Manager->>App: Clicks "Checkout" & Confirms
+    Note over Admin, DB: Phase 2: Final Checkout & Account Settlement
+    Admin->>App: Clicks "Checkout" & Confirms
     App->>Controller: POST /api/manager/guests/{id}/confirm-checkout
     Controller->>Service: confirmCheckout(...)
     Service->>DB: Calculate pro-rated rent for current month (Room Rent * Sharing Type if isBookEntireRoom = true)
@@ -109,31 +120,31 @@ sequenceDiagram
         Service->>DB: Update Bed status to VACANT
     end
     Service->>DB: Clear guest_beds mappings, set guest active = false
-    Service->>Manager: Return SettlementResult receipt (Displays final balance / refunds)
+    Service->>Admin: Return SettlementResult receipt (Displays final balance / refunds)
 ```
 
 ---
 
-## 4. Meal & Add-on Tracking Flow
-Tracks the daily meal preferences and add-on roster logs recorded by managers for bulk operations.
+## 5. Meal & Add-on Tracking Flow
+Tracks the daily meal preferences and add-on roster logs recorded by Tier 2 Admins for bulk operations.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerGuestAddons Component
     participant Controller as PgManagerController
     participant DB as PostgreSQL DB
 
-    Note over Manager, DB: Daily Meal & Add-on Log Retrieval
-    Manager->>App: Selects date
+    Note over Admin, DB: Daily Meal & Add-on Log Retrieval
+    Admin->>App: Selects date
     App->>Controller: GET /api/manager/guests-with-log/{date}
     Controller->>DB: Find active guests in building
     Controller->>DB: Retrieve or build default DailyLog records
-    Controller->>Manager: Returns daily roster payload
+    Controller->>Admin: Returns daily roster payload
     
-    Note over Manager, DB: Daily Log Updates & Inline Auto-Saving
-    Manager->>App: Toggles meal state or increments omelette/washing machine count
+    Note over Admin, DB: Daily Log Updates & Inline Auto-Saving
+    Admin->>App: Toggles meal state or increments omelette/washing machine count
     Note over App: App displays dynamic saving spinner next to guest's name
     App->>Controller: PUT /api/guest/daily-log/{date} (via guest ID)
     Controller->>DB: Save DailyLog (isVeg, breakfast, lunch, dinner, omelettes, laundry)
@@ -143,12 +154,12 @@ sequenceDiagram
 
 ---
 
-## 5. EB (Electricity) Bill Split Calculations
+## 6. EB (Electricity) Bill Split Calculations
 The application supports multiple bill calculation models: Equal Split across all active guests, Fixed Rate Per Bed, and Meter-Based Readings.
 
 ```mermaid
 flowchart TD
-    Start([Manager Submits EB Bill]) --> Method{Split Method?}
+    Start([Admin Submits EB Bill]) --> Method{Split Method?}
     
     Method -- EQUAL_SPLIT --o EqualCalc[Divide total bill amount equally among all active guests in period]
     EqualCalc --> SaveEqual[Save EbBill details & link pro-rated amounts to guests]
@@ -156,7 +167,7 @@ flowchart TD
     Method -- PER_BED --o FixedCalc[Automatically charge configured fixed rate per bed in monthly invoice]
     FixedCalc --> DisableManual[Disable manual entries; charge per invoice cycle]
     
-    Method -- METER_BASED --o MeterCalc[Manager enters previous & current unit readings per guest]
+    Method -- METER_BASED --o MeterCalc[Admin enters previous & current unit readings per guest]
     MeterCalc --> DiffCalc[Calculate consumed units: current - previous]
     DiffCalc --> CostCalc[Dues: units * ratePerUnit]
     CostCalc --> SaveMeter[Save EbBill & individual guest meter logs]
@@ -164,20 +175,20 @@ flowchart TD
 
 ---
 
-## 6. Invoice Generation & PDF Rendering
+## 7. Invoice Generation & PDF Rendering
 Billing runs either automatically via monthly cron schedules or on-demand via the manager portal.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerBilling Component
     participant Controller as PgManagerController
     participant Service as InvoiceService
     participant PDF as InvoicePdfService
     participant DB as PostgreSQL DB
 
-    Manager->>App: Clicks "Generate All Invoices" (Month, Year)
+    Admin->>App: Clicks "Generate All Invoices" (Month, Year)
     App->>Controller: POST /api/manager/invoices/generate-all
     Controller->>Service: Generate invoices for active building guests
     loop For Each Active Guest
@@ -189,27 +200,27 @@ sequenceDiagram
     end
     Service->>Manager: Success message (Total invoices created)
     
-    Note over Manager, DB: Download PDF Invoice
-    Manager->>App: Clicks Download Invoice PDF
+    Note over Admin, DB: Download PDF Invoice
+    Admin->>App: Clicks Download Invoice PDF
     App->>Controller: GET /api/manager/invoices/{id}/pdf
     Controller->>PDF: generateInvoicePdf(...)
     PDF->>DB: Retrieve invoice details & guest info
     PDF->>PDF: Render layout using OpenPDF Library
-    PDF->>Manager: Return PDF byte stream for local download
+    PDF->>Admin: Return PDF byte stream for local download
 ```
 
 ---
 
-## 7. Guest Maintenance Portal Lifecycle
-Guests submit maintenance requests from their portal. Real-time updates and status changes flow directly to the manager.
+## 8. Guest Maintenance Portal Lifecycle
+Guests submit maintenance requests from their portal. Real-time updates and status changes flow directly to the manager/admin.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest
+    actor Guest as Tier 1 Guest
     participant Portal as Guest Portal
     participant Controller as GuestController
-    participant Manager as PgManager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant MgrApp as ManagerMaintenance
     participant DB as PostgreSQL DB
 
@@ -219,10 +230,10 @@ sequenceDiagram
     Controller->>DB: Create MaintenanceTicket (status = OPEN)
     Controller->>Portal: Ticket created
     
-    Note over Manager, DB: Manager Ticket Resolution
-    Manager->>MgrApp: Loads open tickets list
+    Note over Admin, DB: Admin Ticket Resolution
+    Admin->>MgrApp: Loads open tickets list
     MgrApp->>DB: Retrieve OPEN tickets
-    Manager->>MgrApp: Clicks "Resolve Ticket"
+    Admin->>MgrApp: Clicks "Resolve Ticket"
     MgrApp->>DB: Update status to RESOLVED
     DB->>MgrApp: Saved
     MgrApp->>Guest: Update ticket status in Guest Portal view
@@ -230,12 +241,12 @@ sequenceDiagram
 
 ---
 
-## 8. Audit Trail Logging System
+## 9. Audit Trail Logging System
 Ensures compliance and accountability by tracking all operational administrative modifications in a permanent ledger.
 
 ```mermaid
 flowchart LR
-    Admin([Manager / Owner Action]) --> API[API Endpoint Trigger]
+    Admin([Admin / Owner Action]) --> API[API Endpoint Trigger]
     API --> Action[Perform Operation: check-in, update rules, pricing override]
     Action --> DB[(PostgreSQL Database)]
     Action --> Audit[AuditService.log]
@@ -244,22 +255,22 @@ flowchart LR
 
 ---
 
-## 9. Building Setup & Room Inventory Creation Flow
-Owners programmatically provision physical buildings, layout structures, and room configurations using a step-by-step layout wizard.
+## 10. Building Setup & Room Inventory Creation Flow
+Owners programmatically provision physical buildings, layout structures, and room configurations using a step-by-step layout wizard. Driven by Tier 3 Super Admins.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Owner
+    actor SuperAdmin as Tier 3 Super Admin
     participant Creator as OwnerBuildingCreator Component
     participant Controller as PgOwnerController
     participant SetupService as BuildingSetupService
     participant DB as PostgreSQL DB
 
-    Owner->>Creator: Defines Building metadata (Name, Address)
-    Owner->>Creator: Configures layout schema (Floors, Blocks, Room counts, Sharing Type, Rents)
+    SuperAdmin->>Creator: Defines Building metadata (Name, Address)
+    SuperAdmin->>Creator: Configures layout schema (Floors, Blocks, Room counts, Sharing Type, Rents)
     Creator->>Creator: Computes default bed structures (e.g., Bed A, Bed B per room)
-    Owner->>Creator: Clicks "Submit Property"
+    SuperAdmin->>Creator: Clicks "Submit Property"
     Creator->>Controller: POST /api/owner/buildings (BuildingSetupRequest DTO)
     Controller->>SetupService: setupBuilding(...)
     Note over SetupService, DB: Database Transaction Context
@@ -273,82 +284,82 @@ sequenceDiagram
     SetupService->>DB: Commit Transaction
     SetupService->>Controller: Return confirmation
     Controller->>Creator: Return success payload
-    Creator->>Owner: Displays new building in property directory
+    Creator->>SuperAdmin: Displays new building in property directory
 ```
 
 ---
 
-## 10. Manager Assignment & Branch Access Scoping Flow
-Owners delegate operations by assigning managers to specific buildings, enforcing multi-branch safety scopes via JWT attributes.
+## 11. Manager Assignment & Branch Access Scoping Flow
+Tier 3 Super Admins delegate operations by assigning Tier 2 Admins to specific buildings, enforcing multi-branch safety scopes via JWT attributes.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Owner
+    actor SuperAdmin as Tier 3 Super Admin
     participant App as OwnerDashboard
     participant Controller as PgOwnerController
     participant DB as PostgreSQL DB
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant MgrApp as ManagerApp
     participant Filter as JwtAuthenticationFilter
 
-    Owner->>App: Selects building mappings & saves Manager
+    SuperAdmin->>App: Selects building mappings & saves Admin Profile
     App->>Controller: POST/PUT /api/owner/managers (assigns branchId array)
     Controller->>DB: Update User record (branchId: "1,2")
     
-    Note over Manager, DB: Manager Login & Scoped Requests
-    Manager->>MgrApp: Performs Login
+    Note over Admin, DB: Admin Login & Scoped Requests
+    Admin->>MgrApp: Performs Login
     MgrApp->>Controller: POST /api/auth/login
-    Controller->>DB: Lookup Manager User
+    Controller->>DB: Lookup Admin User
     DB->>Controller: Return assignments (branchIds: [1,2])
-    Controller->>Manager: Yields JWT Token (claims: branchIds)
-    Manager->>MgrApp: Selects active branch (Building 1) from TopHeader
+    Controller->>Admin: Yields JWT Token (claims: branchIds)
+    Admin->>MgrApp: Selects active branch (Building 1) from TopHeader
     MgrApp->>Filter: GET /api/manager/guests (Headers: X-Selected-Branch-Id = 1, JWT Bearer)
     Filter->>Filter: Verify selected branch is in user JWT claims list
     Filter->>Filter: Set context branchId attribute
     Filter->>DB: Scoped Query: Get active guests where buildingId = 1
-    DB->>Manager: Yields building-specific guest roster
+    DB->>Admin: Yields building-specific guest roster
 ```
 
 ---
 
-## 11. Dynamic Pricing Overrides & Rent Settings Flow
-Enables property administrators to adjust general prices or perform bulk sharing-type rent overrides across an entire building.
+## 12. Dynamic Pricing Overrides & Rent Settings Flow
+Enables property administrators (Tier 2) to adjust general prices or perform bulk sharing-type rent overrides across an entire building.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerPricing Component
     participant Controller as PricingController
     participant Service as PricingService
     participant DB as PostgreSQL DB
 
-    Note over Manager, DB: Modifying Item Specific Prices
-    Manager->>App: Enters new Omelette Price (e.g. 18.00)
+    Note over Admin, DB: Modifying Item Specific Prices
+    Admin->>App: Enters new Omelette Price (e.g. 18.00)
     App->>Controller: PUT /api/manager/pricing/omelette (value = 18.00)
     Controller->>Service: savePricingOverride("omelette", 18.00)
     Service->>DB: Save or Update PricingConfig (key = "omelette", value = 18.00)
-    Service->>Manager: Confirmation receipt
+    Service->>Admin: Confirmation receipt
     
-    Note over Manager, DB: Bulk Sharing-Type Rent Updates
-    Manager->>App: Enters new Double-Sharing rent (e.g. 7500)
+    Note over Admin, DB: Bulk Sharing-Type Rent Updates
+    Admin->>App: Enters new Double-Sharing rent (e.g. 7500)
     App->>Controller: PUT /api/manager/pricing/sharing/DOUBLE/rent (value = 7500)
     Controller->>Service: updateSharingRent("DOUBLE", 7500)
     Service->>DB: Select all Rooms in building where sharingType = DOUBLE
     Service->>DB: Bulk Update Room set baseRent = 7500
-    Service->>Manager: Update summary (X rooms updated)
+    Service->>Admin: Update summary (X rooms updated)
 ```
 
 ---
 
-## 12. Calendar-Based Guest Meal Booking & Lockout Validation Flow
+## 13. Calendar-Based Guest Meal Booking & Lockout Validation Flow
 Guests manage future meal schedules directly from their portal, checked against strict time-based locks.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest
+    actor Guest as Tier 1 Guest
     participant Portal as Guest DailyLog Page
     participant Controller as GuestController
     participant Service as DailyLogService
@@ -378,13 +389,13 @@ sequenceDiagram
 
 ---
 
-## 13. Razorpay Payment Processing & Webhook Verification Flow
+## 14. Razorpay Payment Processing & Webhook Verification Flow
 Facilitates secure guest billing collections via payment gateway triggers, completing the invoice lifecycle.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest
+    actor Guest as Tier 1 Guest
     participant Portal as GuestInvoices Page
     participant Controller as PaymentController
     participant Service as PaymentService
@@ -415,7 +426,7 @@ sequenceDiagram
 
 ---
 
-## 14. System Configuration & White-Label Customization Engine Flow
+## 15. System Configuration & White-Label Customization Engine Flow
 Dynamically loads custom system colors, logos, names, and structural preferences dynamically on load.
 
 ```mermaid
@@ -443,7 +454,7 @@ sequenceDiagram
 
 ---
 
-## 15. Cron-Based Billing & Payment Reminders Automation Flow
+## 16. Cron-Based Billing & Payment Reminders Automation Flow
 Executes server-side batch billing pipelines on schedule, notifying residents automatically of pending balances.
 
 ```mermaid
@@ -483,13 +494,13 @@ sequenceDiagram
 
 ---
 
-## 16. Guest Email Profile Change OTP Verification Flow
+## 17. Guest Email Profile Change OTP Verification Flow
 Secures the guest profile update pipeline, preventing unauthorized email modifications by using a 6-digit verification code.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest
+    actor Guest as Tier 1 Guest
     participant Portal as Guest Settings Page
     participant Controller as GuestController
     participant EVService as EmailVerificationService
@@ -529,13 +540,13 @@ sequenceDiagram
 
 ---
 
-## 17. Forgot/Reset Password Temporary Credentials Flow
+## 18. Forgot/Reset Password Temporary Credentials Flow
 Permits self-service password recovery, issuing a random temporary password and forcing users to change it on their subsequent login.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Guest / Manager
+    actor User as Guest / Admin
     participant App as ForgotPassword Page
     participant Controller as AuthController
     participant Service as AuthService
@@ -573,13 +584,13 @@ sequenceDiagram
 
 ---
 
-## 18. Room/Bed Switch & Multi-Channel Notification Flow
+## 19. Room/Bed Switch & Multi-Channel Notification Flow
 Handles transferring checked-in guests between rooms/beds via an interactive grid, recording audit logs, sending confirmation emails, and publishing in-app alerts.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as GuestService
@@ -587,11 +598,11 @@ sequenceDiagram
     participant Mail as EmailService
     participant Notif as NotificationService
 
-    Manager->>App: Selects Guest and clicks "Switch Bed"
-    App->>Controller: GET /api/inventory/buildings (fetches all layout structures)
+    Admin->>App: Selects Guest and clicks "Switch Bed"
+    App->>Controller: GET /api/inventory/buildings
     Controller->>App: Return Building layout
     Note over App: App opens visual selector modal
-    Manager->>App: Selects a VACANT bed & clicks "Confirm"
+    Admin->>App: Selects a VACANT bed & clicks "Confirm"
     App->>Controller: PUT /api/manager/guests/{id}/switch-bed?bedId={bedId}
     Controller->>Service: switchBed(guestId, bedId)
     
@@ -608,10 +619,10 @@ sequenceDiagram
     
     Service->>Controller: Return updated GuestResponse
     Controller->>App: Return success status
-    App->>Manager: Displays success toast
+    App->>Admin: Displays success toast
     
     Note over Guest, DB: Guest receives In-App Alert
-    actor Guest
+    actor Guest as Tier 1 Guest
     Guest->>App: Logs into Guest Portal
     App->>Controller: GET /api/guest/dashboard / GET /api/guest/notifications
     Controller->>DB: Count unread notifications & fetch feed
@@ -623,18 +634,18 @@ sequenceDiagram
 
 ---
 
-## 19. Guest Cash Handover & Manager Verification Flow
+## 20. Guest Cash Handover & Manager Verification Flow
 Enables guests to request rent verification for offline cash handovers, placing verification cards at high priority on the manager's dashboard workspace.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest
+    actor Guest as Tier 1 Guest
     participant Portal as GuestInvoices Page
     participant Controller as PgManagerController
     participant Service as InvoiceService
     participant DB as PostgreSQL DB
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant Dashboard as ManagerDashboard
 
     Guest->>Portal: Clicks "Cash Handover" on Invoice
@@ -644,13 +655,13 @@ sequenceDiagram
     Service->>Portal: Success payload
     Note over Portal: Renders a static Clock icon indicating pending approval status
 
-    Note over Manager, DB: Manager Verification Dashboard Notification
-    Manager->>Dashboard: Loads Dashboard
+    Note over Admin, DB: Admin Verification Dashboard Notification
+    Admin->>Dashboard: Loads Dashboard
     Dashboard->>Controller: GET /api/manager/invoices/pending-cash
     Controller->>DB: Query invoices with status = PENDING_CASH_VERIFICATION
     DB->>Dashboard: Yields pending cash handover list
     
-    Manager->>Dashboard: Clicks "Verify Cash" button
+    Admin->>Dashboard: Clicks "Verify Cash" button
     Dashboard->>Controller: POST /api/manager/invoices/{id}/verify-cash
     Controller->>Service: verifyCashHandover(invoiceId)
     Service->>DB: Set Invoice status = PAID, paymentMode = CASH, paymentDate = today
@@ -660,20 +671,20 @@ sequenceDiagram
 
 ---
 
-## 20. Guest Profile Modification & Constraint Validation Flow
+## 21. Guest Profile Modification & Constraint Validation Flow
 Secures the guest profile update pipeline in the manager view, preventing duplicate email assignments using an in-modal validation error alert.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Manager
+    actor Admin as Tier 2 Admin (PG Owner)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant DB as PostgreSQL DB
 
-    Manager->>App: Clicks "Edit" on a Guest row
-    App->>Manager: Opens "Edit Guest Details" Modal
-    Manager->>App: Modifies Email ID field to an existing email & clicks "Save"
+    Admin->>App: Clicks "Edit" on a Guest row
+    App->>Admin: Opens "Edit Guest Details" Modal
+    Admin->>App: Modifies Email ID field to an existing email & clicks "Save"
     App->>Controller: PUT /api/manager/guests/{id} (editForm payload)
     Controller->>DB: Check if email is in use by another user account
     DB->>Controller: Email matches an existing active account
@@ -683,7 +694,7 @@ sequenceDiagram
 
 ---
 
-## 21. System-Wide SLF4J Observability Pipelines
+## 22. System-Wide SLF4J Observability Pipelines
 Details how logging levels and data flows transition across application layers during execution, separating security logs, error logs, and metrics logs.
 
 ```mermaid
