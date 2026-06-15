@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { guestApi } from '../../api';
+import { useAuth } from '../../context/AuthContext';
 import { 
   CalendarDays, 
   Check, 
@@ -24,6 +25,7 @@ const MEAL_CONFIG = [
 ];
 
 export default function DailyLog() {
+  const { user } = useAuth();
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -415,7 +417,8 @@ export default function DailyLog() {
                   </div>
                 ) : (
                   meals.map(meal => {
-                    const locked = isLocked(meal.lockKey, selectedDate);
+                    const isSystemLocked = isLocked(meal.lockKey, selectedDate);
+                    const locked = isSystemLocked && !(user?.role === 'PG_MANAGER' || user?.role === 'PG_OWNER');
                     const Icon = meal.icon;
                     const isOpted = !!log[meal.key];
 
@@ -425,9 +428,11 @@ export default function DailyLog() {
                         className={`p-3.5 rounded-xl border flex items-center justify-between transition-all duration-200 ${
                           locked 
                             ? 'bg-slate-50 border-slate-200 opacity-80' 
-                            : isOpted 
-                              ? 'bg-emerald-50/30 border-emerald-500 shadow-sm shadow-emerald-50' 
-                              : 'bg-white border-slate-200 hover:border-slate-300'
+                            : isSystemLocked
+                              ? 'bg-amber-50/20 border-amber-500 shadow-sm shadow-amber-50'
+                              : isOpted 
+                                ? 'bg-emerald-50/30 border-emerald-500 shadow-sm shadow-emerald-50' 
+                                : 'bg-white border-slate-200 hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -455,7 +460,7 @@ export default function DailyLog() {
                               <span>Locked</span>
                             </span>
                           ) : (
-                            <label className="toggle scale-75">
+                            <label className={`toggle scale-75 ${isSystemLocked ? 'ring-2 ring-amber-400 rounded-full' : ''}`} title={isSystemLocked ? "Manager Override Active" : ""}>
                               <input 
                                 type="checkbox" 
                                 checked={isOpted} 

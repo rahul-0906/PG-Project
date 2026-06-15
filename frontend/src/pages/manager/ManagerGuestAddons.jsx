@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import AppLayout from '../../components/AppLayout';
 import { managerApi } from '../../api';
 import { useSystemConfig } from '../../context/SystemConfigContext';
+import { useAuth } from '../../context/AuthContext';
 import { 
   ChefHat, 
   Egg, 
@@ -93,6 +94,7 @@ function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true
 
 export default function ManagerGuestAddons() {
   const { config } = useSystemConfig();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('daily'); // 'daily' or 'monthly'
   const [date, setDate] = useState(TODAY);
   
@@ -571,10 +573,10 @@ export default function ManagerGuestAddons() {
                           </div>
                         </td>
                         <td className="text-center">
-                          {log.breakfastDisabled ? (
+                          {(log.breakfastDisabled && !(user?.role === 'PG_MANAGER' || user?.role === 'PG_OWNER')) ? (
                             <span className="text-slate-400 font-semibold text-xs">—</span>
                           ) : (
-                            <label className="toggle scale-75">
+                            <label className={`toggle scale-75 ${log.breakfastDisabled ? 'ring-2 ring-amber-400 rounded-full' : ''}`} title={log.breakfastDisabled ? "Manager Override Active" : ""}>
                               <input
                                 type="checkbox"
                                 checked={!!log.breakfastOpted}
@@ -585,10 +587,10 @@ export default function ManagerGuestAddons() {
                           )}
                         </td>
                         <td className="text-center">
-                          {log.lunchDisabled ? (
+                          {(log.lunchDisabled && !(user?.role === 'PG_MANAGER' || user?.role === 'PG_OWNER')) ? (
                             <span className="text-slate-400 font-semibold text-xs">—</span>
                           ) : (
-                            <label className="toggle scale-75">
+                            <label className={`toggle scale-75 ${log.lunchDisabled ? 'ring-2 ring-amber-400 rounded-full' : ''}`} title={log.lunchDisabled ? "Manager Override Active" : ""}>
                               <input
                                 type="checkbox"
                                 checked={!!log.lunchOpted}
@@ -599,10 +601,10 @@ export default function ManagerGuestAddons() {
                           )}
                         </td>
                         <td className="text-center">
-                          {log.dinnerDisabled ? (
+                          {(log.dinnerDisabled && !(user?.role === 'PG_MANAGER' || user?.role === 'PG_OWNER')) ? (
                             <span className="text-slate-400 font-semibold text-xs">—</span>
                           ) : (
-                            <label className="toggle scale-75">
+                            <label className={`toggle scale-75 ${log.dinnerDisabled ? 'ring-2 ring-amber-400 rounded-full' : ''}`} title={log.dinnerDisabled ? "Manager Override Active" : ""}>
                               <input
                                 type="checkbox"
                                 checked={!!log.dinnerOpted}
