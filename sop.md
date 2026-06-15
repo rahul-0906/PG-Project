@@ -562,8 +562,8 @@ PG CRM uses environment profiles to manage configuration behaviors across develo
 
 1. **Development Profile (`dev`)**:
    * Activated via `SPRING_PROFILES_ACTIVE=dev`.
-   * Configured with `spring.jpa.hibernate.ddl-auto=create`, which drops and recreates database tables on startup.
-   * Flyway migrations are disabled (`spring.flyway.enabled=false`) to prevent database schema conflicts during development.
+   * Configured with `spring.jpa.hibernate.ddl-auto=validate` to enforce schema validation and prevent drop/recreation cycles.
+   * Flyway migrations are enabled (`spring.flyway.enabled=true`) to build and update database schemas from versioned SQL scripts.
    * Runs the `DatabaseSeeder` on startup to seed the default Super Admin owner account (`owner@pgcrm.com` / `Admin@123` or custom overrides) if the database is empty.
 2. **Production Profile (`prod`)**:
    * Activated via `SPRING_PROFILES_ACTIVE=prod`.

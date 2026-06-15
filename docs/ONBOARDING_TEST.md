@@ -14,9 +14,9 @@ The system supports three active profiles for local testing:
 
 1. **Development Profile (`dev`)**: 
    - Activated by setting `SPRING_PROFILES_ACTIVE=dev` in your `.env`.
-   - **Destructive Schema Reset**: Configures `spring.jpa.hibernate.ddl-auto=create` to drop and recreate the schema and tables on startup.
-   - Disables Flyway migrations (`spring.flyway.enabled=false`) to avoid conflicting constraints.
-   - Triggers the `DatabaseSeeder` to automatically insert the default Super Admin / Owner login (`owner@pgcrm.com` / `Admin@123` or environment overrides) if the database is empty.
+   - **Schema Validation & Parity**: Configures `spring.jpa.hibernate.ddl-auto=validate` to align database schema validations with production.
+   - **Flyway Migrations Enabled**: Enables Flyway migrations (`spring.flyway.enabled=true`) to construct and upgrade schemas from versioned SQL scripts.
+   - **Database Seeding**: Runs `DatabaseSeeder` to seed the default Super Admin owner account if empty, and conditionally triggers the `DataSeeder` based on demo seeder properties.
 2. **Production Profile (`prod`)**:
    - Activated by setting `SPRING_PROFILES_ACTIVE=prod` in your `.env`.
    - **Schema Protection**: Configures `spring.jpa.hibernate.ddl-auto=validate` to ensure no database schema elements are dropped or altered automatically.
@@ -51,7 +51,7 @@ The system supports three active profiles for local testing:
    ```
 3. Configure your local `.env` file in the workspace root:
    ```ini
-   SPRING_PROFILES_ACTIVE=dev      # Set to 'dev' to wipe/rebuild schema and seed owner account
+   SPRING_PROFILES_ACTIVE=dev      # Set to 'dev' to run Flyway migrations and seed initial accounts
    APP_SEED-DEMO=false             # Set to true if you want to seed mock guest records
    DB_PASSWORD=pgcrm123            # Match your local Postgres password
    ```
@@ -62,7 +62,6 @@ The system supports three active profiles for local testing:
    - **Frontend URL**: `http://localhost:5173`
    - **Backend API URL**: `http://localhost:8080`
    - **Postgres URL**: `localhost:5432`
-5. **Post-Reset Lock**: After running the destructive schema wipe successfully under the `dev` profile once, switch `SPRING_PROFILES_ACTIVE=prod` in your local `.env` to prevent accidental future data loss.
 
 ---
 

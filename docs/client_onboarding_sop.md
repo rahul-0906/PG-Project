@@ -58,7 +58,7 @@ Deploying the UAT environment on a staging subdomain (e.g. `uat.srisaipg.in`) al
    ```
 2. Open `/opt/pgcrm/deploy/.env` and update the variables for the UAT scope:
    ```ini
-   SPRING_PROFILES_ACTIVE=dev      # Enables schema resets and seeder runs
+   SPRING_PROFILES_ACTIVE=dev      # Runs Flyway migrations and seeder runs
    DB_URL=jdbc:postgresql://postgres:5432/pgcrmdb
    DB_USERNAME=postgres
    DB_PASSWORD=SecureUatPassword2026!
