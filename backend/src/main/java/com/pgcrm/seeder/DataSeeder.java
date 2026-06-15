@@ -56,12 +56,18 @@ public class DataSeeder implements CommandLineRunner {
     private final EbBillRepository ebBillRepository;
     private final AuditLogRepository auditLogRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${app.seed-demo:true}")
+    @org.springframework.beans.factory.annotation.Value("${app.seed-demo:false}")
     private boolean seedDemo;
 
     @Override
     @Transactional
     public void run(String... args) {
+        if (!seedDemo) {
+            log.info("⚙️ app.seed-demo is FALSE. Only provisioning building structural layout and exiting.");
+            seedBuildingLayoutOnly();
+            return;
+        }
+
         seedDefaultBusiness();
         
         // Ensure all existing guests from previous seed runs have default preferences set to true
@@ -75,6 +81,52 @@ public class DataSeeder implements CommandLineRunner {
                 log.info("Updated default meal preferences to TRUE for guest: {}", g.getFullName());
             }
         }
+    }
+
+    private void seedBuildingLayoutOnly() {
+        // Try seeding layout from YAML. If fails or not found, fall back to default hardcoded layout.
+        if (!seedLayoutFromYaml()) {
+            // Check if Main Building already exists in the database
+            java.util.Optional<Building> existingOpt = buildingRepository.findByNameIgnoreCase("Main Building");
+            if (existingOpt.isPresent()) {
+                building = existingOpt.get();
+                log.info("ℹ️ Default Building 'Main Building' already exists. Skipping fallback seeding.");
+            } else {
+                // Building
+                building = Building.builder()
+                        .name("Main Building").address("123 Main St").build();
+                building = buildingRepository.save(building);
+
+                // Ground Floor — no blocks, one 4-sharing room (4 beds)
+                Floor groundFloor = createFloor(building, 0, "Ground Floor");
+                Room groundRoom = createRoom(groundFloor, null, "G-01", 4, BigDecimal.valueOf(7500));
+                createBeds(groundRoom, 4, "G");
+
+                // Floors 1, 2, 3 — 4 blocks each, each block: 2×2-sharing + 1×4-sharing
+                String[] blockNames = {"A", "B", "C", "D"};
+                for (int floorNum = 1; floorNum <= 3; floorNum++) {
+                    Floor floor = createFloor(building, floorNum, "Floor " + floorNum);
+                    for (int b = 0; b < 4; b++) {
+                        Block block = Block.builder()
+                                .floor(floor).name("Block " + blockNames[b]).build();
+                        block = blockRepository.save(block);
+
+                        // 2 × 2-sharing rooms
+                        for (int r = 1; r <= 2; r++) {
+                            String roomNum = floorNum + blockNames[b] + "-2S" + r;
+                            Room room = createRoom(floor, block, roomNum, 2, BigDecimal.valueOf(9000));
+                            createBeds(room, 2, floorNum + blockNames[b] + r + "");
+                        }
+                        // 1 × 4-sharing room
+                        String roomNum4 = floorNum + blockNames[b] + "-4S";
+                        Room room4 = createRoom(floor, block, roomNum4, 4, BigDecimal.valueOf(7500));
+                        createBeds(room4, 4, floorNum + blockNames[b] + "4");
+                    }
+                }
+            }
+        }
+        long totalBeds = bedRepository.countTotal();
+        log.info("✅ Empty building layout seeded with {} beds.", totalBeds);
     }
 
     @Getter @Setter @NoArgsConstructor
@@ -226,22 +278,28 @@ public class DataSeeder implements CommandLineRunner {
                 }
 
                 // Dynamically register a manager user for this building if they don't already exist
-                String managerEmail = "manager" + (buildingIndex == 1 ? "" : buildingIndex) + "@pgcrm.com";
-                User currentManager;
-                java.util.Optional<User> existingManagerOpt = userRepository.findByEmailIgnoreCase(managerEmail);
-                if (existingManagerOpt.isPresent()) {
-                    log.info("ℹ️ Manager '{}' already exists in the database. Skipping creation.", managerEmail);
-                    currentManager = existingManagerOpt.get();
-                } else {
-                    currentManager = createUser(managerEmail, "PG Manager for " + buildingName,
-                            Role.PG_MANAGER, currentBuilding.getId());
-                    log.info("✅ Manager seeded: {} (assigned to building {})", managerEmail, buildingName);
-                }
+                if (seedDemo) {
+                    String managerEmail = "manager" + (buildingIndex == 1 ? "" : buildingIndex) + "@pgcrm.com";
+                    User currentManager;
+                    java.util.Optional<User> existingManagerOpt = userRepository.findByEmailIgnoreCase(managerEmail);
+                    if (existingManagerOpt.isPresent()) {
+                        log.info("ℹ️ Manager '{}' already exists in the database. Skipping creation.", managerEmail);
+                        currentManager = existingManagerOpt.get();
+                    } else {
+                        currentManager = createUser(managerEmail, "PG Manager for " + buildingName,
+                                Role.PG_MANAGER, currentBuilding.getId());
+                        log.info("✅ Manager seeded: {} (assigned to building {})", managerEmail, buildingName);
+                    }
 
-                // Capture the first building & manager for backward compatibility with demo guest/invoice seeders
-                if (buildingIndex == 1) {
-                    this.building = currentBuilding;
-                    this.manager = currentManager;
+                    // Capture the first building & manager for backward compatibility with demo guest/invoice seeders
+                    if (buildingIndex == 1) {
+                        this.building = currentBuilding;
+                        this.manager = currentManager;
+                    }
+                } else {
+                    if (buildingIndex == 1) {
+                        this.building = currentBuilding;
+                    }
                 }
 
                 buildingIndex++;
