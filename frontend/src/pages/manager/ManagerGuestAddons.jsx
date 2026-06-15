@@ -769,10 +769,14 @@ export default function ManagerGuestAddons() {
                 <tbody>
                   {filteredMonthly.map(row => {
                     let bCount = 0, lCount = 0, dCount = 0;
-                    Object.values(row.days || {}).forEach(dayLog => {
-                      if (dayLog.breakfast) bCount++;
-                      if (dayLog.lunch) lCount++;
-                      if (dayLog.dinner) dCount++;
+                    Object.entries(row.days || {}).forEach(([dayStr, dayLog]) => {
+                      const isOutside = (row.checkInDate && dayStr < row.checkInDate) || 
+                                        (row.actualCheckOutDate && dayStr > row.actualCheckOutDate);
+                      if (!isOutside) {
+                        if (dayLog.breakfast) bCount++;
+                        if (dayLog.lunch) lCount++;
+                        if (dayLog.dinner) dCount++;
+                      }
                     });
 
                     const isExpanded = expandedGuestId === row.guestId;
