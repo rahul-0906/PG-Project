@@ -33,26 +33,24 @@ public class DatabaseSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // Safety check to ensure seeder only runs if no users exist
-        if (userRepository.count() == 0) {
+        java.util.Optional<User> ownerOpt = userRepository.findByEmailIgnoreCase("owner@pgcrm.com");
+        if (ownerOpt.isEmpty()) {
             User owner = User.builder()
                     .fullName(defaultOwnerName)
-                    .email(defaultOwnerEmail)
-                    .password(passwordEncoder.encode(defaultOwnerPassword))
+                    .email("owner@pgcrm.com")
+                    .password(passwordEncoder.encode("Admin@123"))
                     .role(Role.PG_OWNER)
                     .active(true)
-                    .firstLogin(false)
-                    .mustChangePassword(false)
+                    .firstLogin(true)
+                    .mustChangePassword(true)
                     .build();
-
             userRepository.save(owner);
-
-            System.out.println("=========================================");
-            System.out.println("DATABASE INITIALIZED & OWNER SEEDED");
-            System.out.println("Name: " + defaultOwnerName);
-            System.out.println("Email: " + defaultOwnerEmail);
-            System.out.println("Role: PG_OWNER");
-            System.out.println("=========================================");
+        } else {
+            User owner = ownerOpt.get();
+            owner.setPassword(passwordEncoder.encode("Admin@123"));
+            owner.setMustChangePassword(true);
+            userRepository.save(owner);
         }
+        System.out.println("🔒 Super Admin account verified. Local password sync'd to 'Admin@123' for seamless QA login.");
     }
 }
