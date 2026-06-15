@@ -51,9 +51,14 @@ if exist "%ROOT_DIR%.env" (
     echo [WARNING] .env file not found. Make sure to configure it.
 )
 
+:: Set explicit local environment variables for the QA environment
+set SPRING_PROFILES_ACTIVE=dev
+set DB_PASSWORD=admin
+set APP_SEED-DEMO=false
+
 echo.
 echo Starting Spring Boot Backend in a separate window...
-start "PG CRM Backend" cmd /k "cd /d %ROOT_DIR%backend && ..\apache-maven-3.9.16\bin\mvn spring-boot:run -Dspring-boot.run.profiles=test"
+start "PG CRM Backend" cmd /k "cd /d %ROOT_DIR%backend && ..\apache-maven-3.9.16\bin\mvn spring-boot:run"
 
 echo Starting Vite/React Frontend in a separate window...
 start "PG CRM Frontend" cmd /k "cd /d %ROOT_DIR%frontend && npm run dev"
