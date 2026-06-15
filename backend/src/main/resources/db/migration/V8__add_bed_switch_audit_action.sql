@@ -1,5 +1,6 @@
 -- Update check constraint on audit_logs to include GUEST_BED_SWITCH
-ALTER TABLE audit_logs DROP CONSTRAINT audit_logs_action_check;
+ALTER TABLE audit_logs DROP CONSTRAINT IF EXISTS audit_logs_action_check;
+
 
 ALTER TABLE audit_logs ADD CONSTRAINT audit_logs_action_check CHECK (
     action IN (

@@ -63,8 +63,7 @@ public class DataSeeder implements CommandLineRunner {
     @Transactional
     public void run(String... args) {
         if (!seedDemo) {
-            log.info("⚙️ app.seed-demo is FALSE. Only provisioning building structural layout and exiting.");
-            seedBuildingLayoutOnly();
+            log.info("⚙️ app.seed-demo is FALSE. Bypassing all building layout and mock data. System will boot with ONLY the Super Admin account.");
             return;
         }
 
