@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Outbound read model (response DTO) representing a guest's complete profile.
@@ -113,6 +114,7 @@ public class GuestResponse {
 
     /** The date the guest officially checked in and their bed was assigned. */
     private LocalDate checkInDate;
+    private LocalTime checkInTime;
 
     /**
      * The originally planned check-out date communicated at check-in.
@@ -258,6 +260,7 @@ public class GuestResponse {
                 .vehicleRegistration(guest.getVehicleRegistration())
                 .kycStatus(guest.getKycStatus() != null ? guest.getKycStatus().name() : null)
                 .checkInDate(guest.getCheckInDate())
+                .checkInTime(guest.getCheckInTime())
                 .expectedCheckOutDate(guest.getExpectedCheckOutDate())
                 .noticeDate(guest.getNoticeDate())
                 .exitDate(guest.getExitDate())

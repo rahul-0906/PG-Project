@@ -9,6 +9,7 @@ import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -178,6 +179,10 @@ public class Guest {
     /** The date the guest officially checked in and their bed was assigned. */
     @Column(name = "check_in_date")
     private LocalDate checkInDate;
+
+    /** The time the guest officially checked in on the check-in date. */
+    @Column(name = "check_in_time")
+    private LocalTime checkInTime;
 
     /**
      * The originally planned check-out date communicated at the time of check-in.

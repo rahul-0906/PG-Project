@@ -199,6 +199,12 @@ public class BuildingSetupService {
      * are auto-generated.</p>
      */
     @Getter @Setter @NoArgsConstructor
+    public static class BedConfig {
+        @JsonProperty("bedLabel")
+        private String bedLabel;
+    }
+
+    @Getter @Setter @NoArgsConstructor
     public static class RoomConfig {
         /**
          * The sharing type (number of beds) for rooms of this configuration.
@@ -222,6 +228,7 @@ public class BuildingSetupService {
          * entries trigger auto-generation for that position.
          */
         private List<String>     roomNumbers = new ArrayList<>();
+        private List<BedConfig>  beds = new ArrayList<>();
     }
 
     /**
@@ -403,11 +410,7 @@ public class BuildingSetupService {
                                 .isAc(rc.isAc())
                                 .build());
 
-                        final String bedPrefix = hasExplicitRoomNumber(rc, i)
-                                ? "R-" + roomNum + "-B"
-                                : (fSetup.getNumber() == 0 ? "G" : String.valueOf(fSetup.getNumber())) + String.format("%02d", rIdx);
-
-                        createBeds(room, rc.getSharing(), bedPrefix);
+                        createBeds(room, rc.getSharing(), null, rc.getBeds());
                         totalRooms++;
                         totalBeds += rc.getSharing();
                         rIdx++;
@@ -443,11 +446,7 @@ public class BuildingSetupService {
                                         .isAc(rc.isAc())
                                         .build());
 
-                                final String bedPrefix = hasExplicitRoomNumber(rc, r - 1)
-                                        ? "R-" + roomNum + "-B"
-                                        : fSetup.getNumber() + blockCode + (rc.getCount() > 1 ? r : rc.getSharing());
-
-                                createBeds(room, rc.getSharing(), bedPrefix);
+                                createBeds(room, rc.getSharing(), blockCode, rc.getBeds());
                                 totalRooms++;
                                 totalBeds += rc.getSharing();
                             }
@@ -683,11 +682,23 @@ public class BuildingSetupService {
      * @param count  the number of beds to create ({@link RoomConfig#getSharing()}).
      * @param prefix the label prefix appended with an integer index (e.g., {@code "G01"} → {@code "G011"}).
      */
-    private void createBeds(final Room room, final int count, final String prefix) {
+    private void createBeds(final Room room, final int count, final String blockCode, final List<BedConfig> bedConfigs) {
         for (int i = 1; i <= count; i++) {
+            String bedSuffix = "B" + i;
+            if (bedConfigs != null && bedConfigs.size() >= i && bedConfigs.get(i - 1) != null && bedConfigs.get(i - 1).getBedLabel() != null) {
+                bedSuffix = bedConfigs.get(i - 1).getBedLabel().trim();
+            }
+
+            String bedLabel;
+            if (blockCode != null && !blockCode.isBlank()) {
+                bedLabel = blockCode + "-" + room.getRoomNumber() + "-" + bedSuffix;
+            } else {
+                bedLabel = room.getRoomNumber() + "-" + bedSuffix;
+            }
+
             bedRepository.save(Bed.builder()
                     .room(room)
-                    .bedLabel(prefix + i)
+                    .bedLabel(bedLabel)
                     .status(BedStatus.VACANT)
                     .build());
         }
@@ -850,7 +861,14 @@ public class BuildingSetupService {
                     .baseRent(re.getBaseRent())
                     .isAc(re.isAc())
                     .build());
-            createBeds(room, re.getSharing(), "R-" + re.getRoomNumber() + "-B");
+            String blockCode = null;
+            if (block != null) {
+                blockCode = block.getName();
+                if (blockCode.contains(" ")) {
+                    blockCode = blockCode.substring(blockCode.lastIndexOf(" ") + 1);
+                }
+            }
+            createBeds(room, re.getSharing(), blockCode, null);
         }
         activeRoomIds.add(room.getId());
         return room;

@@ -3,6 +3,7 @@ package com.pgcrm.service;
 import com.pgcrm.dto.GuestResponse;
 import com.pgcrm.entity.Bed;
 import com.pgcrm.entity.Building;
+import com.pgcrm.entity.BuildingConfig;
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.User;
 import com.pgcrm.entity.enums.AuditAction;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -106,6 +108,7 @@ public class GuestService {
     public Guest checkIn(final List<String> bedIds, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
+                         final LocalTime checkInTime,
                          final String vehicleRegistration, final boolean isBookEntireRoom,
                          final boolean isVeg, final boolean breakfastPreference,
                          final boolean lunchPreference, final boolean dinnerPreference) {
@@ -124,6 +127,23 @@ public class GuestService {
                 });
 
         final Building building = primaryBed.getRoom().getFloor().getBuilding();
+        final BuildingConfig buildingConfig = building.getBuildingConfig();
+        final LocalTime bCutoff = buildingConfig != null && buildingConfig.getBreakfastCutoffTime() != null 
+                ? buildingConfig.getBreakfastCutoffTime() : LocalTime.of(22, 0);
+        final LocalTime dCutoff = buildingConfig != null && buildingConfig.getDinnerCutoffTime() != null 
+                ? buildingConfig.getDinnerCutoffTime() : LocalTime.of(14, 0);
+
+        boolean resolvedBreakfast = breakfastPreference;
+        boolean resolvedLunch = lunchPreference;
+        boolean resolvedDinner = dinnerPreference;
+
+        if (checkInTime != null) {
+            resolvedBreakfast = false;
+            resolvedLunch = false;
+            if (checkInTime.isAfter(dCutoff)) {
+                resolvedDinner = false;
+            }
+        }
 
         // Resolve and validate all beds to check in
         final List<String> targetBedIds = new java.util.ArrayList<>();
@@ -177,13 +197,14 @@ public class GuestService {
                             .vehicleRegistration(vehicleRegistration)
                             .kycStatus(KycStatus.PENDING)
                             .checkInDate(checkInDate != null ? checkInDate : LocalDate.now())
+                            .checkInTime(checkInTime)
                             .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
                             .building(building)
                             .isBookEntireRoom(isBookEntireRoom)
                             .vegPreference(isVeg)
-                            .breakfastPreference(breakfastPreference)
-                            .lunchPreference(lunchPreference)
-                            .dinnerPreference(dinnerPreference)
+                            .breakfastPreference(resolvedBreakfast)
+                            .lunchPreference(resolvedLunch)
+                            .dinnerPreference(resolvedDinner)
                             .build();
                     guest.setBeds(targetBeds);
                 } else {
@@ -198,15 +219,16 @@ public class GuestService {
                     guest.setBookEntireRoom(isBookEntireRoom);
                     guest.setAdvanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO);
                     guest.setCheckInDate(checkInDate != null ? checkInDate : LocalDate.now());
+                    guest.setCheckInTime(checkInTime);
                     guest.setExpectedCheckOutDate(null);
                     guest.setNoticeDate(null);
                     guest.setExitDate(null);
                     guest.setActualCheckOutDate(null);
                     guest.setActive(true);
                     guest.setVegPreference(isVeg);
-                    guest.setBreakfastPreference(breakfastPreference);
-                    guest.setLunchPreference(lunchPreference);
-                    guest.setDinnerPreference(dinnerPreference);
+                    guest.setBreakfastPreference(resolvedBreakfast);
+                    guest.setLunchPreference(resolvedLunch);
+                    guest.setDinnerPreference(resolvedDinner);
                 }
 
                 // Reactivate the user account with fresh credentials.
@@ -270,13 +292,14 @@ public class GuestService {
                 .vehicleRegistration(vehicleRegistration)
                 .kycStatus(KycStatus.PENDING)
                 .checkInDate(checkInDate != null ? checkInDate : LocalDate.now())
+                .checkInTime(checkInTime)
                 .advanceDeposit(advanceDeposit != null ? advanceDeposit : BigDecimal.ZERO)
                 .building(building)
                 .isBookEntireRoom(isBookEntireRoom)
                 .vegPreference(isVeg)
-                .breakfastPreference(breakfastPreference)
-                .lunchPreference(lunchPreference)
-                .dinnerPreference(dinnerPreference)
+                .breakfastPreference(resolvedBreakfast)
+                .lunchPreference(resolvedLunch)
+                .dinnerPreference(resolvedDinner)
                 .build());
         guest.setBeds(targetBeds);
         guest = guestRepository.save(guest);
@@ -307,7 +330,7 @@ public class GuestService {
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
                          final String vehicleRegistration, final boolean isBookEntireRoom) {
-        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, isBookEntireRoom, true, true, true, true);
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, LocalTime.now(), vehicleRegistration, isBookEntireRoom, true, true, true, true);
     }
 
     @Transactional
@@ -315,14 +338,14 @@ public class GuestService {
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate,
                          final String vehicleRegistration) {
-        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, vehicleRegistration, false, true, true, true, true);
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, LocalTime.now(), vehicleRegistration, false, true, true, true, true);
     }
 
     @Transactional
     public Guest checkIn(final String bedId, final String fullName, final String email,
                          final String phone, final String whatsappNumber,
                          final BigDecimal advanceDeposit, final LocalDate checkInDate) {
-        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, null, false, true, true, true, true);
+        return checkIn(java.util.List.of(bedId), fullName, email, phone, whatsappNumber, advanceDeposit, checkInDate, LocalTime.now(), null, false, true, true, true, true);
     }
 
     /**

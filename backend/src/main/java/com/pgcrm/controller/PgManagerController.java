@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -125,6 +126,7 @@ public class PgManagerController {
                 body.getAdvanceDeposit() != null
                         ? body.getAdvanceDeposit() : BigDecimal.ZERO,
                 checkInDate,
+                body.getCheckInTime() != null ? body.getCheckInTime() : LocalTime.now(),
                 body.getVehicleRegistration(),
                 body.isBookEntireRoom(),
                 body.isVeg(),
@@ -133,16 +135,10 @@ public class PgManagerController {
                 body.isDinnerOpted()
         );
 
-        boolean isVeg = body.isVeg();
-        boolean breakfastOpted = body.isBreakfastOpted();
-        boolean lunchOpted = body.isLunchOpted();
-        boolean dinnerOpted = body.isDinnerOpted();
-
-        guest.setVegPreference(isVeg);
-        guest.setBreakfastPreference(breakfastOpted);
-        guest.setLunchPreference(lunchOpted);
-        guest.setDinnerPreference(dinnerOpted);
-        guestRepository.save(guest);
+        boolean isVeg = guest.isVegPreference();
+        boolean breakfastOpted = guest.isBreakfastPreference();
+        boolean lunchOpted = guest.isLunchPreference();
+        boolean dinnerOpted = guest.isDinnerPreference();
 
         DailyLog logEntry = DailyLog.builder()
                 .guest(guest)

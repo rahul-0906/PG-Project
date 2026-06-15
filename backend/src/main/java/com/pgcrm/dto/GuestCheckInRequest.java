@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Inbound request payload for the guest check-in operation.
@@ -90,6 +91,11 @@ public class GuestCheckInRequest {
      * Defaults to the current server date if not explicitly provided by the manager.
      */
     private LocalDate checkInDate;
+
+    /**
+     * The official check-in time.
+     */
+    private LocalTime checkInTime;
 
     /**
      * Vehicle registration number of the guest's 2-wheeler, if applicable.
