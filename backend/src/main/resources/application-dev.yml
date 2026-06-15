@@ -26,5 +26,5 @@ spring:
   flyway:
     enabled: true
     clean-disabled: false
-    clean-on-startup: true
+    clean-on-startup: false
 
