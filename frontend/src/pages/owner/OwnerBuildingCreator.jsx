@@ -31,7 +31,7 @@ function makeBlock(name = 'Block A') {
   return { _id: uid(), name, roomConfigs: [makeRoomConfig()] };
 }
 function makeRoomConfig(sharing = 2) {
-  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: true };
+  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: true, bedLabels: '' };
 }
 
 // ── Step components for Creator ───────────────────────────────────
@@ -207,23 +207,40 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
       </div>
 
       <div className="border-t border-slate-100 pt-2 mt-1">
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
-          <span>Room Numbers</span>
-          <span className="text-slate-300 normal-case font-normal">(Optional — defaults shown as placeholders)</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {Array.from({ length: rc.count }).map((_, idx) => (
-            <div key={idx} className="flex items-center gap-1">
-              {rc.count > 1 && <span className="text-[10px] text-slate-400 font-medium">#{idx + 1}:</span>}
-              <input
-                type="text"
-                className="form-input py-0.5 px-2 text-[11px] w-24 font-semibold"
-                placeholder={placeholders[idx]}
-                value={roomNumbers[idx] || ''}
-                onChange={e => handleRoomNumberChange(idx, e.target.value)}
-              />
+        <div className="flex flex-col gap-2">
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
+              <span>Bed Labels (comma-separated)</span>
+              <span className="text-slate-300 normal-case font-normal">(Optional — e.g. Lower, Upper)</span>
             </div>
-          ))}
+            <input
+              type="text"
+              className="form-input py-1 px-2 text-[11px] w-full"
+              placeholder={Array.from({ length: rc.sharing }).map((_, i) => `B${i + 1}`).join(', ')}
+              value={rc.bedLabels || ''}
+              onChange={e => onUpdate({ ...rc, bedLabels: e.target.value })}
+            />
+          </div>
+          <div>
+            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
+              <span>Room Numbers</span>
+              <span className="text-slate-300 normal-case font-normal">(Optional — defaults shown as placeholders)</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: rc.count }).map((_, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                  {rc.count > 1 && <span className="text-[10px] text-slate-400 font-medium">#{idx + 1}:</span>}
+                  <input
+                    type="text"
+                    className="form-input py-0.5 px-2 text-[11px] w-24 font-semibold"
+                    placeholder={placeholders[idx]}
+                    value={roomNumbers[idx] || ''}
+                    onChange={e => handleRoomNumberChange(idx, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -677,9 +694,9 @@ export default function OwnerBuildingCreator() {
     address: '',
     foodIncludedInRent: false,
     allowMealCancellations: true,
-    breakfastPrice: '',
-    lunchPrice: '',
-    dinnerPrice: '',
+    breakfastPrice: '0',
+    lunchPrice: '0',
+    dinnerPrice: '0',
     omelettePrice: '0',
     boiledEggPrice: '0',
     washingMachinePrice: '0',
@@ -1183,22 +1200,40 @@ export default function OwnerBuildingCreator() {
         floors: floors.map(f => ({
           number: f.number,
           label: f.label,
-          rooms: f.rooms.map(r => ({
-            sharing: r.sharing,
-            count: parseInt(r.count) || 1,
-            baseRent: parseFloat(r.baseRent) || 0,
-            roomNumbers: r.roomNumbers || [],
-            isAc: r.isAc || false
-          })),
-          blocks: f.blocks.map(b => ({
-            name: b.name,
-            roomConfigs: b.roomConfigs.map(r => ({
+          rooms: f.rooms.map(r => {
+            const labels = r.bedLabels
+              ? r.bedLabels.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+            const beds = Array.from({ length: r.sharing }).map((_, idx) => ({
+              bedLabel: labels[idx] || `B${idx + 1}`
+            }));
+            return {
               sharing: r.sharing,
               count: parseInt(r.count) || 1,
               baseRent: parseFloat(r.baseRent) || 0,
               roomNumbers: r.roomNumbers || [],
-              isAc: r.isAc || false
-            })),
+              isAc: r.isAc || false,
+              beds
+            };
+          }),
+          blocks: f.blocks.map(b => ({
+            name: b.name,
+            roomConfigs: b.roomConfigs.map(r => {
+              const labels = r.bedLabels
+                ? r.bedLabels.split(',').map(s => s.trim()).filter(Boolean)
+                : [];
+              const beds = Array.from({ length: r.sharing }).map((_, idx) => ({
+                bedLabel: labels[idx] || `B${idx + 1}`
+              }));
+              return {
+                sharing: r.sharing,
+                count: parseInt(r.count) || 1,
+                baseRent: parseFloat(r.baseRent) || 0,
+                roomNumbers: r.roomNumbers || [],
+                isAc: r.isAc || false,
+                beds
+              };
+            }),
           })),
         })),
       };
@@ -1219,9 +1254,9 @@ export default function OwnerBuildingCreator() {
       address: '',
       foodIncludedInRent: false,
       allowMealCancellations: true,
-      breakfastPrice: '',
-      lunchPrice: '',
-      dinnerPrice: '',
+      breakfastPrice: '0',
+      lunchPrice: '0',
+      dinnerPrice: '0',
       omelettePrice: '0',
       boiledEggPrice: '0',
       washingMachinePrice: '0',
