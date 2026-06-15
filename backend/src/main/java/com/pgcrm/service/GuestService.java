@@ -133,14 +133,28 @@ public class GuestService {
         final LocalTime dCutoff = buildingConfig != null && buildingConfig.getDinnerCutoffTime() != null 
                 ? buildingConfig.getDinnerCutoffTime() : LocalTime.of(14, 0);
 
+        LocalDate today = LocalDate.now();
+        LocalDate targetCheckInDate = checkInDate != null ? checkInDate : today;
+
         boolean resolvedBreakfast = breakfastPreference;
         boolean resolvedLunch = lunchPreference;
         boolean resolvedDinner = dinnerPreference;
 
-        if (checkInTime != null) {
+        if (targetCheckInDate.isBefore(today) || targetCheckInDate.equals(today)) {
             resolvedBreakfast = false;
             resolvedLunch = false;
-            if (checkInTime.isAfter(dCutoff)) {
+        } else if (targetCheckInDate.equals(today.plusDays(1))) {
+            if (LocalTime.now().isAfter(bCutoff)) {
+                resolvedBreakfast = false;
+                resolvedLunch = false;
+            }
+        }
+
+        if (targetCheckInDate.isBefore(today)) {
+            resolvedDinner = false;
+        } else if (targetCheckInDate.equals(today)) {
+            LocalTime evalTime = checkInTime != null ? checkInTime : LocalTime.now();
+            if (evalTime.isAfter(dCutoff)) {
                 resolvedDinner = false;
             }
         }

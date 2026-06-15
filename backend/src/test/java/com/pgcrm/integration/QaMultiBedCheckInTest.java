@@ -111,7 +111,7 @@ public class QaMultiBedCheckInTest {
             // 2. Authenticate as Super Admin
             String loginJson = objectMapper.writeValueAsString(Map.of(
                     "email", "owner@pgcrm.com",
-                    "password", "Owner@123"
+                    "password", "Admin@123"
             ));
 
             String adminLoginResponse = mockMvc.perform(post("/api/auth/login")

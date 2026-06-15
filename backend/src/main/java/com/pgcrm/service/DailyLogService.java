@@ -10,6 +10,8 @@ import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.repository.DailyLogRepository;
 import com.pgcrm.repository.GuestRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,21 +89,33 @@ public class DailyLogService {
             throw new IllegalArgumentException("Cannot update logs for a date prior to the guest's check-in date: " + guest.getCheckInDate());
         }
 
-        if (guest.getCheckInDate() != null && logDate.equals(guest.getCheckInDate())) {
-            final java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
-            final java.time.LocalTime checkInTime = checkInDateTime.toLocalTime();
-            if (checkInTime.isAfter(java.time.LocalTime.of(10, 0))) {
-                incoming.setBreakfastOpted(false);
-            }
-            if (checkInTime.isAfter(java.time.LocalTime.of(14, 0))) {
-                incoming.setLunchOpted(false);
-            }
-            if (checkInTime.isAfter(java.time.LocalTime.of(21, 0))) {
-                incoming.setDinnerOpted(false);
-            }
+        boolean isGuest = true;
+        final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            isGuest = auth.getAuthorities().stream()
+                    .anyMatch(a -> {
+                        String role = a.getAuthority().replace("ROLE_", "");
+                        return "GUEST".equalsIgnoreCase(role);
+                    });
         }
 
-        validateLockouts(guest, logDate, incoming);
+        if (isGuest) {
+            if (guest.getCheckInDate() != null && logDate.equals(guest.getCheckInDate())) {
+                final java.time.LocalDateTime checkInDateTime = guest.getCreatedAt() != null ? guest.getCreatedAt() : logDate.atStartOfDay();
+                final java.time.LocalTime checkInTime = checkInDateTime.toLocalTime();
+                if (checkInTime.isAfter(java.time.LocalTime.of(10, 0))) {
+                    incoming.setBreakfastOpted(false);
+                }
+                if (checkInTime.isAfter(java.time.LocalTime.of(14, 0))) {
+                    incoming.setLunchOpted(false);
+                }
+                if (checkInTime.isAfter(java.time.LocalTime.of(21, 0))) {
+                    incoming.setDinnerOpted(false);
+                }
+            }
+
+            validateLockouts(guest, logDate, incoming);
+        }
 
         DailyLog log = dailyLogRepository.findByGuestIdAndLogDate(guestId, logDate)
                 .orElseGet(() -> {
@@ -153,6 +167,18 @@ public class DailyLogService {
      * @throws InvalidLockoutException if any meal selection is changed after its cutoff has passed.
      */
     private void validateLockouts(final Guest guest, final LocalDate logDate, final DailyLog incoming) {
+        final Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            boolean isGuest = auth.getAuthorities().stream()
+                    .anyMatch(a -> {
+                        String role = a.getAuthority().replace("ROLE_", "");
+                        return "GUEST".equalsIgnoreCase(role);
+                    });
+            if (!isGuest) {
+                return;
+            }
+        }
+
         final LocalDateTime now = LocalDateTime.now();
 
         // Resolve cutoff times — start with YAML defaults, then override with building config.
