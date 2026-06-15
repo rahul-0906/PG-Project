@@ -20,6 +20,21 @@ import {
   Shuffle
 } from 'lucide-react';
 
+const getLocalCheckInDate = () => {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const getLocalCheckInTime = () => {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+};
+
 export default function ManagerGuests() {
   const [guests, setGuests] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -35,8 +50,9 @@ export default function ManagerGuests() {
     phone:'', 
     whatsappNumber:'', 
     advanceDeposit:'', 
-    checkInDate: new Date().toISOString().slice(0,10),
-    checkinDate: new Date().toISOString().slice(0,10),
+    checkInDate: getLocalCheckInDate(),
+    checkinDate: getLocalCheckInDate(),
+    checkInTime: getLocalCheckInTime(),
     isVeg: true,
     foodOptedIn: false,
     breakfastOpted: false,
@@ -202,8 +218,9 @@ export default function ManagerGuests() {
       phone:'', 
       whatsappNumber:'', 
       advanceDeposit:'', 
-      checkInDate: new Date().toISOString().slice(0,10),
-      checkinDate: new Date().toISOString().slice(0,10),
+      checkInDate: getLocalCheckInDate(),
+      checkinDate: getLocalCheckInDate(),
+      checkInTime: getLocalCheckInTime(),
       isVeg: true,
       foodOptedIn: false,
       breakfastOpted: false,
@@ -246,6 +263,10 @@ export default function ManagerGuests() {
         showToast('Check-In Date is required.', 'error');
         return;
       }
+      if (!form.checkInTime) {
+        showToast('Check-In Time is required.', 'error');
+        return;
+      }
 
       setSaving(true);
 
@@ -270,6 +291,7 @@ export default function ManagerGuests() {
         whatsappNumber: form.whatsappNumber || '',
         advanceDeposit: deposit,
         checkInDate: dateVal,
+        checkInTime: form.checkInTime,
         isVeg: !!form.isVeg,
         breakfastOpted: !!(form.foodOptedIn && form.breakfastOpted),
         lunchOpted: !!(form.foodOptedIn && form.lunchOpted),
@@ -1387,18 +1409,6 @@ export default function ManagerGuests() {
                    )}
                  </div>
                 <div className="form-group mb-0">
-                  <label className="form-label">Check-In Date *</label>
-                  <input 
-                    type="date" 
-                    className="form-input" 
-                    value={form.checkInDate || form.checkinDate || ''} 
-                    onChange={e => setForm(f => ({ ...f, checkInDate: e.target.value, checkinDate: e.target.value }))} 
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div className="form-group mb-0">
                   <label className="form-label">Sharing Type</label>
                   <select 
                     className="form-input bg-slate-100 cursor-not-allowed text-slate-500" 
@@ -1412,6 +1422,30 @@ export default function ManagerGuests() {
                     <option value="4">4-Sharing</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="form-group mb-0">
+                  <label className="form-label">Check-In Date *</label>
+                  <input 
+                    type="date" 
+                    className="form-input" 
+                    value={form.checkInDate || form.checkinDate || ''} 
+                    onChange={e => setForm(f => ({ ...f, checkInDate: e.target.value, checkinDate: e.target.value }))} 
+                  />
+                </div>
+                <div className="form-group mb-0">
+                  <label className="form-label">Check-In Time *</label>
+                  <input 
+                    type="time" 
+                    className="form-input" 
+                    value={form.checkInTime || ''} 
+                    onChange={e => setForm(f => ({ ...f, checkInTime: e.target.value }))} 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 mb-4">
                 <div className="form-group mb-0 flex flex-col justify-end pb-2">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input 
