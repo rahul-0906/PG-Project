@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import OnboardingForm from './pages/OnboardingForm';
 import SuccessPage from './pages/SuccessPage';
+import AdminLayout from './components/AdminLayout';
+import AdminDashboard from './pages/AdminDashboard';
+import ClientRoster from './pages/ClientRoster';
 
 function App() {
   return (
@@ -11,6 +14,10 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signup" element={<OnboardingForm />} />
         <Route path="/success" element={<SuccessPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="clients" element={<ClientRoster />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
