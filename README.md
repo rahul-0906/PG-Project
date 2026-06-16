@@ -1,39 +1,73 @@
-# PG CRM Monorepo
-### Dual-Application Ecosystem: Core Hostel Operations & Master B2B SaaS Control Plane
+# PG CRM Ecosystem
+### Enterprise Hostel Management & Automated B2B SaaS Control Plane
 
-Welcome to the PG CRM repository. This repository is organized as a monorepo containing two distinct applications:
+This repository operates as a **Monorepo**, housing the complete software suite required to run a multi-tenant, premium B2B SaaS business for Paying Guest (PG) and hostel operators.
 
-1. **`[PG-CORE]` (Core PG CRM)**: Located under `/core-pg-crm/`. This is the single-tenant hostel management software that manages resident check-ins, room inventories, daily meal trackers, utility splits, in-app notifications, and guest invoicing/rent collections.
-2. **`[CONTROL-PLANE]` (Master Control Plane)**: Located under `/master-control-plane/`. This is the centralized multi-tenant admin portal that registers B2B clients (PG Owners), processes AMC (Annual Maintenance Contract) setup payments, tracks subscription expiry, schedules renewal reminders, and automates single-tenant client instance provisioning.
+The architecture is strictly decoupled into two isolated applications to protect core hostel operations from SaaS billing logic.
 
 ---
 
-## 1. System Boundaries & Tenant Isolation
+## 1. The Dual-Application Architecture
 
-This repository employs a **Hybrid Single-Tenant / Shared Control Plane** topology:
+### 🏢 `[PG-CORE]` (Tenant Operations)
+**Location:** `/core-pg-crm/`
+The standalone, single-tenant hostel management software. 
+* **Scope:** Daily property operations. Manages guest check-ins, automated arrears billing, electricity (EB) sub-meter utility splits, visual meal calendars, and maintenance ticketing.
+* **Security:** Deployed as highly isolated, dedicated PostgreSQL databases and Spring Boot containers per client. Cross-tenant data leakage is physically impossible.
+
+### ⚙️ `[CONTROL-PLANE]` (Master SaaS Billing)
+**Location:** `/master-control-plane/`
+The centralized B2B subscription command center and automated public front door.
+* **Scope:** B2B client acquisition, subscription, and lifecycle management. Captures public Razorpay checkout payments, registers new clients into the deployment queue, tracks Annual Maintenance Contract (AMC) expirations, and triggers provisioning scripts.
+* **Security:** Cryptographically verifies incoming payment webhooks via HMAC-SHA256 before granting `PENDING_DEPLOYMENT` status to a new instance.
+
+---
+
+## 2. Infrastructure & Tenant Isolation Model
+
+The platform utilizes a **Hybrid Single-Tenant / Shared Control Plane** topology. The Control Plane manages the master ledger, while individual clients run on dedicated subdomains mapped to isolated VPS ports.
 
 ```mermaid
 graph TD
     subgraph SaaS Control Plane [Centralized SaaS Admin]
         ControlPlane[controlplane.pgcrm.com] --> CPDB[(Control Plane DB)]
-        ControlPlane -->|Ansible SSH Provision| HostVM[Client Virtual Machine]
+        ControlPlane -->|Ansible / Manual Provision| HostVM[Client Virtual Machine]
     end
-
     subgraph Tenant VM [Isolated Single-Tenant Operations]
-        HostVM -->|Mounts Workspace A| ClientA[client-a.pgcrm.com]
-        HostVM -->|Mounts Workspace B| ClientB[client-b.pgcrm.com]
+        HostVM -->|Port 8081| ClientA[client-a.pgcrm.com]
+        HostVM -->|Port 8082| ClientB[client-b.pgcrm.com]
         
-        ClientA --> DB_A[(Client A isolated DB)]
-        ClientB --> DB_B[(Client B isolated DB)]
+        ClientA --> DB_A[(Client A isolated Postgres DB)]
+        ClientB --> DB_B[(Client B isolated Postgres DB)]
     end
 ```
 
-- **Tenant Operations (`[PG-CORE]`)**: Scoped strictly to daily property management. Run as independent single-tenant containers with fully isolated databases to prevent cross-tenant data leakage. Guest rent checkout queries run directly within each tenant's local database.
-- **SaaS Billing & Reminders (`[CONTROL-PLANE]`)**: Scoped to central B2B SaaS administration. Manages tenant subdomains, registers payments via Razorpay, tracks AMC contract expirations, and coordinates automated reminders.
+In production, multiple single-tenant instances of `[PG-CORE]` are hosted on the same VM host by isolating workspace directories. Each client gets their own folder under `/opt/pgcrm/` containing their isolated Docker container configuration, environment secrets, and whitelabel configs:
+
+```
+/opt/pgcrm/
+├── client-a/                    # Isolated directory for Client A
+│   └── deploy/
+│       ├── .env                 # Client A secrets & database credentials
+│       └── docker-compose.yml   # Client A container orchestrations
+└── client-b/                    # Isolated directory for Client B
+    └── deploy/
+        ├── .env                 # Client B secrets & database credentials
+        └── docker-compose.yml   # Client B container orchestrations
+```
 
 ---
 
-## 2. Monorepo Directory Layout
+## 3. Hybrid Asset Business Model
+
+The system operates on the **Hybrid Asset Model**:
+1. **One-Time Setup Fee**: Client registers, pays ₹15,000 via Razorpay Checkout, and gets their custom subdomain set up with an isolated database.
+2. **Annual Maintenance Contract (AMC)**: Includes 1 year of AMC. The master control plane runs a daily cron scheduler to evaluate expiration dates (sending reminder emails 30, 7, and 1 days before expiration).
+3. **Suspension**: If the AMC expires without payment, the master portal suspends the tenant instance.
+
+---
+
+## 4. Monorepo Directory Layout
 
 The repository is structured to separate application scopes, deployment configs, and shared developer documentation:
 
@@ -41,77 +75,67 @@ The repository is structured to separate application scopes, deployment configs,
 e:/Antigravity Project/PG Project/
 ├── core-pg-crm/                   # [PG-CORE] Core PG CRM source code
 │   ├── backend/                   # Spring Boot 3 + Java 23 backend source
-│   ├── frontend/                  # React 18 + Vite frontend source
+│   ├── frontend/                  # React 18 + Vite + Tailwind CSS frontend
 │   ├── deploy/                    # Client Docker Compose & Nginx configs
-│   │   ├── docker-compose.prod.yml
-│   │   └── nginx-site.conf
-│   ├── Dockerfile                 # Client multi-stage production builder
+│   ├── Dockerfile                 # Client production build Dockerfile
 │   └── tenant-config.yml          # Client whitelabel config template
 ├── master-control-plane/          # [CONTROL-PLANE] Centralized SaaS Portal
-│   ├── backend/                   # Spring Boot master admin app
-│   └── frontend/                  # React dashboard for platform admins
+│   ├── backend/                   # Spring Boot 3 + Java 23 master admin app
+│   └── frontend/                  # React 18 + Vite + Tailwind v4 admin dashboard
 ├── docs/                          # Shared systems architecture manuals
 │   ├── CALCULATIONS_ENGINE.md     # Business calculations & proration logic
 │   ├── FILE_ARCHITECTURE.md       # Monorepo directory and file registry
 │   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
 │   └── ONBOARDING.md              # Unified client onboarding & setup SOP
 ├── apache-maven-3.9.16/           # Bundled Maven distribution
-├── .gitignore                     # Git ignore rules
 └── README.md                      # Primary repository landing page
 ```
 
 ---
 
-## 3. Production Deployment & Onboarding (VM Directory Separation)
-
-In production environments, multiple white-labeled single-tenant instances of `[PG-CORE]` are hosted on the same virtual machine (VM) host by isolating workspace directories. Each client gets their own folder under `/opt/pgcrm/` containing their isolated Docker container configuration, environment secrets, and custom configs.
-
-```
-/opt/pgcrm/
-├── client-a/                    # Isolated directory for Client A
-│   ├── deploy/
-│   │   ├── .env                 # Client A secrets & database credentials
-│   │   └── docker-compose.yml   # Client A container orchestrations
-│   └── tenant-config.yml        # Client A whitelabel branding overrides
-└── client-b/                    # Isolated directory for Client B
-    ├── deploy/
-    │   ├── .env                 # Client B secrets & database credentials
-    │   └── docker-compose.yml   # Client B container orchestrations
-    └── tenant-config.yml        # Client B whitelabel branding overrides
-```
-Each container runs on independent local ports (e.g. `8080` for Client A, `8081` for Client B), which are mapped to their subdomains (e.g., `client-a.pgcrm.com`, `client-b.pgcrm.com`) via a central Nginx reverse proxy.
-
-For detailed instructions on setting up local testing, UAT subdomains, Nginx proxy, Let's Encrypt SSL, and client handover procedures, please refer to the unified onboarding guide: **[ONBOARDING.md](file:///e:/Antigravity%20Project/PG%20Project/docs/ONBOARDING.md)**.
-
----
-
-## 4. Development Quick Start: Core PG CRM (`[PG-CORE]`)
+## 5. Development Quick Start & Startup Commands
 
 ### Prerequisites
-* **Java Development Kit (JDK) 23** installed and on path.
+* **JDK 23** installed and configured on your system PATH.
 * **Node.js (v24+)** and **npm** installed.
-* **Maven 3.9.16+** (bundled binary in `/apache-maven-3.9.16` can be used).
 * **PostgreSQL 18** database running locally.
 
-### Step 1: Start Backend Server
-Navigate to the core backend folder, configure `.env`, and launch:
+### Running the core application: `[PG-CORE]`
+
+#### 1. Start Core Backend:
+Navigate to the core backend folder, configure your database parameters in `.env`, and launch via the bundled Maven wrapper:
 ```bash
 cd core-pg-crm/backend
 # On Windows PowerShell:
 $env:SPRING_PROFILES_ACTIVE="dev"; ../../apache-maven-3.9.16/bin/mvn spring-boot:run
 ```
 
-### Step 2: Start Frontend Dev Server
-Navigate to the core frontend folder, install dependencies, and launch Vite:
+#### 2. Start Core Frontend:
+Navigate to the core frontend folder, install dependencies, and start Vite:
 ```bash
 cd core-pg-crm/frontend
 npm install
 npm run dev
 ```
-*Frontend dev server launches on port `5173`. Access the web portal in your browser at `http://localhost:5173`.*
+*Accessible at `http://localhost:5173`.*
 
 ---
 
-## 5. Development Quick Start: Master Control Plane (`[CONTROL-PLANE]`)
+### Running the master billing portal: `[CONTROL-PLANE]`
 
-Refer to the internal readme directories inside `/master-control-plane/` for database schema setups, Razorpay test sandbox config, and Spring scheduler verification protocols.
+#### 1. Start Control Plane Backend:
+Navigate to the control plane backend folder, configure database connections, and start Spring Boot:
+```bash
+cd master-control-plane/backend
+# On Windows PowerShell:
+$env:SPRING_PROFILES_ACTIVE="dev"; ../../apache-maven-3.9.16/bin/mvn spring-boot:run
+```
+
+#### 2. Start Control Plane Frontend:
+Navigate to the control plane frontend folder, install dependencies, and start Vite:
+```bash
+cd master-control-plane/frontend
+npm install
+npm run dev
+```
+*Accessible at `http://localhost:5173` (or the next available local port, e.g., `http://localhost:5174`).*
