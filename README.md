@@ -86,7 +86,8 @@ The repository is structured to accurately map the files visible in our remote r
    ├── control_plane_architecture.md
    ├── docker-compose.yml
    ├── sop.md
-   └── start_project.bat
+   ├── start_control.bat
+   └── start_core.bat
 ```
 
 ---

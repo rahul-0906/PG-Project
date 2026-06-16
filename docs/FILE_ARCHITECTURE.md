@@ -19,7 +19,8 @@ The repository is structured to accurately map the files visible in our remote r
    ├── control_plane_architecture.md
    ├── docker-compose.yml
    ├── sop.md
-   └── start_project.bat
+   ├── start_control.bat
+   └── start_core.bat
 ```
 
 ---
@@ -407,7 +408,8 @@ The master control plane is a separate B2B SaaS application managed by the platf
 
 The root-level directory contains critical launch scripts, SaaS architecture configurations, compliance documentations, and general guidelines:
 
-* **`start_project.bat`**: The local development startup launcher.
+* **`start_core.bat`**: The local development startup launcher for PG-CORE (hostel operations).
+* **`start_control.bat`**: The local development startup launcher for CONTROL-PLANE (SaaS billing).
 * **`control_plane_architecture.md`**: The B2B SaaS architecture design document.
 * **`MEMORY.md`**: The Antigravity context and file creation rules.
 * **`sop.md`**: The unified client onboarding standard operating procedure.
