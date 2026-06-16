@@ -18,7 +18,7 @@ The application enforces a strict four-tier role hierarchy that separates end-us
 
 ---
 
-## 2. Backend Registry (`com.pgcrm`)
+## 2. Core PG CRM - Backend Registry (`core-pg-crm/backend`)
 
 The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It follows a Controller-Service-Repository multi-layered architecture.
 
@@ -288,7 +288,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-## 3. Infrastructure Registry (`deploy/`)
+## 3. Core PG CRM - Infrastructure Registry (`core-pg-crm/deploy/`)
 
 #### `docker-compose.prod.yml`
 * **Structural Purpose**: Defines the production service stack.
@@ -309,7 +309,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-## 4. Frontend Registry (`frontend/src`)
+## 4. Core PG CRM - Frontend Registry (`core-pg-crm/frontend/src`)
 
 ### 4.1 Contexts & Client Infrastructure
 
@@ -365,3 +365,19 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 * **`owner/OwnerBuildingCreator.jsx`**: Multi-step wizard to register or edit properties for Tier 3 Super Admins.
 * **`owner/OwnerDashboard.jsx`**: Registers and configures Tier 2 Admin (PG Owner) accounts.
+
+---
+
+## 5. Master Control Plane Registry (`master-control-plane/`)
+
+The master control plane is a separate B2B SaaS application managed by the platform provider to register tenants, check payments, and automate VM instance setups.
+
+### 5.1 Backend Service (`master-control-plane/backend`)
+- **`com.controlplane.scheduler`**: Houses scheduled jobs such as the `AmcReminderScheduler` that evaluates AMC expiry dates (30, 7, 1 days prior) and triggers email notifications.
+- **`com.controlplane.controller`**: Exposes REST endpoints to signup tenants, verify setup fee signatures, list tenant configurations, and suspend expired client accounts.
+- **`com.controlplane.entity`**: Database mapping models including `Tenant`, `Subscription` (AMC), `RazorpayTransaction`, and `OnboardingTicket` schemas.
+- **`com.controlplane.repository`**: Standard Spring Data JPA interfaces for managing master client profiles and billing ledgers.
+- **`com.controlplane.service`**: Holds central provisioning business logic (SSH triggers, Ansible provisioning events, email reminders).
+
+### 5.2 Frontend Admin Portal (`master-control-plane/frontend`)
+- **Admin Dashboard**: Portal for system administrators to view list of B2B tenants, check setup ticket states, manually trigger provisioning, and verify payments history.
