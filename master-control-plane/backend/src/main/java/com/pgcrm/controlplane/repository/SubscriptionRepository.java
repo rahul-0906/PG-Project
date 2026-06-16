@@ -20,4 +20,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
     @Query("SELECT s FROM Subscription s JOIN FETCH s.tenantInstance t JOIN FETCH t.client c " +
            "WHERE s.licenseState = 'ACTIVE' AND s.amcExpiryDate < :today")
     List<Subscription> findActiveExpiredBefore(@Param("today") LocalDate today);
+
+    @Query("SELECT COUNT(s) FROM Subscription s " +
+           "WHERE s.licenseState = 'ACTIVE' AND s.amcExpiryDate >= :startDate AND s.amcExpiryDate <= :endDate")
+    long countUpcomingExpirations(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

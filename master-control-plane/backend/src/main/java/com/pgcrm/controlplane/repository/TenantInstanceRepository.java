@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface TenantInstanceRepository extends JpaRepository<TenantInstance, UUID> {
     Optional<TenantInstance> findByDomainName(String domainName);
     Optional<TenantInstance> findByRazorpayOrderId(String razorpayOrderId);
+    long countByStatus(com.pgcrm.controlplane.entity.TenantStatus status);
 }

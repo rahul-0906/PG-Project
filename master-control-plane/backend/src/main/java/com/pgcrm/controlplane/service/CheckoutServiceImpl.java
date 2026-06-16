@@ -121,13 +121,13 @@ public class CheckoutServiceImpl implements CheckoutService {
                 TenantInstance tenant = tenantInstanceRepository.findByRazorpayOrderId(orderId)
                         .orElseThrow(() -> new IllegalStateException("Tenant instance not found for order ID: " + orderId));
 
-                if (tenant.getStatus() == TenantStatus.ACTIVE) {
-                    log.info("Tenant {} is already ACTIVE. Skipping reconciliation.", tenant.getDomainName());
+                if (tenant.getStatus() == TenantStatus.ACTIVE || tenant.getStatus() == TenantStatus.PENDING_DEPLOYMENT) {
+                    log.info("Tenant {} is already processed (Status: {}). Skipping reconciliation.", tenant.getDomainName(), tenant.getStatus());
                     return;
                 }
 
                 // Update Tenant Instance details
-                tenant.setStatus(TenantStatus.ACTIVE);
+                tenant.setStatus(TenantStatus.PENDING_DEPLOYMENT);
                 // Assign a mock VPS IP and Port for demonstration purposes during provisioning
                 tenant.setVpsIpAddress("159.65.148.22");
                 tenant.setAllocatedPort(8081);

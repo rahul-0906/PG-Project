@@ -10,4 +10,10 @@ import java.util.UUID;
 @Repository
 public interface ClientRepository extends JpaRepository<Client, UUID> {
     Optional<Client> findByEmail(String email);
+
+    @Query("SELECT COUNT(DISTINCT c) FROM Client c JOIN c.tenantInstances t WHERE t.status = :status")
+    long countActiveClients(@Param("status") com.pgcrm.controlplane.entity.TenantStatus status);
+
+    @Query("SELECT DISTINCT c FROM Client c LEFT JOIN FETCH c.tenantInstances t LEFT JOIN FETCH t.subscription")
+    java.util.List<Client> findAllClientsWithDetails();
 }
