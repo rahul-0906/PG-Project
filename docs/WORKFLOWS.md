@@ -8,9 +8,9 @@ This document outlines the core business workflows, architectural data transitio
 
 The application segregates permissions using a four-tier architecture. Authorisation is enforced dynamically using JWT claim attributes on every REST call:
 
-1. **Tier 1: Guest (`GUEST`)**: The resident resident. Has read-only access to their allocated bed, logs meal preferences, submits maintenance requests, and reviews/pays invoice bills.
-2. **Tier 2: Admin - PG Owner (`PG_MANAGER`)**: The property administrator/operator. Manages assigned properties, handles check-ins, sets room pricing overrides, records EB utility readings, and resolves tickets.
-3. **Tier 3: Super Admin - Owner's Super Admin (`PG_OWNER`)**: The global property administrator. Unrestricted access to setup buildings, register Admin (PG Owner) accounts, associate admins with multiple branches, and monitor business analytics.
+1. **Tier 1: Guest (`GUEST`)**: The resident guest. Has read-only access to their allocated bed, logs meal preferences, submits maintenance requests, and reviews/pays invoice bills.
+2. **Tier 2: Manager / Branch Admin (`PG_MANAGER`)**: The property branch administrator/operator. Manages assigned properties, handles check-ins, sets room pricing overrides, records EB utility readings, and resolves tickets.
+3. **Tier 3: Owner / Super Admin (`PG_OWNER`)**: The global enterprise administrator. Unrestricted access to setup buildings, register Manager / Branch Admin accounts, associate managers with multiple branches, and monitor business analytics.
 4. **Tier 4: Super Super Admin - Software Provider**: System operator. Handles direct Docker container deployments, edits whitelist/color tokens, provisions server environments, and generates SSL credentials.
 
 ---
@@ -48,12 +48,12 @@ sequenceDiagram
 ---
 
 ## 3. Guest Check-In & Multi-Bed Provisioning Flow
-Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail. Supports booking single beds or "Whole Room Bookings" (occupying all beds in a room). Driven by Tier 2 Admins.
+Provisioning a new check-in allocates inventory, sets up a secure temp account, notifies the guest, and updates the building audit trail. Supports booking single beds or "Whole Room Bookings" (occupying all beds in a room). Driven by Tier 2 Managers.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as GuestService
@@ -87,12 +87,12 @@ sequenceDiagram
 ---
 
 ## 4. Checkout Notice & Financial Settlement Flow
-Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds. Managed by Tier 2 Admins.
+Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds. Managed by Tier 2 Managers.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as SettlementService
@@ -126,12 +126,12 @@ sequenceDiagram
 ---
 
 ## 5. Meal & Add-on Tracking Flow
-Tracks the daily meal preferences and add-on roster logs recorded by Tier 2 Admins for bulk operations.
+Tracks the daily meal preferences and add-on roster logs recorded by Tier 2 Managers for bulk operations.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerGuestAddons Component
     participant Controller as PgManagerController
     participant DB as PostgreSQL DB
@@ -181,7 +181,7 @@ Billing runs either automatically via monthly cron schedules or on-demand via th
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerBilling Component
     participant Controller as PgManagerController
     participant Service as InvoiceService
@@ -220,7 +220,7 @@ sequenceDiagram
     actor Guest as Tier 1 Guest
     participant Portal as Guest Portal
     participant Controller as GuestController
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant MgrApp as ManagerMaintenance
     participant DB as PostgreSQL DB
 
@@ -256,12 +256,12 @@ flowchart LR
 ---
 
 ## 10. Building Setup & Room Inventory Creation Flow
-Owners programmatically provision physical buildings, layout structures, and room configurations using a step-by-step layout wizard. Driven by Tier 3 Super Admins.
+Owners programmatically provision physical buildings, layout structures, and room configurations using a step-by-step layout wizard. Driven by Tier 3 Owners.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor SuperAdmin as Tier 3 Super Admin
+    actor SuperAdmin as Tier 3 Owner (PG Owner)
     participant Creator as OwnerBuildingCreator Component
     participant Controller as PgOwnerController
     participant SetupService as BuildingSetupService
@@ -290,16 +290,16 @@ sequenceDiagram
 ---
 
 ## 11. Manager Assignment & Branch Access Scoping Flow
-Tier 3 Super Admins delegate operations by assigning Tier 2 Admins to specific buildings, enforcing multi-branch safety scopes via JWT attributes.
+Tier 3 Owners delegate operations by assigning Tier 2 Managers to specific buildings, enforcing multi-branch safety scopes via JWT attributes.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor SuperAdmin as Tier 3 Super Admin
+    actor SuperAdmin as Tier 3 Owner (PG Owner)
     participant App as OwnerDashboard
     participant Controller as PgOwnerController
     participant DB as PostgreSQL DB
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant MgrApp as ManagerApp
     participant Filter as JwtAuthenticationFilter
 
@@ -324,12 +324,12 @@ sequenceDiagram
 ---
 
 ## 12. Dynamic Pricing Overrides & Rent Settings Flow
-Enables property administrators (Tier 2) to adjust general prices or perform bulk sharing-type rent overrides across an entire building.
+Enables property managers (Tier 2) to adjust general prices or perform bulk sharing-type rent overrides across an entire building.
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerPricing Component
     participant Controller as PricingController
     participant Service as PricingService
@@ -590,7 +590,7 @@ Handles transferring checked-in guests between rooms/beds via an interactive gri
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant Service as GuestService
@@ -640,12 +640,12 @@ Enables guests to request rent verification for offline cash handovers, placing 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Guest as Tier 1 Guest
+    actor Guest as Guest
     participant Portal as GuestInvoices Page
     participant Controller as PgManagerController
     participant Service as InvoiceService
     participant DB as PostgreSQL DB
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Manager
     participant Dashboard as ManagerDashboard
 
     Guest->>Portal: Clicks "Cash Handover" on Invoice
@@ -677,7 +677,7 @@ Secures the guest profile update pipeline in the manager view, preventing duplic
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Admin as Tier 2 Admin (PG Owner)
+    actor Admin as Tier 2 Manager (PG Manager)
     participant App as ManagerGuests Component
     participant Controller as PgManagerController
     participant DB as PostgreSQL DB

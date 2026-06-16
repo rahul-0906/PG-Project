@@ -2,6 +2,10 @@
 
 This document serves as the single source of truth for all mathematical logic, billing pipelines, allocation models, and data aggregation algorithms implemented within the PG CRM application. It defines the formulas, database fields, and logic constraints used by the Java Spring Boot backend services and React frontend UI visualizations.
 
+> [!NOTE]
+> **System Scope & Billing Boundaries**
+> This Calculations Engine governs **Tenant Operations** (guest rent, utility bill splits, daily addon logs, and guest invoicing). **SaaS-level billing** (e.g. client subscriptions, platform setup fees, and annual maintenance contract payments) is managed externally by the centralized **B2B SaaS Control Plane** and is outside the scope of individual single-tenant calculation databases.
+
 ---
 
 ## 1. The Monthly Invoice Generation Pipeline (Arrears Billing)
@@ -9,7 +13,7 @@ This document serves as the single source of truth for all mathematical logic, b
 The billing pipeline operates on an **arrears model** where monthly base rents, utility shares, and daily add-on consumptions are calculated and invoiced in the subsequent month.
 
 ### 1.1 The "Look-Back" Logic
-When a monthly invoice generation runs (either automatically via the `MonthlyBillingScheduler` cron task or manually triggered by a Tier 2 Admin (PG Owner) on the 1st of a month), the system executes a "look-back" query to capture data from the preceding calendar month. 
+When a monthly invoice generation runs (either automatically via the `MonthlyBillingScheduler` cron task or manually triggered by a Tier 2 Manager / Branch Admin (PG Manager) on the 1st of a month), the system executes a "look-back" query to capture data from the preceding calendar month. 
 
 For an invoice generated on Month $M$, Day 1:
 * The billing period begins on **Day 1 of Month $M-1$** (at `00:00:00.000` UTC).

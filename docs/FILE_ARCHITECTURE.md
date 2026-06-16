@@ -12,8 +12,8 @@ The application enforces a strict four-tier role hierarchy that separates end-us
 | Hierarchy Tier | Platform Role | Database Role Enum | Access Scope & Responsibilities |
 | :--- | :--- | :--- | :--- |
 | **Tier 1** | **Guest** | `GUEST` | Resident Portal. Access is limited to their own check-in details, meal calendars, maintenance requests, and payment logs. |
-| **Tier 2** | **Admin (PG Owner)** | `PG_MANAGER` | Property Administration. Operates assigned buildings, registers checked-in guests, logs meals and add-ons, generates monthly invoices, and resolves tickets. |
-| **Tier 3** | **Super Admin (Owner's Super Admin)** | `PG_OWNER` | Global Administration. Manages building setup, registers Admin (PG Owner) accounts, allocates building permissions, and views revenue reports. |
+| **Tier 2** | **Manager / Branch Admin** | `PG_MANAGER` | Property Administration. Operates assigned buildings, registers checked-in guests, logs meals and add-ons, generates monthly invoices, and resolves tickets. |
+| **Tier 3** | **Owner / Super Admin** | `PG_OWNER` | Global Administration. Manages building setup, registers Manager / Branch Admin accounts, allocates building permissions, and views revenue reports. |
 | **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | Infrastructure Operations. Configures host variables, deploys docker-compose services, updates whitelabel config parameters, and manages SSL certificates. |
 
 ---
