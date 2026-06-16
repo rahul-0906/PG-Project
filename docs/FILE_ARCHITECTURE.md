@@ -3,6 +3,25 @@
 
 This document acts as a granular registry of the entire codebase, detail by detail. It breaks down every file in the Spring Boot backend, the React/Vite frontend, and the production infrastructure deployment directories, detailing their structural roles, why they were created, internal logic/dependencies, and database/UI interactions.
 
+## Monorepo Directory Layout
+
+The repository is structured to accurately map the files visible in our remote repository:
+
+```
+   ├── core-pg-crm/
+   ├── docs/
+   ├── master-control-plane/
+   ├── scripts/
+   ├── .env.example
+   ├── .gitignore
+   ├── MEMORY.md
+   ├── README.md
+   ├── control_plane_architecture.md
+   ├── docker-compose.yml
+   ├── sop.md
+   └── start_project.bat
+```
+
 ---
 
 ## 1. Role-Based Access Control (RBAC) & Mapping
@@ -381,3 +400,14 @@ The master control plane is a separate B2B SaaS application managed by the platf
 
 ### 5.2 Frontend Admin Portal (`master-control-plane/frontend`)
 - **Admin Dashboard**: Portal for system administrators to view list of B2B tenants, check setup ticket states, manually trigger provisioning, and verify payments history.
+
+---
+
+## 6. Root-Level Files Registry
+
+The root-level directory contains critical launch scripts, SaaS architecture configurations, compliance documentations, and general guidelines:
+
+* **`start_project.bat`**: The local development startup launcher.
+* **`control_plane_architecture.md`**: The B2B SaaS architecture design document.
+* **`MEMORY.md`**: The Antigravity context and file creation rules.
+* **`sop.md`**: The unified client onboarding standard operating procedure.

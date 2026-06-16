@@ -56,6 +56,9 @@ In production, multiple single-tenant instances of `[PG-CORE]` are hosted on the
         └── docker-compose.yml   # Client B container orchestrations
 ```
 
+For detailed instructions on setting up local testing, UAT subdomains, Nginx proxy, Let's Encrypt SSL, and client handover procedures, please refer to the unified onboarding guide: **[sop.md](file:///E:/Antigravity%20Project/PG%20Project/sop.md)**.
+
+
 ---
 
 ## 3. Hybrid Asset Business Model
@@ -69,26 +72,21 @@ The system operates on the **Hybrid Asset Model**:
 
 ## 4. Monorepo Directory Layout
 
-The repository is structured to separate application scopes, deployment configs, and shared developer documentation:
+The repository is structured to accurately map the files visible in our remote repository:
 
 ```
-e:/Antigravity Project/PG Project/
-├── core-pg-crm/                   # [PG-CORE] Core PG CRM source code
-│   ├── backend/                   # Spring Boot 3 + Java 23 backend source
-│   ├── frontend/                  # React 18 + Vite + Tailwind CSS frontend
-│   ├── deploy/                    # Client Docker Compose & Nginx configs
-│   ├── Dockerfile                 # Client production build Dockerfile
-│   └── tenant-config.yml          # Client whitelabel config template
-├── master-control-plane/          # [CONTROL-PLANE] Centralized SaaS Portal
-│   ├── backend/                   # Spring Boot 3 + Java 23 master admin app
-│   └── frontend/                  # React 18 + Vite + Tailwind v4 admin dashboard
-├── docs/                          # Shared systems architecture manuals
-│   ├── CALCULATIONS_ENGINE.md     # Business calculations & proration logic
-│   ├── FILE_ARCHITECTURE.md       # Monorepo directory and file registry
-│   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
-│   └── ONBOARDING.md              # Unified client onboarding & setup SOP
-├── apache-maven-3.9.16/           # Bundled Maven distribution
-└── README.md                      # Primary repository landing page
+   ├── core-pg-crm/
+   ├── docs/
+   ├── master-control-plane/
+   ├── scripts/
+   ├── .env.example
+   ├── .gitignore
+   ├── MEMORY.md
+   ├── README.md
+   ├── control_plane_architecture.md
+   ├── docker-compose.yml
+   ├── sop.md
+   └── start_project.bat
 ```
 
 ---
