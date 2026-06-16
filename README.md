@@ -1,30 +1,71 @@
-# PG CRM
-### Premium Single-Tenant, White-Labeled Paying Guest & Hostel Management System
+# PG CRM Monorepo
+### Dual-Application Ecosystem: Core Hostel Operations & Master B2B SaaS Control Plane
 
-PG CRM is a modern, enterprise-grade Paying Guest (PG) and Hostel Management Platform designed for scale. Featuring multi-property management, a visual calendar-based meal planner, automated billing utilities, and a direct checkout pipeline, this solution serves owners, managers, and guests under a unified, high-performance web interface.
+Welcome to the PG CRM repository. This repository is organized as a monorepo containing two distinct applications:
 
-> [!NOTE]
-> **System Workflows & Visual Models**
-> For a detailed, visual breakdown of the application's core logic flows (including Auth, Check-In, Settlements, Bill Splits, Maintenance Tickets, and background Cron schedulers), refer to [WORKFLOWS.md](file:///e:/Antigravity%20Project/PG%20Project/docs/WORKFLOWS.md).
->
-> **Onboarding & Operations Guide**
-> For details on local testing, UAT provisioning, Nginx setup, SSL certificates, and client handoffs, refer to the unified onboarding guide [ONBOARDING.md](file:///e:/Antigravity%20Project/PG%20Project/docs/ONBOARDING.md).
+1. **`[PG-CORE]` (Core PG CRM)**: Located under `/core-pg-crm/`. This is the single-tenant hostel management software that manages resident check-ins, room inventories, daily meal trackers, utility splits, in-app notifications, and guest invoicing/rent collections.
+2. **`[CONTROL-PLANE]` (Master Control Plane)**: Located under `/master-control-plane/`. This is the centralized multi-tenant admin portal that registers B2B clients (PG Owners), processes AMC (Annual Maintenance Contract) setup payments, tracks subscription expiry, schedules renewal reminders, and automates single-tenant client instance provisioning.
 
 ---
 
-## 1. Architectural Pillars
+## 1. System Boundaries & Tenant Isolation
 
-The application follows a strictly decoupled client-server architecture designed around three key structural pillars:
+This repository employs a **Hybrid Single-Tenant / Shared Control Plane** topology:
 
-### 1.1 Premium Single-Tenant Data Isolation
-To ensure the highest standard of data privacy, compliance, and customizability, PG CRM implements a **Single-Tenant Deployment Model**. 
-* **Isolated Database Instances**: Each client deployment is provisioned with its own distinct database instance (using PostgreSQL in production). This prevents data leakage across different clients, simplifies custom schema expansions, and eases backups and compliance audits.
-* **No Shared Resources**: Application execution and file storage are isolated per tenant, eliminating resource contention and "noisy neighbor" issues common in multi-tenant environments.
+```mermaid
+graph TD
+    subgraph SaaS Control Plane [Centralized SaaS Admin]
+        ControlPlane[controlplane.pgcrm.com] --> CPDB[(Control Plane DB)]
+        ControlPlane -->|Ansible SSH Provision| HostVM[Client Virtual Machine]
+    end
 
-### 1.2 Multi-Client Host Folder Structure
-In production environments, multiple white-labeled single-tenant instances are hosted on the same virtual machine (VM) host by isolating workspace directories. Each client gets their own folder under `/opt/pgcrm/` containing their isolated Docker container configuration, environment secrets, and custom configs.
+    subgraph Tenant VM [Isolated Single-Tenant Operations]
+        HostVM -->|Mounts Workspace A| ClientA[client-a.pgcrm.com]
+        HostVM -->|Mounts Workspace B| ClientB[client-b.pgcrm.com]
+        
+        ClientA --> DB_A[(Client A isolated DB)]
+        ClientB --> DB_B[(Client B isolated DB)]
+    end
+```
 
-Example folder structure on the host server:
+- **Tenant Operations (`[PG-CORE]`)**: Scoped strictly to daily property management. Run as independent single-tenant containers with fully isolated databases to prevent cross-tenant data leakage. Guest rent checkout queries run directly within each tenant's local database.
+- **SaaS Billing & Reminders (`[CONTROL-PLANE]`)**: Scoped to central B2B SaaS administration. Manages tenant subdomains, registers payments via Razorpay, tracks AMC contract expirations, and coordinates automated reminders.
+
+---
+
+## 2. Monorepo Directory Layout
+
+The repository is structured to separate application scopes, deployment configs, and shared developer documentation:
+
+```
+e:/Antigravity Project/PG Project/
+├── core-pg-crm/                   # [PG-CORE] Core PG CRM source code
+│   ├── backend/                   # Spring Boot 3 + Java 23 backend source
+│   ├── frontend/                  # React 18 + Vite frontend source
+│   ├── deploy/                    # Client Docker Compose & Nginx configs
+│   │   ├── docker-compose.prod.yml
+│   │   └── nginx-site.conf
+│   ├── Dockerfile                 # Client multi-stage production builder
+│   └── tenant-config.yml          # Client whitelabel config template
+├── master-control-plane/          # [CONTROL-PLANE] Centralized SaaS Portal
+│   ├── backend/                   # Spring Boot master admin app
+│   └── frontend/                  # React dashboard for platform admins
+├── docs/                          # Shared systems architecture manuals
+│   ├── CALCULATIONS_ENGINE.md     # Business calculations & proration logic
+│   ├── FILE_ARCHITECTURE.md       # Monorepo directory and file registry
+│   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
+│   └── ONBOARDING.md              # Unified client onboarding & setup SOP
+├── apache-maven-3.9.16/           # Bundled Maven distribution
+├── .gitignore                     # Git ignore rules
+└── README.md                      # Primary repository landing page
+```
+
+---
+
+## 3. Production Deployment & Onboarding (VM Directory Separation)
+
+In production environments, multiple white-labeled single-tenant instances of `[PG-CORE]` are hosted on the same virtual machine (VM) host by isolating workspace directories. Each client gets their own folder under `/opt/pgcrm/` containing their isolated Docker container configuration, environment secrets, and custom configs.
+
 ```
 /opt/pgcrm/
 ├── client-a/                    # Isolated directory for Client A
@@ -40,270 +81,37 @@ Example folder structure on the host server:
 ```
 Each container runs on independent local ports (e.g. `8080` for Client A, `8081` for Client B), which are mapped to their subdomains (e.g., `client-a.pgcrm.com`, `client-b.pgcrm.com`) via a central Nginx reverse proxy.
 
-### 1.3 Tenant Operations vs. SaaS Control Plane Boundaries
-The platform separates core business operations (Tenant Operations) from central B2B SaaS management:
-* **Tenant Operations (This Codebase)**: Manages local branch activities for a single client instance. Handles guest records, room layout inventory, daily addon logs (meals, laundry), utility split calculations, guest invoicing, and guest-facing rent collections (via local online payment gateways or manual cash updates).
-* **Central Control Plane (External Portal)**: A separate centralized application for platform administrators to manage B2B clients, track active tenant containers, verify SaaS subscription payments (setup fees), track Annual Maintenance Contracts (AMC) renewals, handle automated email expiration reminders (30, 7, and 1 day prior), and suspend instances on expiry.
-
-### 1.4 Consolidated White-Labeling Engine
-The system supports full whitelabel configurations out of the box through a single externalized configuration file (`tenant-config.yml`). 
-* **Dynamic Branding**: Branding name and short title are loaded dynamically on boot from the YAML file.
-* **External Configuration**: The backend dynamically looks up `./tenant-config.yml` on the host filesystem before falling back to Java class defaults, permitting administrators to customize branding values without rebuilding application JARs.
-
-```yaml
-# Example tenant-config.yml
-pg:
-  system:
-    branding:
-      name: "Sri Sai Luxury PG"
-      short-title: "Sri Sai"
-```
-
-### 1.5 Tenant Customization & Scope Separation
-Role-Based Access Control (RBAC) separates administrative capabilities from guest interactions. Owners configure global setups, managers oversee operational logs, and guests view invoices and request maintenance, keeping operational boundaries clean.
-
-### 1.6 Dynamic Rules Engine & Guest Maintenance Portal
-PG CRM incorporates a robust DB-backed configuration architecture:
-* **Dynamic Rules Engine**: Building-specific prices, food options, EB splits, cutoff hours, and automatic billing scheduler statuses are stored in the database via the `BuildingConfig` model and managed directly through the Owner/Manager UI.
-* **Guest Maintenance Portal**: Guests can report issues (Wi-Fi, plumbing, electrical) through their portal, selecting priority levels and viewing resolution state logs updated in real-time by the manager.
-
-### 1.7 Multi-Channel Notifications & Verification Core
-The platform incorporates secure self-service modules and automated messaging pipelines:
-* **In-App & Multi-Channel Notifications**: Real-time push updates logged directly to the PostgreSQL database and served via an interactive header bell notification dropdown menu. The backend also supports automated email and WhatsApp reminders.
-* **Secure Email verification OTPs**: Guest profile email updates require verification via a 6-digit code cached for 15 minutes in-memory using `EmailVerificationService`.
-* **Temporary Password Resets**: A clean password-recovery flow allows requesting a high-entropy temporary password, enforcing a mandatory change-password check (`mustChangePassword` = true) upon subsequent logins.
+For detailed instructions on setting up local testing, UAT subdomains, Nginx proxy, Let's Encrypt SSL, and client handover procedures, please refer to the unified onboarding guide: **[ONBOARDING.md](file:///e:/Antigravity%20Project/PG%20Project/docs/ONBOARDING.md)**.
 
 ---
 
-## 2. Core Tech Stack
-
-```mermaid
-graph TD
-    subgraph Frontend [Client Viewport - React/Vite]
-        UI[Tailwind UI Components]
-        Contexts[Auth & Config Contexts]
-        SDKs[Razorpay SDK]
-    end
-
-    subgraph Backend [Core Server - Spring Boot]
-        Filter[JWT Auth Filter]
-        Controllers[Rest Controllers]
-        Services[Business Logic & Billing Services]
-        Schedulers[Billing & Reminder Cron Jobs]
-        Repo[Spring Data JPA Repositories]
-    end
-
-    subgraph Infrastructure [Data & Comms]
-        DB[(PostgreSQL)]
-        Mail[SMTP Mail Server]
-        MetaWhatsApp[Meta WhatsApp Cloud API]
-    end
-
-    UI --> Contexts
-    Contexts -->|Axios JSON + JWT Headers| Filter
-    SDKs -->|Payment Verifications| Controllers
-    Filter --> Controllers
-    Controllers --> Services
-    Services --> Schedulers
-    Services --> Repo
-    Repo --> DB
-    Services --> Mail
-    Services --> MetaWhatsApp
-```
-
-### 2.1 Backend Platform
-* **Java 23 & Spring Boot 3.2.5**: Core runtime framework providing embedded Tomcat execution, dependency injection, and REST controllers.
-* **Spring Data JPA & Hibernate**: Object-relational mapping, database transactions, and queries.
-* **Flyway (Database Migrations)**: Standardizes database versioning, executing automated schema migrations (`V1` through `V5`) cleanly on server start.
-* **MapStruct (DTO Mapping)**: Facilitates type-safe, high-performance object conversion between JPA entity objects and REST data transfer objects (DTOs).
-* **Spring Security & JSON Web Tokens (JWT)**: Secures REST endpoints and verifies request authenticity stateless.
-* **PostgreSQL**: PostgreSQL 18+ for both development and production durability.
-
-### 2.2 Frontend Client
-* **React 18 & Vite**: Component-driven UI framework with fast building compilation.
-* **TanStack React Query (Server State)**: Performs async cache synchronization, server data mutation, and automated cache invalidation logic for guest and manager dashboards.
-* **Vite PWA (Progressive Web App)**: Integrates client caching, background service worker installations (`sw.js`), updates notifications, offline rendering, and manifest configurations for mobile installations.
-* **Tailwind CSS**: Modern utility styling framework with a unified color token palette.
-* **Lucide React**: Premium icon package standardized to a thin, modern `strokeWidth={1.5}` layout across all UI pages.
-* **Recharts**: Responsive SVG graphs for dashboard analytics.
-* **Razorpay Checkout SDK**: Integrated client-side payment processing modal.
-
-### 2.3 External Communications
-* **Meta WhatsApp Cloud API**: Direct integration with the Meta Graph API for automated reminders, notifications, and webhook support.
-* **Spring Mail & Thymeleaf**: Dynamic HTML email template compilation and SMTP delivery.
-
----
-
-## 3. Role-Based Access Control (RBAC)
-
-The application utilizes a strict 4-tier role hierarchy to isolate scopes of access:
-
-| Role Tier | Platform Role | Database Role Mapping | Responsibilities & Capabilities |
-| :--- | :--- | :--- | :--- |
-| **Tier 1** | **Guest** | `GUEST` | Resident Portal access. Views active check-ins, tracks service logs, schedules meals on calendar, files maintenance tickets, and pays invoices via Razorpay. |
-| **Tier 2** | **Manager / Branch Admin** | `PG_MANAGER` | Property branch manager scope. Manages checked-in guests, assigns rooms/beds, records sub-meter EB units, tracks add-on orders (meals, laundry), and resolves maintenance tickets. |
-| **Tier 3** | **Owner / Super Admin** | `PG_OWNER` | Global administrator scope. Setup and configures buildings/layout grids, creates and assigns manager profiles to multiple branches, and monitors global financial collections. |
-| **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | System Operations scope. Provisions host VMs, edits whitelist variables, deploys container stacks, configures proxy servers, and manages SSL certificate renewals. |
-
----
-
-## 4. Configuration & Environment Variables
-
-Create an `.env` file in the root or set these parameters in your operating system environment:
-
-### 4.1 Server Configuration
-* `SERVER_PORT`: Port on which the Spring Boot application runs. Default is `8080`.
-* `SPRING_PROFILES_ACTIVE`: Active runtime profile (`dev` to wipe/rebuild development schema, `prod` for production schema validation mode, or `test` for a completely empty database and no seeders).
-
-### 4.2 Database Settings
-* `SPRING_DATASOURCE_URL`: JDBC database connection string (e.g. `jdbc:postgresql://localhost:5432/pgcrmdb`).
-* `SPRING_DATASOURCE_USERNAME`: Database login username.
-* `SPRING_DATASOURCE_PASSWORD`: Database login password.
-
-### 4.3 Third-Party API Keys
-* `META_WHATSAPP_PHONE_NUMBER_ID`: The Phone Number ID provided in the Meta App Dashboard.
-* `META_WHATSAPP_ACCESS_TOKEN`: The system user access token for Meta Graph API calls.
-* `META_WEBHOOK_VERIFY_TOKEN`: The custom token used to verify WhatsApp incoming webhooks.
-* `RAZORPAY_KEY_ID`: Razorpay public API key (e.g. `rzp_test_SuLwO7L565iIkE`).
-* `RAZORPAY_KEY_SECRET`: Razorpay secure key secret for validation.
-* `RAZORPAY_ENABLED`: Flag to toggle Razorpay (`true` or `false`). When `false`, payments resolve through a mock transaction simulator.
-
----
-
-## 5. Development Quick Start
+## 4. Development Quick Start: Core PG CRM (`[PG-CORE]`)
 
 ### Prerequisites
 * **Java Development Kit (JDK) 23** installed and on path.
 * **Node.js (v24+)** and **npm** installed.
-* **Maven 3.9.16+** (provided binary in `/apache-maven-3.9.16` can be used).
+* **Maven 3.9.16+** (bundled binary in `/apache-maven-3.9.16` can be used).
+* **PostgreSQL 18** database running locally.
 
-### 5.1 Local Execution (PostgreSQL Database - Decoupled Environment Profiles)
-
-The application implements a profile-based database and data initialization strategy. To run the application, set `SPRING_PROFILES_ACTIVE` to one of the following:
-
-* **Development Profile (`dev`)**: 
-  - **Destructive Rebuild**: Drops the existing database schema and recreates all tables (`spring.jpa.hibernate.ddl-auto=create`).
-  - **Flyway Disabled**: Skips Flyway migrations (`spring.flyway.enabled=false`) to avoid schema constraint conflicts.
-  - **DatabaseSeeder Active**: Provisions the initial Owner account (`owner@pgcrm.com` / `Admin@123` or custom `.env` overrides).
-* **Production Profile (`prod`)**:
-  - **Schema Validation**: Validates the database schema matches entity mappings (`spring.jpa.hibernate.ddl-auto=validate`) without executing auto-alterations.
-  - **Flyway Enabled**: Automatically applies incremental SQL schema migrations.
-  - **DatabaseSeeder Disabled**: Mutes the `DatabaseSeeder` component (`@Profile("!prod")`) to protect live data tables.
-* **Pure Test Profile (`test`)**:
-  - **Destructive Wipe**: Wipes all tables cleanly (`spring.jpa.hibernate.ddl-auto=create`) to ensure a blank baseline.
-  - **Flyway Disabled**: Skips migration scripts (`spring.flyway.enabled=false`) to speed up setup.
-  - **Demo Data Muted**: Mutes all demo/guest seeding (`DataSeeder`), starting with a 100% empty database.
-  - **DatabaseSeeder Active**: Retains the master `DatabaseSeeder` to dynamically provision the admin Owner login from environment variables, ensuring secure auth is immediately available.
-
-#### Dynamic Super Admin Onboarding
-The initial PG Owner login credentials are not hardcoded. The master `DatabaseSeeder` injects values dynamically from the host environment:
-- `PG_DEFAULT_OWNER_EMAIL` (Default: `owner@pgcrm.com`)
-- `PG_DEFAULT_OWNER_NAME` (Default: `System Owner`)
-- `PG_DEFAULT_OWNER_PASSWORD` (Default: `Owner@123` or `Admin@123`)
-
-#### Step 1: Start Backend Server
-Navigate to the backend directory and launch the application (using the `dev` profile for initial startup or schema resets):
+### Step 1: Start Backend Server
+Navigate to the core backend folder, configure `.env`, and launch:
 ```bash
-cd backend
+cd core-pg-crm/backend
 # On Windows PowerShell:
-$env:SPRING_PROFILES_ACTIVE="dev"; ../apache-maven-3.9.16/bin/mvn spring-boot:run
+$env:SPRING_PROFILES_ACTIVE="dev"; ../../apache-maven-3.9.16/bin/mvn spring-boot:run
 ```
-*The backend boots on port `8080`, wipes and rebuilds the local database structures, and seeds the master admin account.*
 
-#### Step 2: Start Frontend Dev Server
-Navigate to the frontend directory, install dependencies, and launch Vite:
+### Step 2: Start Frontend Dev Server
+Navigate to the core frontend folder, install dependencies, and launch Vite:
 ```bash
-cd frontend
+cd core-pg-crm/frontend
 npm install
 npm run dev
 ```
-*The frontend dev server launches on port `5173`. Access the web portal in your browser at `http://localhost:5173`.*
-
-### 5.2 Seeded Demo Credentials
-On startup, default credentials are seeded for local testing depending on the active profile:
-* **PG Owner (dev profile)**: `owner@pgcrm.com` / `Admin@123` (seeded by `DatabaseSeeder`)
-* **PG Owner (prod profile)**: `owner@pgcrm.com` / `Owner@123` (seeded by `DataSeeder`)
-* **PG Manager (dev/prod profiles)**: `manager@pgcrm.com` / `Manager@123` (seeded by `DataSeeder`)
-* **Guest (dev/prod profiles)**: `guest@pgcrm.com` / `Guest@123` (seeded by `DataSeeder`)
-* **Test Profile (`test`)**: Dynamic Owner account generated; all other credentials and layout metadata are blank.
-
-> [!IMPORTANT]
-> **Direct Authentication Enforcement & Build-Time Security**
-> - **Authentication**: The "QUICK LOGIN (DEMO)" panel and buttons have been removed from the login screen to strictly enforce real API-driven authentication. You must manually type the credentials above into the login inputs to sign in. In case the backend or database is unreachable, a clear server offline warning banner is displayed.
-> - **Production Build Security**: The frontend production build pipeline utilizes Vite's native `esbuild` minifier, configured to completely strip all `console.log`, `console.warn`, `console.error`, and `debugger` statements from the compiled client bundles. This prevents data leakage (JWTs, PII) in browser developer tools.
-
-### 5.3 Interactive API Documentation
-The backend exposes interactive OpenAPI 3.0 documentation using Swagger UI. When the server is running, navigate to:
-* **Swagger UI URL**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-This interactive sandbox lists all operational REST routes, DTO payload requirements, and security configurations, facilitating third-party developer integrations.
-
-### 5.4 Running Testing Suites
-The project includes end-to-end automated testing metrics for verifying codebase compliance.
-* **Backend JUnit 5 Tests**:
-  Navigate to the `/backend` folder and run:
-  ```bash
-  mvn test
-  ```
-* **Frontend Tests**:
-  Navigate to the `/frontend` folder and run:
-  ```bash
-  npm run test
-  ```
+*Frontend dev server launches on port `5173`. Access the web portal in your browser at `http://localhost:5173`.*
 
 ---
 
-## 6. Docker Deployment
+## 5. Development Quick Start: Master Control Plane (`[CONTROL-PLANE]`)
 
-For clean staging or production deployments, use the provided Docker multi-stage configurations.
-
-### 6.1 Multi-Stage Dockerfile
-The application has a root Dockerfile that performs a two-stage build:
-1. **Build Stage**: Compiles React frontend assets, drops them into the Spring Boot resource folder, and runs Maven package to compile the final fat executable JAR.
-2. **Runtime Stage**: Creates a lightweight Alpine JRE runtime environment to run the backend jar.
-
-### 6.2 Spin up using Docker Compose
-Start the database service and the application container simultaneously:
-```bash
-docker-compose up --build
-```
-This launches:
-* A **PostgreSQL 18** container listening internally on port `5432` with an active healthcheck utilizing `pg_isready` to verify database health.
-* The **PG CRM Server** listening on port `8080`, mounting the config and seeding schemas.
-
-> [!TIP]
-> **Fail-Fast Startup Sequencing**
-> The backend application container (`app`) is configured to depend strictly on the database container (`postgres`) being healthy (`condition: service_healthy`). This prevents the application server from starting up and trying to initialize its database connection pool until the database daemon is fully initialized and accepting connections.
-
----
-
-## 7. Folder Structure
-
-The project root is structured to isolate source logic, local tooling, configuration, and documentation:
-
-```
-e:/Antigravity Project/PG Project/
-├── backend/                       # Java/Spring Boot backend source
-├── frontend/                      # React/Vite frontend source
-├── apache-maven-3.9.16/           # Bundled Maven distribution
-├── deploy/                        # Production deployment configuration templates
-│   ├── docker-compose.prod.yml    # Production Docker Compose stack definition
-│   ├── nginx-site.conf            # Nginx reverse proxy configuration template
-│   └── .env.example               # Production environment variables template
-├── docs/                          # Project documentation and test walkthroughs
-│   ├── history/                   # Legacy planning and task files
-│   ├── media/                     # Testing & tutorial media recordings
-│   ├── CALCULATIONS_ENGINE.md     # Business calculation specs
-│   ├── FILE_ARCHITECTURE.md       # Directory and file mapping
-│   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
-│   └── ONBOARDING.md              # Unified client onboarding & setup SOP
-├── scripts/                       # Maintenance and helper scripts
-│   └── backup.sh                  # Postgres backup utility script
-├── .env                           # Local development environment variables
-├── .env.example                   # Template environment variables
-├── .gitignore                     # Git ignore file
-├── Dockerfile                     # Multi-stage production build configuration
-├── docker-compose.yml             # Local docker compose environment
-├── README.md                      # Primary repository entry point documentation
-├── start_project.bat              # Dev launcher script
-└── tenant-config.yml              # White-label branding setup properties
-```
+Refer to the internal readme directories inside `/master-control-plane/` for database schema setups, Razorpay test sandbox config, and Spring scheduler verification protocols.
