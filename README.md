@@ -137,4 +137,4 @@ cd master-control-plane/frontend
 npm install
 npm run dev
 ```
-*Accessible at `http://localhost:5173` (or the next available local port, e.g., `http://localhost:5174`).*
+*Accessible at `http://localhost:5176`.*
