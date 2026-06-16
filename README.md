@@ -6,6 +6,9 @@ PG CRM is a modern, enterprise-grade Paying Guest (PG) and Hostel Management Pla
 > [!NOTE]
 > **System Workflows & Visual Models**
 > For a detailed, visual breakdown of the application's core logic flows (including Auth, Check-In, Settlements, Bill Splits, Maintenance Tickets, and background Cron schedulers), refer to [WORKFLOWS.md](file:///e:/Antigravity%20Project/PG%20Project/docs/WORKFLOWS.md).
+>
+> **Onboarding & Operations Guide**
+> For details on local testing, UAT provisioning, Nginx setup, SSL certificates, and client handoffs, refer to the unified onboarding guide [ONBOARDING.md](file:///e:/Antigravity%20Project/PG%20Project/docs/ONBOARDING.md).
 
 ---
 
@@ -13,16 +16,36 @@ PG CRM is a modern, enterprise-grade Paying Guest (PG) and Hostel Management Pla
 
 The application follows a strictly decoupled client-server architecture designed around three key structural pillars:
 
-### 1.1 Single-Tenant Data Isolation
+### 1.1 Premium Single-Tenant Data Isolation
 To ensure the highest standard of data privacy, compliance, and customizability, PG CRM implements a **Single-Tenant Deployment Model**. 
 * **Isolated Database Instances**: Each client deployment is provisioned with its own distinct database instance (using PostgreSQL in production). This prevents data leakage across different clients, simplifies custom schema expansions, and eases backups and compliance audits.
 * **No Shared Resources**: Application execution and file storage are isolated per tenant, eliminating resource contention and "noisy neighbor" issues common in multi-tenant environments.
 
-> [!TIP]
-> **Production Reverse Proxy & Multi-Tenant Domain Routing**
-> In a live production environment, a reverse proxy like **Nginx** handles incoming customer traffic for custom domains (e.g., `srisaipg.in`, `galaxyhostel.com`). Nginx acts as an edge router, matching host header domains to individual single-tenant backend ports and dynamically mounting SSL security layers via Let's Encrypt automated ACME clients.
+### 1.2 Multi-Client Host Folder Structure
+In production environments, multiple white-labeled single-tenant instances are hosted on the same virtual machine (VM) host by isolating workspace directories. Each client gets their own folder under `/opt/pgcrm/` containing their isolated Docker container configuration, environment secrets, and custom configs.
 
-### 1.2 Consolidated White-Labeling Engine
+Example folder structure on the host server:
+```
+/opt/pgcrm/
+├── client-a/                    # Isolated directory for Client A
+│   ├── deploy/
+│   │   ├── .env                 # Client A secrets & database credentials
+│   │   └── docker-compose.yml   # Client A container orchestrations
+│   └── tenant-config.yml        # Client A whitelabel branding overrides
+└── client-b/                    # Isolated directory for Client B
+    ├── deploy/
+    │   ├── .env                 # Client B secrets & database credentials
+    │   └── docker-compose.yml   # Client B container orchestrations
+    └── tenant-config.yml        # Client B whitelabel branding overrides
+```
+Each container runs on independent local ports (e.g. `8080` for Client A, `8081` for Client B), which are mapped to their subdomains (e.g., `client-a.pgcrm.com`, `client-b.pgcrm.com`) via a central Nginx reverse proxy.
+
+### 1.3 Tenant Operations vs. SaaS Control Plane Boundaries
+The platform separates core business operations (Tenant Operations) from central B2B SaaS management:
+* **Tenant Operations (This Codebase)**: Manages local branch activities for a single client instance. Handles guest records, room layout inventory, daily addon logs (meals, laundry), utility split calculations, guest invoicing, and guest-facing rent collections (via local online payment gateways or manual cash updates).
+* **Central Control Plane (External Portal)**: A separate centralized application for platform administrators to manage B2B clients, track active tenant containers, verify SaaS subscription payments (setup fees), track Annual Maintenance Contracts (AMC) renewals, handle automated email expiration reminders (30, 7, and 1 day prior), and suspend instances on expiry.
+
+### 1.4 Consolidated White-Labeling Engine
 The system supports full whitelabel configurations out of the box through a single externalized configuration file (`tenant-config.yml`). 
 * **Dynamic Branding**: Branding name and short title are loaded dynamically on boot from the YAML file.
 * **External Configuration**: The backend dynamically looks up `./tenant-config.yml` on the host filesystem before falling back to Java class defaults, permitting administrators to customize branding values without rebuilding application JARs.
@@ -36,15 +59,15 @@ pg:
       short-title: "Sri Sai"
 ```
 
-### 1.3 Tenant Customization & Scope Separation
+### 1.5 Tenant Customization & Scope Separation
 Role-Based Access Control (RBAC) separates administrative capabilities from guest interactions. Owners configure global setups, managers oversee operational logs, and guests view invoices and request maintenance, keeping operational boundaries clean.
 
-### 1.4 Dynamic Rules Engine & Guest Maintenance Portal
+### 1.6 Dynamic Rules Engine & Guest Maintenance Portal
 PG CRM incorporates a robust DB-backed configuration architecture:
 * **Dynamic Rules Engine**: Building-specific prices, food options, EB splits, cutoff hours, and automatic billing scheduler statuses are stored in the database via the `BuildingConfig` model and managed directly through the Owner/Manager UI.
 * **Guest Maintenance Portal**: Guests can report issues (Wi-Fi, plumbing, electrical) through their portal, selecting priority levels and viewing resolution state logs updated in real-time by the manager.
 
-### 1.5 Multi-Channel Notifications & Verification Core
+### 1.7 Multi-Channel Notifications & Verification Core
 The platform incorporates secure self-service modules and automated messaging pipelines:
 * **In-App & Multi-Channel Notifications**: Real-time push updates logged directly to the PostgreSQL database and served via an interactive header bell notification dropdown menu. The backend also supports automated email and WhatsApp reminders.
 * **Secure Email verification OTPs**: Guest profile email updates require verification via a 6-digit code cached for 15 minutes in-memory using `EmailVerificationService`.
@@ -118,8 +141,8 @@ The application utilizes a strict 4-tier role hierarchy to isolate scopes of acc
 | Role Tier | Platform Role | Database Role Mapping | Responsibilities & Capabilities |
 | :--- | :--- | :--- | :--- |
 | **Tier 1** | **Guest** | `GUEST` | Resident Portal access. Views active check-ins, tracks service logs, schedules meals on calendar, files maintenance tickets, and pays invoices via Razorpay. |
-| **Tier 2** | **Admin (PG Owner)** | `PG_MANAGER` | Property Administrator scope. Manages checked-in guests, assigns rooms/beds, records sub-meter EB units, tracks add-on orders (meals, laundry), and resolves maintenance tickets. |
-| **Tier 3** | **Super Admin (Owner's Super Admin)** | `PG_OWNER` | Global Administrator scope. Setup and configures buildings/layout grids, creates and assigns PG Owner manager profiles to multiple branches, and monitors global financial collections. |
+| **Tier 2** | **Manager / Branch Admin** | `PG_MANAGER` | Property branch manager scope. Manages checked-in guests, assigns rooms/beds, records sub-meter EB units, tracks add-on orders (meals, laundry), and resolves maintenance tickets. |
+| **Tier 3** | **Owner / Super Admin** | `PG_OWNER` | Global administrator scope. Setup and configures buildings/layout grids, creates and assigns manager profiles to multiple branches, and monitors global financial collections. |
 | **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | System Operations scope. Provisions host VMs, edits whitelist variables, deploys container stacks, configures proxy servers, and manages SSL certificate renewals. |
 
 ---
@@ -137,7 +160,6 @@ Create an `.env` file in the root or set these parameters in your operating syst
 * `SPRING_DATASOURCE_USERNAME`: Database login username.
 * `SPRING_DATASOURCE_PASSWORD`: Database login password.
 
-### 4.3 Third-Party API Keys
 ### 4.3 Third-Party API Keys
 * `META_WHATSAPP_PHONE_NUMBER_ID`: The Phone Number ID provided in the Meta App Dashboard.
 * `META_WHATSAPP_ACCESS_TOKEN`: The system user access token for Meta Graph API calls.
@@ -273,9 +295,7 @@ e:/Antigravity Project/PG Project/
 │   ├── CALCULATIONS_ENGINE.md     # Business calculation specs
 │   ├── FILE_ARCHITECTURE.md       # Directory and file mapping
 │   ├── WORKFLOWS.md               # User & system flows (mermaid diagrams)
-│   ├── ONBOARDING_PROD.md         # Production onboarding & setup guide
-│   ├── ONBOARDING_TEST.md         # Local testing & verification guide
-│   └── client_onboarding_sop.md   # Client onboarding Standard Operating Procedure
+│   └── ONBOARDING.md              # Unified client onboarding & setup SOP
 ├── scripts/                       # Maintenance and helper scripts
 │   └── backup.sh                  # Postgres backup utility script
 ├── .env                           # Local development environment variables
