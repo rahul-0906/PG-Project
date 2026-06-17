@@ -99,6 +99,16 @@ The repository is structured to accurately map the files visible in our remote r
 * **Node.js (v24+)** and **npm** installed.
 * **PostgreSQL 18** database running locally.
 
+### Database Initialization
+Before running either application, you must create their respective local databases using `psql` or any PostgreSQL client:
+```sql
+-- Create database for core hostel management (PG-CORE)
+CREATE DATABASE pgcrmdb;
+
+-- Create database for centralized SaaS billing (CONTROL-PLANE)
+CREATE DATABASE controlplane_db;
+```
+
 ### Running the core application: `[PG-CORE]`
 
 #### 1. Start Core Backend:

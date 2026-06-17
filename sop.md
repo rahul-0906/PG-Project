@@ -618,6 +618,23 @@ export default defineConfig({
 });
 ```
 
+### 6.4 Local Development & Testing
+
+For local development and testing, both the Core application and the Control Plane require dedicated databases to be initialized on a local PostgreSQL instance.
+
+#### Database Setup
+Use the `psql` command-line utility or any PostgreSQL client to create the necessary databases:
+
+```sql
+-- Create database for Core Hostel Management (PG-CORE)
+DROP DATABASE IF EXISTS pgcrmdb;
+CREATE DATABASE pgcrmdb;
+
+-- Create database for centralized SaaS Billing command center (CONTROL-PLANE)
+DROP DATABASE IF EXISTS controlplane_db;
+CREATE DATABASE controlplane_db;
+```
+
 ---
 
 ## 7. Standard Operating Procedure (SOP): Single-Tenant Client Onboarding

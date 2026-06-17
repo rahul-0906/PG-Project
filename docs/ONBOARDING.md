@@ -48,10 +48,15 @@ This section guides local testing to match the production PostgreSQL database se
 
 #### Database Setup
 1. Spin up the local PostgreSQL instance.
-2. Initialize a blank database:
+2. Initialize the blank databases for both the Core Application and the Control Plane:
    ```sql
+   -- For Core Hostel Management (PG-CORE)
    DROP DATABASE IF EXISTS pgcrmdb;
    CREATE DATABASE pgcrmdb;
+
+   -- For Centralized SaaS Billing Portal (CONTROL-PLANE)
+   DROP DATABASE IF EXISTS controlplane_db;
+   CREATE DATABASE controlplane_db;
    ```
 3. Create a `.env` configuration file in the project root:
    ```ini
