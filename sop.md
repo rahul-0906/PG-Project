@@ -620,22 +620,62 @@ export default defineConfig({
 
 ### 6.4 Local Development & Testing
 
-For local development and testing, both the Core application and the Control Plane require dedicated databases to be initialized on a local PostgreSQL instance.
+For local development and testing, the Monorepo environment is split to allow independent executions. Both the Core Application `[PG-CORE]` and the SaaS Command Center `[CONTROL-PLANE]` require isolated PostgreSQL databases to be configured and run on your local environment.
 
-#### Database Setup
-Use the `psql` command-line utility or any PostgreSQL client to create the necessary databases:
+#### 1. Software Prerequisites
+Before initiating local startup, verify the following are installed:
+* **JDK 23**: Configured on the system PATH.
+* **Node.js (v24+) & npm**: For compilation of frontends.
+* **PostgreSQL (v18+)**: Running locally on port `5432` with username `postgres`.
 
-```sql
--- Create database for Core Hostel Management (PG-CORE)
-DROP DATABASE IF EXISTS pgcrmdb;
-CREATE DATABASE pgcrmdb;
+#### 2. Manual Database Initialization via psql
+Connect to your local PostgreSQL instance as the superuser (`postgres`) and execute the SQL commands to create the isolated databases. 
 
--- Create database for centralized SaaS Billing command center (CONTROL-PLANE)
-DROP DATABASE IF EXISTS controlplane_db;
-CREATE DATABASE controlplane_db;
+Using the terminal `psql` command line tool:
+```bash
+# Connect to default postgres database
+psql -U postgres -h localhost
+
+# Execute database creation queries:
+postgres=# CREATE DATABASE pgcrmdb;
+postgres=# CREATE DATABASE controlplane_db;
+postgres=# \q
 ```
 
+*Note: Verify that the credentials in `application.properties` (specifically username and password) match your local PostgreSQL configuration. By default, the control plane backend expects `username=postgres` and `password=admin`.*
+
+#### 3. Configuration Setup (.env files)
+Ensure the root `.env` or application-specific configuration profiles are set:
+* In `core-pg-crm/backend/`, verify connection strings in properties/env.
+* In `master-control-plane/backend/`, properties point to `jdbc:postgresql://localhost:5432/controlplane_db`.
+
+#### 4. Executing Services via Isolated Launchers
+To simplify local operations, two dedicated Windows Batch launchers are located in the project root.
+
+##### Option A: Running the PG CRM Core (`[PG-CORE]`)
+To work on property management features (guests, beds, invoices, electric meter splits), run `start_core.bat`:
+1. Double-click the `start_core.bat` file.
+2. The script:
+   - Configures the database credentials.
+   - Launches a new command prompt running the Core Backend (Spring Boot on Port `8080`).
+   - Launches another command prompt running the Core Frontend (Vite on Port `5173`).
+3. Services will be available at:
+   - **Core Frontend (User Portal)**: `http://localhost:5173`
+   - **Core Backend REST API**: `http://localhost:8080`
+
+##### Option B: Running the B2B SaaS Control Plane (`[CONTROL-PLANE]`)
+To work on B2B subscription portals, signup forms, Razorpay checkout, or automation webhooks, run `start_control.bat`:
+1. Double-click the `start_control.bat` file.
+2. The script:
+   - Sets the active Spring Profile to `dev`.
+   - Launches a new command prompt running the Control Plane Backend (Spring Boot on Port `8090`).
+   - Launches a second command prompt running the Control Plane Frontend (Vite on Port `5176`).
+3. Services will be available at:
+   - **Billing Admin Frontend**: `http://localhost:5176`
+   - **Billing Backend REST API**: `http://localhost:8090`
+
 ---
+
 
 ## 7. Standard Operating Procedure (SOP): Single-Tenant Client Onboarding
 ### Official Operations SOP for Tier 4 Super Super Admins (Software Providers)
