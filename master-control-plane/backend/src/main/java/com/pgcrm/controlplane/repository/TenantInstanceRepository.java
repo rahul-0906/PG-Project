@@ -2,6 +2,7 @@ package com.pgcrm.controlplane.repository;
 
 import com.pgcrm.controlplane.entity.TenantInstance;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,4 +13,7 @@ public interface TenantInstanceRepository extends JpaRepository<TenantInstance, 
     Optional<TenantInstance> findByDomainName(String domainName);
     Optional<TenantInstance> findByRazorpayOrderId(String razorpayOrderId);
     long countByStatus(com.pgcrm.controlplane.entity.TenantStatus status);
+
+    @Query("SELECT MAX(t.allocatedPort) FROM TenantInstance t")
+    Integer findMaxAllocatedPort();
 }

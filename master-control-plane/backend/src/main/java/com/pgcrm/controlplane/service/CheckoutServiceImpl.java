@@ -32,6 +32,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final TenantInstanceRepository tenantInstanceRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final ObjectMapper objectMapper;
+    private final ProvisioningService provisioningService;
 
     @Value("${razorpay.key.id:rzp_test_mockKeyId12345}")
     private String razorpayKeyId;
@@ -128,9 +129,6 @@ public class CheckoutServiceImpl implements CheckoutService {
 
                 // Update Tenant Instance details
                 tenant.setStatus(TenantStatus.PENDING_DEPLOYMENT);
-                // Assign a mock VPS IP and Port for demonstration purposes during provisioning
-                tenant.setVpsIpAddress("159.65.148.22");
-                tenant.setAllocatedPort(8081);
                 tenantInstanceRepository.save(tenant);
 
                 // 4. Create Active Subscription (AMC contract starting now, expiring in 1 year)
@@ -143,8 +141,8 @@ public class CheckoutServiceImpl implements CheckoutService {
                         .build();
                 subscriptionRepository.save(subscription);
 
-                log.info("Successfully provisioned tenant instance for {} with active subscription. Initiating VM deployment...", tenant.getDomainName());
-                triggerAutomatedProvisioning(tenant);
+                log.info("Successfully provisioned subscription for tenant: {}. Initiating asynchronous VM deployment...", tenant.getDomainName());
+                provisioningService.provisionNewTenant(tenant);
             }
         } catch (Exception e) {
             log.error("Error occurred while reconciling webhook: ", e);
