@@ -55,24 +55,28 @@ New client acquisition is fully automated from the public checkout form through 
 sequenceDiagram
     autonumber
     actor Owner as B2B PG Owner
-    participant Frontend as Control Plane Frontend
+    participant Landing as LandingPage.jsx (/)
+    participant SignupForm as Signup Form (/signup)
     participant Backend as Control Plane Backend
     participant Razorpay as Razorpay API Gateway
     participant Script as provision_tenant.sh
     participant TenantStack as Tenant Docker Stack
 
-    Owner->>Frontend: Fills Signup Form (subdomain, brand, contact)
-    Frontend->>Backend: POST /api/public/checkout/initiate-order
+    Owner->>Landing: Visits portal landing page
+    Owner->>Landing: Clicks "Start Your Onboarding" / "Purchase & Provision"
+    Landing->>SignupForm: Routes to /signup
+    Owner->>SignupForm: Fills onboarding details (domain, owner name, email, brand)
+    SignupForm->>Backend: POST /api/public/checkout/initiate-order
     Note over Backend: Validates subdomain availability & creates Client/TenantInstance stubs
     Backend->>Razorpay: Creates Razorpay Order (₹15,000 Setup Fee)
     Razorpay-->>Backend: Returns Order ID
-    Backend-->>Frontend: Returns registration ID & Razorpay Order details
-    Frontend->>Owner: Renders Razorpay Checkout modal
+    Backend-->>SignupForm: Returns registration ID & Razorpay Order details
+    SignupForm->>Owner: Renders Razorpay Checkout modal
     Owner->>Razorpay: Authorizes Payment (UPI/Card/NetBanking)
     Razorpay-->>Owner: Payment Authorized
     Razorpay->>Backend: Webhook Callback POST /api/public/checkout/webhook/reconcile
     Note over Backend: 1. Verifies HMAC-SHA256 signature<br/>2. Transition transaction to SUCCESS<br/>3. Sets TenantInstance status to PROVISIONING
-    Backend->>Backend: Trigger Async @Scheduled/Async provisionNewTenant()
+    Backend->>Backend: Trigger Async provisionNewTenant()
     rect rgb(30, 41, 59)
         Note over Backend: Invokes ProcessBuilder to run provision_tenant.sh
         Backend->>Script: Execute bash scripts/provision_tenant.sh [domain] [password] [port] [email]

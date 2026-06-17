@@ -674,7 +674,25 @@ To work on B2B subscription portals, signup forms, Razorpay checkout, or automat
    - **Billing Admin Frontend**: `http://localhost:5176`
    - **Billing Backend REST API**: `http://localhost:8090`
 
+### 6.5 Production Control Plane Host Preparation
+
+When deploying the centralized SaaS `[CONTROL-PLANE]` on a host Ubuntu VPS, the backend uses Java `ProcessBuilder` to trigger the tenant provisioning bash script. For the automation pipeline to run successfully, the script must have execution permissions on the host system.
+
+Before launching the Control Plane Spring Boot backend, the DevOps engineer must configure the execution permission on the script:
+
+```bash
+# Navigate to the repository root directory on the VPS
+cd /opt/pgcrm-monorepo/
+
+# Grant execution permissions to the tenant provisioning automation script
+chmod +x scripts/provision_tenant.sh
+```
+
+> [!IMPORTANT]
+> Failure to grant execution permissions to the script will cause the asynchronous `ProvisioningService` to throw an `IOException: Permission denied` during Razorpay webhook checkout reconciliations, resulting in failed tenant provisioning tickets.
+
 ---
+
 
 
 ## 7. Standard Operating Procedure (SOP): Single-Tenant Client Onboarding

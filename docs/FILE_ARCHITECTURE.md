@@ -393,14 +393,44 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 The master control plane is a separate B2B SaaS application managed by the platform provider to register tenants, check payments, and automate VM instance setups.
 
 ### 5.1 Backend Service (`master-control-plane/backend`)
-- **`com.controlplane.scheduler`**: Houses scheduled jobs such as the `AmcReminderScheduler` that evaluates AMC expiry dates (30, 7, 1 days prior) and triggers email notifications.
-- **`com.controlplane.controller`**: Exposes REST endpoints to signup tenants, verify setup fee signatures, list tenant configurations, and suspend expired client accounts.
-- **`com.controlplane.entity`**: Database mapping models including `Tenant`, `Subscription` (AMC), `RazorpayTransaction`, and `OnboardingTicket` schemas.
-- **`com.controlplane.repository`**: Standard Spring Data JPA interfaces for managing master client profiles and billing ledgers.
-- **`com.controlplane.service`**: Holds central provisioning business logic (SSH triggers, Ansible provisioning events, email reminders).
 
-### 5.2 Frontend Admin Portal (`master-control-plane/frontend`)
-- **Admin Dashboard**: Portal for system administrators to view list of B2B tenants, check setup ticket states, manually trigger provisioning, and verify payments history.
+The backend codebase is written in Java 23, built on Spring Boot 3.2.5, and resides in the `com.pgcrm.controlplane` package hierarchy.
+
+#### Scheduler Package (`com.pgcrm.controlplane.scheduler`)
+* **`AmcReminderScheduler.java`**: Runs daily at 2:00 AM. Scans for subscriptions expiring in exactly 30, 7, and 1 days to dispatch email alerts, and transitions expired contracts to `EXPIRED` status and their associated tenant instances to `SUSPENDED`.
+
+#### Controller Package (`com.pgcrm.controlplane.controller`)
+* **`PublicCheckoutController.java`**: Handles registration order initiation and webhook payment capture reconciliation for new setups.
+* **`BillingController.java`**: Handles subscription status checks, AMC renewal order initiation, and webhook signature verification for renewals.
+* **`AdminDashboardController.java`**: Serves registration analytics, tenant list statuses, and manual instance controls to administrators.
+
+#### Entity Package (`com.pgcrm.controlplane.entity`)
+* **`Client.java`**: Models B2B client contact details, brand names, and active configurations.
+* **`TenantInstance.java`**: Maps isolated tenant subdomains, allocated host port bindings, VPS target IP coordinates, and statuses (`PROVISIONING`, `ACTIVE`, `SUSPENDED`, `DELETED`).
+* **`Subscription.java`**: Tracks setup fee payments, start/expiry dates, and subscription license states (`ACTIVE`, `EXPIRED`, etc.).
+
+#### Repository Package (`com.pgcrm.controlplane.repository`)
+* **`ClientRepository.java`**, `TenantInstanceRepository.java`, `SubscriptionRepository.java`: Database access abstraction layer for central tables.
+
+#### Service Package (`com.pgcrm.controlplane.service`)
+* **`ProvisioningService.java`**: The core automation provisioning engine. Spawns an asynchronous task (`@Async`) that reserves a unique port, updates tenant status to `PROVISIONING`, executes the `scripts/provision_tenant.sh` script using Java `ProcessBuilder`, streams logs to control plane consoles, waits with a timeout of 5 minutes, and sets status to `ACTIVE` upon exit code `0`.
+* **`CheckoutServiceImpl.java`**: Handles creation of setup transactions and verifies Razorpay webhook HMAC signatures.
+* **`BillingServiceImpl.java`**: Manages AMC renewal checkout orders and updates expiration timelines (+1 Year) upon verified payment.
+* **`EmailService.java`**: Integrates SMTP templates to deliver invoice notifications, AMC renewal warnings, and account suspension alerts.
+
+---
+
+### 5.2 Frontend Admin & Portal Registries (`master-control-plane/frontend`)
+
+The frontend application uses React 18, Vite, and Tailwind CSS to serve both platform administrators and client billing portals.
+
+#### Page Components (`src/pages`)
+* **`LandingPage.jsx`**: The public marketing page. Displays value propositions (database isolation moats, billing automation), interactive pricing cards for the Hybrid Asset model (₹15,000 one-time setup + ₹35,000 AMC), and calls-to-action routing to onboarding.
+* **`BillingDashboard.jsx`**: Self-service billing portal for client PG owners. Visualizes their subscription license status, expiry dates, transaction history, and handles AMC payments.
+* **`Dashboard.jsx`**: Administrator viewport for tracking active tenants, provisioning ticket statuses, and payment records.
+
+#### UI Components (`src/components`)
+* **`AmcStatusCard.jsx`**: Component mounted inside the billing dashboard. Displays license state badges (Green/Yellow/Red) and a primary call-to-action ("Renew Subscription") which integrates the Razorpay checkout overlay.
 
 ---
 

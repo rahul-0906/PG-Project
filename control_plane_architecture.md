@@ -105,32 +105,45 @@ CREATE INDEX idx_onboarding_status ON onboarding_tickets(status);
 
 ## 3. Automated Onboarding & Provisioning Flow
 
-The onboarding sequence from signup to setup is structured as follows:
+The onboarding sequence from the public marketing funnel through payment capture reconciliation to local deployment is structured as follows:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Owner as PG Owner
-    participant Web as Marketing Website
+    actor Owner as B2B PG Owner
+    participant Landing as LandingPage.jsx (/)
+    participant SignupForm as Signup Form (/signup)
     participant CP as Control Plane Backend
     participant RZP as Razorpay Gateway
-    participant Prov as Auto Provisioning Service
+    participant Script as provision_tenant.sh
+    participant TenantStack as Tenant Docker Stack
 
-    Owner->>Web: Register Account Info (subdomain, email, company name)
-    Web->>CP: POST /api/onboarding/signup (register tenant details)
-    CP-->>Web: Return Registration ID & Razorpay Order
-    Web->>RZP: Invoke Razorpay Checkout (INR 5,000 Setup Fee)
-    RZP-->>Owner: Complete Payment Authorization
-    RZP->>Web: Return Razorpay Payment Signature
-    Web->>CP: POST /api/onboarding/verify (payment metadata)
-    CP->>CP: Validate Razorpay Signature & Persist Transaction
-    CP->>CP: Create Tenant & generate Onboarding Ticket (PENDING)
-    CP->>Prov: Async Event: Trigger Instance Provisioning
-    Prov->>Prov: Execute Ansible / Terraform Provisioning scripts
-    Note over Prov: Create Tenant DB, run flyway migrations, deploy backend jar
-    Prov-->>CP: Provisioning Success Callback
-    CP->>CP: Mark Onboarding Ticket as COMPLETED & Tenant as ACTIVE
-    CP-->>Owner: Dispatch welcome email with temp password credentials
+    Owner->>Landing: Visits portal landing page
+    Owner->>Landing: Clicks "Start Your Onboarding" / "Purchase & Provision"
+    Landing->>SignupForm: Routes to /signup
+    Owner->>SignupForm: Fills onboarding details (domain, owner name, email, brand)
+    SignupForm->>CP: POST /api/public/checkout/initiate-order
+    Note over CP: Validates subdomain availability & creates Client/TenantInstance stubs
+    CP->>RZP: Creates Razorpay Order (₹15,000 Setup Fee)
+    RZP-->>CP: Returns Order ID
+    CP-->>SignupForm: Returns registration ID & Razorpay Order details
+    SignupForm->>Owner: Renders Razorpay Checkout modal
+    Owner->>RZP: Authorizes Payment (UPI/Card/NetBanking)
+    RZP-->>Owner: Payment Authorized
+    RZP->>CP: Webhook Callback POST /api/public/checkout/webhook/reconcile
+    Note over CP: 1. Verifies HMAC-SHA256 signature<br/>2. Transition transaction to SUCCESS<br/>3. Sets TenantInstance status to PROVISIONING
+    CP->>CP: Trigger Async Provisioning via ProvisioningService
+    rect rgb(30, 41, 59)
+        Note over CP: Invokes ProcessBuilder to run provision_tenant.sh
+        CP->>Script: Execute bash scripts/provision_tenant.sh [domain] [password] [port] [email]
+        Script->>Script: 1. Sanitizes database name (pgcrm_subdomain)<br/>2. Creates isolated DB via psql
+        Script->>Script: 3. Creates directories under /opt/pgcrm/[domain]/deploy<br/>4. Generates unique JWT secret key
+        Script->>Script: 5. Outputs custom .env configuration file<br/>6. Copies docker-compose.prod.yml template
+        Script->>TenantStack: Runs docker compose up -d
+        Script-->>CP: Returns Exit Code 0 (Success)
+    end
+    CP->>CP: 1. Update TenantInstance status to ACTIVE<br/>2. Initialize 1-year Subscription (AMC)
+    CP-->>Owner: Sends onboarding email with temporary password credentials
 ```
 
 ---
