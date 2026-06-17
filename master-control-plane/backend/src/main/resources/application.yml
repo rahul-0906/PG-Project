@@ -1,0 +1,24 @@
+server:
+  port: 8090
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/controlplane_db
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+razorpay:
+  key:
+    id: rzp_test_mockKeyId12345
+    secret: mockSecret
+  webhook:
+    secret: mockWebhookSecret
+
+onboarding:
+  setup-fee-inr: 15000

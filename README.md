@@ -61,12 +61,13 @@ The workspace is organized as follows:
 │   ├── CALCULATIONS_ENGINE.md      # Billing Formulas and Logic Reference
 │   ├── FILE_ARCHITECTURE.md        # File Registry & Module Registry Reference
 │   ├── ONBOARDING.md               # DevOps Tenant Onboarding Procedures
-│   └── WORKFLOWS.md                # System Sequence Diagrams & State Transitions
+│   ├── WORKFLOWS.md                # System Sequence Diagrams & State Transitions
+│   ├── control_plane_architecture.md # SaaS Central Control Plane Architecture Design
+│   └── sop.md                      # Unified Technical Reference & DevOps SOP
 ├── scripts/                        # Operational and Tenant Automation Scripts
 │   └── provision_tenant.sh         # Bash script executing automated dockerized stack creation
 ├── .env.example                    # Template Environment File
 ├── docker-compose.yml              # Local Development Shared Containers config (PostgreSQL)
-├── sop.md                          # Unified Technical Reference & DevOps SOP
 ├── start_control.bat               # Windows launcher for CONTROL-PLANE services
 └── start_core.bat                  # Windows launcher for PG-CORE services
 ```
@@ -128,6 +129,6 @@ npm run dev
 ## 5. Deployment & Documentation Index
 
 For exhaustive execution SOPs, mathematical formulas, and lifecycle details, consult the following references:
-* **Local Development & Deployment SOP**: [sop.md](file:///E:/Antigravity%20Project/PG%20Project/sop.md)
+* **Local Development & Deployment SOP**: [sop.md](file:///E:/Antigravity%20Project/PG%20Project/docs/sop.md)
 * **SaaS Tenant Lifecycle & System Topology**: [docs/ARCHITECTURE.md](file:///E:/Antigravity%20Project/PG%20Project/docs/ARCHITECTURE.md)
 * **Mathematical Calculation Models**: [docs/CALCULATIONS_ENGINE.md](file:///E:/Antigravity%20Project/PG%20Project/docs/CALCULATIONS_ENGINE.md)
