@@ -2,6 +2,7 @@ package com.pgcrm.controlplane.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pgcrm.controlplane.dto.AmcStatusResponse;
 import com.pgcrm.controlplane.dto.RazorpayOrderResponse;
 import com.pgcrm.controlplane.entity.LicenseState;
 import com.pgcrm.controlplane.entity.Subscription;
@@ -181,5 +182,34 @@ public class BillingServiceImpl implements BillingService {
             log.error("HMAC signature calculation failed: {}", e.getMessage());
             return false;
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AmcStatusResponse getAmcStatus(UUID tenantInstanceId) {
+        TenantInstance tenant = tenantInstanceRepository.findById(tenantInstanceId)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant instance not found for ID: " + tenantInstanceId));
+        return mapToAmcStatusResponse(tenant);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AmcStatusResponse getAmcStatusByDomain(String domainName) {
+        TenantInstance tenant = tenantInstanceRepository.findByDomainName(domainName)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant instance not found for domain: " + domainName));
+        return mapToAmcStatusResponse(tenant);
+    }
+
+    private AmcStatusResponse mapToAmcStatusResponse(TenantInstance tenant) {
+        Subscription sub = tenant.getSubscription();
+        return AmcStatusResponse.builder()
+                .tenantInstanceId(tenant.getId())
+                .pgBrandName(tenant.getClient().getPgBrandName())
+                .domainName(tenant.getDomainName())
+                .ownerName(tenant.getClient().getOwnerName())
+                .clientEmail(tenant.getClient().getEmail())
+                .amcExpiryDate(sub != null ? sub.getAmcExpiryDate() : null)
+                .licenseState(sub != null ? sub.getLicenseState().name() : "INACTIVE")
+                .build();
     }
 }

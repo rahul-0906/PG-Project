@@ -6,6 +6,7 @@ import SuccessPage from './pages/SuccessPage';
 import AdminLayout from './components/AdminLayout';
 import AdminDashboard from './pages/AdminDashboard';
 import ClientRoster from './pages/ClientRoster';
+import BillingDashboard from './pages/BillingDashboard';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/signup" element={<OnboardingForm />} />
         <Route path="/success" element={<SuccessPage />} />
+        <Route path="/billing" element={<BillingDashboard />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
           <Route path="clients" element={<ClientRoster />} />

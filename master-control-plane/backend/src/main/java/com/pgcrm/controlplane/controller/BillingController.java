@@ -1,7 +1,9 @@
 package com.pgcrm.controlplane.controller;
 
 import com.pgcrm.controlplane.dto.AmcRenewalRequest;
+import com.pgcrm.controlplane.dto.AmcStatusResponse;
 import com.pgcrm.controlplane.dto.RazorpayOrderResponse;
+import java.util.UUID;
 import com.pgcrm.controlplane.service.BillingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,5 +32,17 @@ public class BillingController {
         log.info("Webhook received to verify AMC payment signature: {}", signature);
         billingService.verifyAmcWebhook(payload, signature);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/status/{tenantInstanceId}")
+    public ResponseEntity<AmcStatusResponse> getStatus(@PathVariable UUID tenantInstanceId) {
+        log.info("REST request to fetch AMC status for tenant instance: {}", tenantInstanceId);
+        return ResponseEntity.ok(billingService.getAmcStatus(tenantInstanceId));
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<AmcStatusResponse> getStatusByDomain(@RequestParam String domainName) {
+        log.info("REST request to fetch AMC status for domain: {}", domainName);
+        return ResponseEntity.ok(billingService.getAmcStatusByDomain(domainName));
     }
 }
