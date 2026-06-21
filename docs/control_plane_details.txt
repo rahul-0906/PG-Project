@@ -1,0 +1,73 @@
+========================================================================
+             PG CRM - SaaS CONTROL PLANE REFERENCE GUIDE
+========================================================================
+
+1. WHAT IS THE CONTROL PLANE?
+-----------------------------
+The SaaS Control Plane (located under /master-control-plane/) is the 
+centralized administrative application and orchestration engine for the 
+PG CRM ecosystem. It operates as a multi-tenant platform managed by 
+the system owner (the software provider) rather than the individual 
+property managers.
+
+While individual single-tenant PG-CORE instances handle daily building 
+operations (check-ins, local rent calculations, meal rosters, and 
+room allocations), the Control Plane acts as the central command center 
+governing the subscription lifecycle of those tenant instances.
+
+Port Mappings:
+- Backend Engine: Port 8090 (Spring Boot 3.2.5 REST API)
+- Admin & Portal Frontend: Port 5176 (React 18 / Vite / Tailwind)
+
+
+2. WHY WAS IT BUILT?
+--------------------
+The Control Plane was designed and implemented to solve three core 
+B2B SaaS challenges:
+
+A. Physical Data Isolation & Tenancy Boundaries:
+   To ensure maximum security and database performance, each hostel brand 
+   runs on an isolated single-tenant database instance (pgcrm_tenantname). 
+   The Control Plane was built to manage this multi-instance architecture 
+   from a single, unified database schema (controlplane_db), tracking 
+   which client maps to which subdomain, VPS port, and container stack.
+
+B. Hand-off Billing & Instant Provisioning:
+   Manually setting up databases, directories, configuration files, and 
+   Docker stacks for every new customer is slow and error-prone. 
+   The Control Plane automates the entire flow:
+   - Captures public B2B registrations via the public LandingPage.jsx funnel.
+   - Registers a PENDING tenant stub and hooks into the Razorpay checkout.
+   - Listens to Razorpay payment callbacks via cryptographically verified 
+     HMAC-SHA256 signature webhooks.
+   - Spawns an asynchronous Java ProcessBuilder that runs a bash script 
+     (scripts/provision_tenant.sh) to allocate a port, create the 
+     PostgreSQL database, generate secrets, and launch a dedicated 
+     Docker Compose stack on the host VPS.
+
+C. Licensing Enforcement & Lifecycle Automation (AMC):
+   The platform operates on a Hybrid Asset Model (₹15,000 Setup Fee + 
+   ₹35,000 Annual Maintenance Contract). The Control Plane handles:
+   - Automated Expiry Checks: A daily cron engine scans for subscriptions 
+     expiring in exactly 30, 7, and 1 days to dispatch email alerts.
+   - Hard Suspensions: If a client fails to pay their annual renewal fee, 
+     the scheduler suspends the tenant instance status, locking the portal.
+   - Self-Service Renewals: Clients can access their billing portal to pay 
+     their annual fee via Razorpay, extending their lease by +1 year and 
+     automatically restoring access.
+
+
+3. KEY ARCHITECTURAL COMPONENTS
+-------------------------------
+- PublicCheckoutController.java: Initiates registrations and accepts verified 
+  checkout webhooks.
+- ProvisioningService.java: Coordinates ProcessBuilder and manages port 
+  allocations and status tracking.
+- provision_tenant.sh: Bash script orchestrating PG database creations, 
+  deploy folder structures (/opt/pgcrm/domain/deploy/), and docker stack runs.
+- AmcReminderScheduler.java: Scheduled daily runner enforcing expiration alerts 
+  and tenant suspensions.
+- BillingDashboard.jsx & AmcStatusCard.jsx: Self-service billing views for 
+  clients to track lease dates and execute renewals.
+- LandingPage.jsx: Public B2B SaaS landing page driving user acquisition.
+========================================================================
