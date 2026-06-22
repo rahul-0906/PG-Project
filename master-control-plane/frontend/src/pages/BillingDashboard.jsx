@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Globe, User, Mail, AlertTriangle, CheckCircle, Loader2, Sparkles } from 'lucide-react';
+import { Search, Globe, User, Mail, AlertTriangle, CheckCircle, Loader2, Sparkles, ArrowRight } from 'lucide-react';
 import AmcStatusCard from '../components/AmcStatusCard';
 
 export default function BillingDashboard() {
@@ -95,7 +95,7 @@ export default function BillingDashboard() {
           tenantInstanceId: amcData.tenantInstanceId,
         },
         theme: {
-          color: '#4f46e5', // Indigo-600
+          color: '#000000', // Black branding
         },
         handler: async function (response) {
           // Reconcile signature and complete renewal
@@ -153,74 +153,81 @@ export default function BillingDashboard() {
   };
 
   return (
-    <div className="bg-[#0b0f19] text-white min-h-screen font-sans py-12 px-6 flex items-center justify-center relative overflow-hidden">
-      {/* Dynamic backdrop glows */}
-      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-indigo-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
+    <div className="bg-[#fafaf9] text-[#141414] min-h-screen font-sans py-16 px-6 flex items-center justify-center relative overflow-hidden">
+      {/* Decorative light grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:16px_28px] pointer-events-none" />
 
-      <div className="max-w-3xl w-full relative z-10 space-y-8">
+      <div className="max-w-3xl w-full relative z-10 space-y-10">
         
         {/* Header */}
-        <div className="text-center space-y-3">
-          <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 inline-flex items-center space-x-1.5 uppercase tracking-wide">
+        <div className="text-center space-y-4">
+          <span className="px-3.5 py-1.5 rounded-full text-xs font-black bg-black text-white inline-flex items-center space-x-1.5 uppercase tracking-widest">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Billing Command Center</span>
           </span>
-          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-white via-gray-100 to-gray-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-black">
             Client Billing Portal
           </h1>
-          <p className="text-gray-400 text-sm max-w-md mx-auto">
+          <p className="text-neutral-500 text-sm md:text-base max-w-md mx-auto font-medium">
             Manage your annual maintenance subscription contracts and process secure online renewals.
           </p>
         </div>
 
         {/* Subdomain search card */}
-        <div className="bg-[#12182b] border border-gray-800 rounded-3xl p-6 shadow-xl">
+        <div className="bg-white border-2 border-black rounded-3xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1 rounded-xl bg-[#080c16] border border-gray-800 hover:border-gray-700 focus-within:border-indigo-500 transition-colors overflow-hidden">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-5 h-5" />
+            <div className="relative flex-1 rounded-full bg-neutral-50 border-2 border-neutral-300 hover:border-black focus-within:border-black transition-colors overflow-hidden">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 w-5 h-5" />
               <input
                 type="text"
                 value={domainSearch}
                 onChange={(e) => setDomainSearch(e.target.value)}
-                className="w-full bg-transparent pl-12 pr-4 py-4 text-white placeholder-gray-600 transition-colors focus:outline-none"
-                placeholder="Enter subdomain prefix (e.g. stanza-living)"
+                className="w-full bg-transparent pl-12 pr-28 py-4 text-black font-bold placeholder-neutral-400 focus:outline-none text-base"
+                placeholder="Enter subdomain prefix"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold pointer-events-none">
+              <span className="absolute right-5 top-1/2 -translate-y-1/2 text-neutral-400 text-sm font-black uppercase tracking-wider pointer-events-none">
                 .pgcrm.com
               </span>
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="py-4 px-8 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+              className="group relative inline-flex items-center justify-between border-2 border-black rounded-full px-8 py-4 bg-black text-white hover:bg-transparent hover:text-black transition-all duration-300 font-bold uppercase tracking-wider text-sm disabled:opacity-50"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Searching...</span>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <span>Searching</span>
                 </>
               ) : (
-                <span>Fetch Status</span>
+                <>
+                  <span className="mr-3">Fetch Status</span>
+                  <div className="w-5 h-5 rounded-full bg-white group-hover:bg-black flex items-center justify-center transition-all duration-300 shrink-0">
+                    <ArrowRight className="w-3 h-3 text-black group-hover:text-white" />
+                  </div>
+                </>
               )}
             </button>
           </form>
 
           {searchError && (
-            <p className="text-red-500 text-xs mt-3 pl-1">{searchError}</p>
+            <p className="text-red-600 text-xs font-bold uppercase tracking-wide mt-3 pl-2 flex items-center space-x-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-600 inline-block mr-1" />
+              <span>{searchError}</span>
+            </p>
           )}
         </div>
 
         {/* Alerts and errors feedback */}
         {errorMessage && (
-          <div className="p-4 rounded-2xl border border-red-500/20 bg-red-500/5 text-red-400 text-sm flex items-start space-x-3 shadow-lg">
+          <div className="p-5 rounded-3xl border-2 border-red-200 bg-red-50 text-red-700 text-sm font-bold flex items-start space-x-3 shadow-sm">
             <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-sm flex items-start space-x-3 shadow-lg">
+          <div className="p-5 rounded-3xl border-2 border-emerald-250 bg-emerald-50 text-emerald-800 text-sm font-bold flex items-start space-x-3 shadow-sm">
             <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
             <span>{successMessage}</span>
           </div>
@@ -236,19 +243,27 @@ export default function BillingDashboard() {
             />
 
             {/* Tenant details */}
-            <div className="bg-[#12182b]/60 border border-gray-800/80 rounded-3xl p-6 space-y-4">
-              <h3 className="text-gray-300 font-bold text-sm border-b border-gray-800 pb-2">Client Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <User className="w-4 h-4 text-indigo-400 shrink-0" />
+            <div className="bg-white border-2 border-black rounded-3xl p-6 md:p-8 space-y-4 shadow-sm">
+              <h3 className="text-black font-black uppercase tracking-widest text-xs border-b border-neutral-100 pb-3">
+                Client Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm font-bold">
+                <div className="flex items-center space-x-3 text-neutral-600">
+                  <div className="w-8 h-8 rounded-full border border-neutral-200 flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-black" />
+                  </div>
                   <span>{amcData.ownerName}</span>
                 </div>
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <Mail className="w-4 h-4 text-indigo-400 shrink-0" />
+                <div className="flex items-center space-x-3 text-neutral-600">
+                  <div className="w-8 h-8 rounded-full border border-neutral-200 flex items-center justify-center shrink-0">
+                    <Mail className="w-4 h-4 text-black" />
+                  </div>
                   <span className="truncate">{amcData.clientEmail}</span>
                 </div>
-                <div className="flex items-center space-x-3 text-gray-400">
-                  <Globe className="w-4 h-4 text-indigo-400 shrink-0" />
+                <div className="flex items-center space-x-3 text-neutral-600">
+                  <div className="w-8 h-8 rounded-full border border-neutral-200 flex items-center justify-center shrink-0">
+                    <Globe className="w-4 h-4 text-black" />
+                  </div>
                   <span>{amcData.domainName}.pgcrm.com</span>
                 </div>
               </div>
@@ -260,3 +275,4 @@ export default function BillingDashboard() {
     </div>
   );
 }
+
