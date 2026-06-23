@@ -30,6 +30,7 @@ if exist "%ROOT_DIR%.env" (
                     if "!val:~0,1!" == """" set "val=!val:~1,-1!"
                     if "!val:~0,1!" == "'" set "val=!val:~1,-1!"
                     set "!key!=!val!"
+                    echo   - Loaded: !key!=!val!
                 )
             )
         )
@@ -43,7 +44,7 @@ set SPRING_PROFILES_ACTIVE=dev
 
 echo.
 echo Starting PG CORE Backend (Port 8080) in a separate window...
-start "PG CORE Backend" cmd /k "cd /d %ROOT_DIR%core-pg-crm\backend && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run"
+start "PG CORE Backend" cmd /k "cd /d %ROOT_DIR%core-pg-crm\backend && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-DDB_WIPE_ON_STARTUP=%DB_WIPE_ON_STARTUP%\""
 
 echo Starting PG CORE Frontend (Port 5173) in a separate window...
 start "PG CORE Frontend" cmd /k "cd /d %ROOT_DIR%core-pg-crm\frontend && npm run dev"
