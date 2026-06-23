@@ -43,6 +43,18 @@ public class TenantInstance {
     @Column(name = "razorpay_order_id", unique = true)
     private String razorpayOrderId;
 
+    @Column(name = "whatsapp_token")
+    private String whatsappToken;
+
+    @Column(name = "razorpay_key_id")
+    private String razorpayKeyId;
+
+    @Column(name = "razorpay_key_secret")
+    private String razorpayKeySecret;
+
+    @Column(name = "primary_color")
+    private String primaryColor;
+
     @OneToOne(mappedBy = "tenantInstance", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Subscription subscription;
 

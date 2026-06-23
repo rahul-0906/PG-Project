@@ -35,5 +35,9 @@ public class ClientDetailResponse {
         private LocalDate amcExpiryDate;
         private String licenseState;
         private Boolean setupFeePaid;
+        private String whatsappToken;
+        private String razorpayKeyId;
+        private String razorpayKeySecret;
+        private String primaryColor;
     }
 }

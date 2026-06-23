@@ -64,3 +64,9 @@ apache-maven-*/
 *.db
 *.h2.mv.db
 *.h2.trace.db
+
+# ── Tenants (Local Provisioned Instances) ────────────────
+tenants/
+
+# ── Mockup designs ────────────────────────────────────────
+PG UI.png

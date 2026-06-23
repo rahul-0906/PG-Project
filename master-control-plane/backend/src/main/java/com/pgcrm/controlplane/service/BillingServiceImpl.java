@@ -202,6 +202,27 @@ public class BillingServiceImpl implements BillingService {
 
     private AmcStatusResponse mapToAmcStatusResponse(TenantInstance tenant) {
         Subscription sub = tenant.getSubscription();
+        java.util.List<AmcStatusResponse.PaymentHistoryItem> history = new java.util.ArrayList<>();
+        if (sub != null) {
+            // Setup fee payment
+            history.add(AmcStatusResponse.PaymentHistoryItem.builder()
+                    .date(sub.getAmcStartDate().toString())
+                    .amount("₹15,000")
+                    .description("Setup & 1st Year AMC")
+                    .build());
+            
+            // For subsequent years (if any)
+            LocalDate current = sub.getAmcStartDate().plusYears(1);
+            while (current.isBefore(sub.getAmcExpiryDate())) {
+                history.add(0, AmcStatusResponse.PaymentHistoryItem.builder()
+                        .date(current.toString())
+                        .amount("₹35,000")
+                        .description("Annual Maintenance Contract (AMC) Renewal")
+                        .build());
+                current = current.plusYears(1);
+            }
+        }
+
         return AmcStatusResponse.builder()
                 .tenantInstanceId(tenant.getId())
                 .pgBrandName(tenant.getClient().getPgBrandName())
@@ -210,6 +231,7 @@ public class BillingServiceImpl implements BillingService {
                 .clientEmail(tenant.getClient().getEmail())
                 .amcExpiryDate(sub != null ? sub.getAmcExpiryDate() : null)
                 .licenseState(sub != null ? sub.getLicenseState().name() : "INACTIVE")
+                .paymentHistory(history)
                 .build();
     }
 }

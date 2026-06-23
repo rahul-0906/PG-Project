@@ -73,6 +73,10 @@ public class CheckoutServiceImpl implements CheckoutService {
                 .client(client)
                 .domainName(request.getDomainName())
                 .status(TenantStatus.PROVISIONING)
+                .whatsappToken(request.getWhatsappToken())
+                .razorpayKeyId(request.getRazorpayKeyId())
+                .razorpayKeySecret(request.getRazorpayKeySecret())
+                .primaryColor(request.getPrimaryColor())
                 .build();
 
         // Save first to generate UUID reference
@@ -142,7 +146,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 subscriptionRepository.save(subscription);
 
                 log.info("Successfully provisioned subscription for tenant: {}. Initiating asynchronous VM deployment...", tenant.getDomainName());
-                provisioningService.provisionNewTenant(tenant);
+                provisioningService.provisionNewTenant(tenant.getId());
             }
         } catch (Exception e) {
             log.error("Error occurred while reconciling webhook: ", e);

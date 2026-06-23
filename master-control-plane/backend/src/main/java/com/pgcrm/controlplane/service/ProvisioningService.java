@@ -27,7 +27,9 @@ public class ProvisioningService {
      */
     @Async
     @Transactional
-    public void provisionNewTenant(TenantInstance tenant) {
+    public void provisionNewTenant(UUID tenantId) {
+        TenantInstance tenant = tenantInstanceRepository.findById(tenantId)
+                .orElseThrow(() -> new IllegalArgumentException("Tenant instance not found: " + tenantId));
         log.info("Starting automated provisioning process for tenant: {}", tenant.getDomainName());
 
         try {
@@ -52,6 +54,11 @@ public class ProvisioningService {
             
             log.info("Current user.dir: {}, Calculated projectRoot: {}", userDir.getAbsolutePath(), projectRoot.getAbsolutePath());
 
+            String whatsappToken = tenant.getWhatsappToken() != null ? tenant.getWhatsappToken() : "";
+            String razorpayKeyId = tenant.getRazorpayKeyId() != null ? tenant.getRazorpayKeyId() : "";
+            String razorpayKeySecret = tenant.getRazorpayKeySecret() != null ? tenant.getRazorpayKeySecret() : "";
+            String primaryColor = tenant.getPrimaryColor() != null ? tenant.getPrimaryColor() : "";
+
             // Execute using bash (standard on Linux hosts, and supported in Windows Git Bash/WSL sandbox environments)
             ProcessBuilder pb = new ProcessBuilder(
                     "bash", 
@@ -59,13 +66,17 @@ public class ProvisioningService {
                     tenant.getDomainName(), 
                     dbPassword, 
                     String.valueOf(port), 
-                    tenant.getClient().getEmail()
+                    tenant.getClient().getEmail(),
+                    whatsappToken,
+                    razorpayKeyId,
+                    razorpayKeySecret,
+                    primaryColor
             );
             pb.directory(projectRoot);
             pb.redirectErrorStream(true);
 
-            log.info("Executing provisioning command: bash scripts/provision_tenant.sh {} [PASSWORD] {} {}", 
-                    tenant.getDomainName(), port, tenant.getClient().getEmail());
+            log.info("Executing provisioning command: bash scripts/provision_tenant.sh {} [PASSWORD] {} {} {} {} [RP_SECRET] {}", 
+                    tenant.getDomainName(), port, tenant.getClient().getEmail(), whatsappToken, razorpayKeyId, primaryColor);
 
             Process process = pb.start();
 

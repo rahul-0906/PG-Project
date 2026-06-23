@@ -20,4 +20,15 @@ public class AmcStatusResponse {
     private String clientEmail;
     private LocalDate amcExpiryDate;
     private String licenseState;
+    private java.util.List<PaymentHistoryItem> paymentHistory;
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class PaymentHistoryItem {
+        private String date;
+        private String amount;
+        private String description;
+    }
 }

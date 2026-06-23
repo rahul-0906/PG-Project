@@ -70,6 +70,10 @@ public class AdminDashboardServiceImpl implements AdminDashboardService {
                                         .amcExpiryDate(sub != null ? sub.getAmcExpiryDate() : null)
                                         .licenseState(sub != null ? sub.getLicenseState().name() : null)
                                         .setupFeePaid(sub != null && sub.getSetupFeePaid())
+                                        .whatsappToken(instance.getWhatsappToken())
+                                        .razorpayKeyId(instance.getRazorpayKeyId())
+                                        .razorpayKeySecret(instance.getRazorpayKeySecret())
+                                        .primaryColor(instance.getPrimaryColor())
                                         .build();
                             })
                             .collect(Collectors.toList());

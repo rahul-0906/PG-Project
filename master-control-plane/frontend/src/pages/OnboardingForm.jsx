@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Loader2, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Loader2, Sparkles, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight, Settings2, Palette } from 'lucide-react';
+
+const PRESET_COLORS = [
+  { name: 'Indigo', hex: '#6366f1' },
+  { name: 'Blue', hex: '#3b82f6' },
+  { name: 'Emerald', hex: '#10b981' },
+  { name: 'Orange', hex: '#f97316' },
+  { name: 'Red', hex: '#ef4444' },
+  { name: 'Purple', hex: '#8b5cf6' },
+  { name: 'Charcoal', hex: '#1e293b' },
+];
 
 export default function OnboardingForm() {
   const navigate = useNavigate();
@@ -11,15 +21,19 @@ export default function OnboardingForm() {
     phone: '',
     pgBrandName: '',
     domainName: '',
+    whatsappToken: '',
+    razorpayKeyId: '',
+    razorpayKeySecret: '',
+    primaryColor: '#6366f1',
   });
 
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [step, setStep] = useState(1);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // For domainName, force lowercase and replace non-alphanumeric chars with hyphens
     if (name === 'domainName') {
       const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
       setFormData((prev) => ({ ...prev, [name]: sanitized }));
@@ -30,6 +44,10 @@ export default function OnboardingForm() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  const selectColor = (hex) => {
+    setFormData((prev) => ({ ...prev, primaryColor: hex }));
   };
 
   const validate = () => {
@@ -76,24 +94,25 @@ export default function OnboardingForm() {
     e.preventDefault();
     setErrorMessage('');
     
-    if (!validate()) return;
+    if (!validate()) {
+      setStep(1);
+      return;
+    }
 
+    setStep(3);
     setLoading(true);
     try {
-      // 1. Post registration details to backend
       const initiateResponse = await axios.post('/api/public/checkout/initiate-order', formData);
       const { orderId, amount, currency, keyId, clientEmail, clientPhone, pgBrandName } = initiateResponse.data;
 
-      // 2. Load Razorpay CDN Script
       const scriptLoaded = await loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Razorpay SDK failed to load. Please verify your connection.');
       }
 
-      // 3. Configure Razorpay Options
       const options = {
         key: keyId,
-        amount: amount * 100, // Rupee to Paise
+        amount: amount * 100,
         currency: currency,
         name: pgBrandName || 'PG CRM Control Plane',
         description: 'Single-Tenant Setup & 1-Year AMC Fee',
@@ -108,10 +127,9 @@ export default function OnboardingForm() {
           brandName: formData.pgBrandName,
         },
         theme: {
-          color: '#4f46e5', // Indigo-600
+          color: '#000000', // Set to Dinergy black for sandbox popup
         },
         handler: async function (response) {
-          // Reconcile signature and complete transaction
           try {
             setLoading(true);
             const webhookPayload = {
@@ -134,7 +152,6 @@ export default function OnboardingForm() {
               },
             });
 
-            // Navigate to Success page on successful reconciliation
             navigate('/success', {
               state: {
                 orderId: response.razorpay_order_id,
@@ -144,7 +161,7 @@ export default function OnboardingForm() {
               },
             });
           } catch (err) {
-            logError(err);
+            console.error('Checkout verification failed:', err);
             setErrorMessage('Payment succeeded, but automated VM configuration reconciliation failed. Please contact support.');
           } finally {
             setLoading(false);
@@ -153,157 +170,276 @@ export default function OnboardingForm() {
         modal: {
           ondismiss: function () {
             setLoading(false);
+            setStep(2);
             setErrorMessage('Payment checkout cancelled.');
           },
         },
       };
 
-      // 4. Open Razorpay payment portal
       const rzpInstance = new window.Razorpay(options);
       rzpInstance.open();
 
     } catch (err) {
-      logError(err);
+      console.error('Checkout request error:', err);
       if (err.response && err.response.status === 409) {
         setErrors((prev) => ({ ...prev, domainName: 'Subdomain is already registered.' }));
+        setStep(1);
       } else {
-        setErrorMessage(err.message || 'An unexpected error occurred. Please try again.');
+        setErrorMessage(err.response?.data?.message || err.message || 'An unexpected error occurred. Please try again.');
+        setStep(2);
       }
       setLoading(false);
     }
   };
 
-  const logError = (err) => {
-    console.error('Checkout error detail:', err);
-  };
-
   return (
-    <div className="bg-[#0b0f19] text-white min-h-screen font-sans selection:bg-indigo-500 py-12 px-6 flex items-center justify-center relative">
-      {/* Glow background */}
-      <div className="absolute top-10 left-10 w-96 h-96 bg-indigo-500/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-500/10 blur-[100px] rounded-full pointer-events-none" />
+    <div className="bg-[#fafaf9] text-[#141414] min-h-screen font-sans py-12 px-6 flex items-center justify-center relative overflow-hidden">
+      {/* Subtle grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:16px_28px] pointer-events-none" />
 
-      <div className="max-w-2xl w-full relative z-10">
+      <div className="max-w-4xl w-full relative z-10 space-y-6">
         <Link
           to="/"
-          className="inline-flex items-center space-x-2 text-gray-400 hover:text-white transition-colors mb-8 text-sm group"
+          className="group inline-flex items-center space-x-2 text-neutral-400 hover:text-black transition-colors font-bold uppercase tracking-wider text-xs"
         >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           <span>Back to Home</span>
         </Link>
 
-        <div className="bg-[#12182b] border border-gray-800 rounded-3xl p-8 md:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-white border-2 border-black rounded-3xl p-8 md:p-10 shadow-sm relative overflow-hidden">
           {/* Header */}
-          <div className="mb-8 relative pb-6 border-b border-gray-800">
-            <h1 className="text-3xl font-extrabold mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Deploy Your PG Instance
-            </h1>
-            <p className="text-gray-400 text-sm">
-              Complete details below to spin up your whitelabeled instance of PG CRM.
-            </p>
+          <div className="mb-8 pb-6 border-b-2 border-neutral-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-black uppercase tracking-tight text-black mb-1">
+                Deploy PG Instance
+              </h1>
+              <p className="text-neutral-550 text-xs font-semibold uppercase tracking-wider">
+                Spin up your whitelabeled instance of PG CRM.
+              </p>
+            </div>
+
+            {/* Step Wizard Progress Bar */}
+            <div className="flex items-center space-x-2 md:space-x-3 text-[10px] font-black uppercase tracking-wider shrink-0 bg-neutral-50 border border-neutral-200 p-2 rounded-2xl">
+              <span className={`px-2.5 py-1 rounded-lg transition-all ${step === 1 ? 'bg-black text-white' : 'text-neutral-400'}`}>
+                1. Basic Info
+              </span>
+              <span className="text-neutral-300">/</span>
+              <span className={`px-2.5 py-1 rounded-lg transition-all ${step === 2 ? 'bg-black text-white' : 'text-neutral-400'}`}>
+                2. Config
+              </span>
+              <span className="text-neutral-300">/</span>
+              <span className={`px-2.5 py-1 rounded-lg transition-all ${step === 3 ? 'bg-black text-white' : 'text-neutral-400'}`}>
+                3. Payment
+              </span>
+            </div>
           </div>
 
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-400 text-sm flex items-start space-x-3">
-              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="mb-6 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-750 text-xs font-bold flex items-start space-x-2.5 shadow-sm">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">Owner Name</label>
-                <input
-                  type="text"
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleChange}
-                  className={`w-full bg-[#080c16] border ${errors.ownerName ? 'border-red-500' : 'border-gray-800 hover:border-gray-700Focus'} focus:border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-gray-600 transition-colors focus:outline-none`}
-                  placeholder="E.g. Rahul Sharma"
-                />
-                {errors.ownerName && <p className="text-red-500 text-xs mt-1.5">{errors.ownerName}</p>}
+          <form onSubmit={handleSubmit} className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              
+              {/* Left Column: Basic Info & Subdomain */}
+              <div className={`space-y-5 transition-opacity ${step === 3 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                <div className="flex items-center space-x-2 border-b-2 border-black pb-2 mb-4">
+                  <span className="w-1.5 h-4 bg-black rounded" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-black">Basic Registration</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1.5 pl-1">Owner Name</label>
+                    <input
+                      type="text"
+                      name="ownerName"
+                      value={formData.ownerName}
+                      onChange={handleChange}
+                      onFocus={() => setStep(1)}
+                      className={`w-full bg-neutral-50 border-2 ${errors.ownerName ? 'border-red-500' : 'border-neutral-200 hover:border-black focus:border-black'} rounded-full px-5 py-3.5 text-black font-bold placeholder-neutral-400 focus:outline-none transition-colors text-xs`}
+                      placeholder="Rahul Sharma"
+                    />
+                    {errors.ownerName && <p className="text-red-600 text-[10px] font-bold uppercase mt-1 pl-1">{errors.ownerName}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1.5 pl-1">Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      onFocus={() => setStep(1)}
+                      className={`w-full bg-neutral-50 border-2 ${errors.email ? 'border-red-500' : 'border-neutral-200 hover:border-black focus:border-black'} rounded-full px-5 py-3.5 text-black font-bold placeholder-neutral-400 focus:outline-none transition-colors text-xs`}
+                      placeholder="rahul@example.com"
+                    />
+                    {errors.email && <p className="text-red-600 text-[10px] font-bold uppercase mt-1 pl-1">{errors.email}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1.5 pl-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      onFocus={() => setStep(1)}
+                      className={`w-full bg-neutral-50 border-2 ${errors.phone ? 'border-red-500' : 'border-neutral-200 hover:border-black focus:border-black'} rounded-full px-5 py-3.5 text-black font-bold placeholder-neutral-400 focus:outline-none transition-colors text-xs`}
+                      placeholder="+919876543210"
+                    />
+                    {errors.phone && <p className="text-red-600 text-[10px] font-bold uppercase mt-1 pl-1">{errors.phone}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1.5 pl-1">PG Brand Name</label>
+                    <input
+                      type="text"
+                      name="pgBrandName"
+                      value={formData.pgBrandName}
+                      onChange={handleChange}
+                      onFocus={() => setStep(1)}
+                      className={`w-full bg-neutral-50 border-2 ${errors.pgBrandName ? 'border-red-500' : 'border-neutral-200 hover:border-black focus:border-black'} rounded-full px-5 py-3.5 text-black font-bold placeholder-neutral-400 focus:outline-none transition-colors text-xs`}
+                      placeholder="Stanza Living"
+                    />
+                    {errors.pgBrandName && <p className="text-red-600 text-[10px] font-bold uppercase mt-1 pl-1">{errors.pgBrandName}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1.5 pl-1">Desired Subdomain</label>
+                  <div className="flex rounded-full bg-neutral-50 border-2 border-neutral-200 hover:border-black focus-within:border-black transition-colors overflow-hidden">
+                    <input
+                      type="text"
+                      name="domainName"
+                      value={formData.domainName}
+                      onChange={handleChange}
+                      onFocus={() => setStep(1)}
+                      className="bg-transparent flex-1 px-5 py-3.5 text-black font-bold placeholder-neutral-450 focus:outline-none text-xs"
+                      placeholder="my-awesome-pg"
+                    />
+                    <span className="bg-neutral-100 border-l-2 border-neutral-200 text-neutral-405 px-6 py-3.5 font-black uppercase tracking-wider flex items-center text-[10px]">
+                      .pgcrm.com
+                    </span>
+                  </div>
+                  {errors.domainName ? (
+                    <p className="text-red-650 text-[10px] font-bold uppercase mt-1 pl-1">{errors.domainName}</p>
+                  ) : (
+                    <p className="text-neutral-400 text-[9px] font-semibold uppercase tracking-wider mt-1 pl-1">
+                      Hosting address for your isolated single-tenant database frontend.
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`w-full bg-[#080c16] border ${errors.email ? 'border-red-500' : 'border-gray-800 hover:border-gray-700Focus'} focus:border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-gray-600 transition-colors focus:outline-none`}
-                  placeholder="rahul@example.com"
-                />
-                {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
+              {/* Right Column: Custom Configuration Panel */}
+              <div className={`bg-neutral-50 border-2 border-black rounded-3xl p-6 space-y-5 transition-opacity ${step === 3 ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                <div className="flex items-center space-x-2 border-b-2 border-black pb-2 mb-2">
+                  <span className="w-1.5 h-4 bg-black rounded" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-black flex items-center gap-1.5">
+                    <Settings2 className="w-4 h-4 text-black" />
+                    <span>Configuration Panel</span>
+                  </h3>
+                </div>
+
+                {/* WhatsApp Token */}
+                <div>
+                  <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1 pl-1">WhatsApp API Keys</label>
+                  <input
+                    type="password"
+                    name="whatsappToken"
+                    value={formData.whatsappToken}
+                    onChange={handleChange}
+                    onFocus={() => setStep(2)}
+                    className="w-full bg-white border border-neutral-200 hover:border-black focus:border-black rounded-full px-4 py-2.5 text-black font-semibold placeholder-neutral-400 focus:outline-none transition-colors text-xs"
+                    placeholder="whatsapp.api.token"
+                  />
+                  <p className="text-[8px] text-neutral-400 font-bold uppercase tracking-wide mt-1 pl-1">Optional. Injected into VM context variables.</p>
+                </div>
+
+                {/* Razorpay Keys */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1 pl-1">Razorpay Key ID</label>
+                    <input
+                      type="text"
+                      name="razorpayKeyId"
+                      value={formData.razorpayKeyId}
+                      onChange={handleChange}
+                      onFocus={() => setStep(2)}
+                      className="w-full bg-white border border-neutral-200 hover:border-black focus:border-black rounded-full px-4 py-2.5 text-black font-semibold placeholder-neutral-400 focus:outline-none transition-colors text-xs"
+                      placeholder="rzp_test_..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-black font-black uppercase tracking-widest text-[9px] mb-1 pl-1">Key Secret</label>
+                    <input
+                      type="password"
+                      name="razorpayKeySecret"
+                      value={formData.razorpayKeySecret}
+                      onChange={handleChange}
+                      onFocus={() => setStep(2)}
+                      className="w-full bg-white border border-neutral-200 hover:border-black focus:border-black rounded-full px-4 py-2.5 text-black font-semibold placeholder-neutral-400 focus:outline-none transition-colors text-xs"
+                      placeholder="••••••••••••••"
+                    />
+                  </div>
+                </div>
+
+                {/* Theme Color Picker */}
+                <div className="space-y-2">
+                  <label className="block text-black font-black uppercase tracking-widest text-[9px] pl-1 flex items-center gap-1">
+                    <span>Theme Color Picker</span>
+                  </label>
+                  
+                  {/* Presets layout */}
+                  <div className="flex flex-wrap gap-2.5 pl-1">
+                    {PRESET_COLORS.map((color) => {
+                      const isSelected = formData.primaryColor === color.hex;
+                      return (
+                        <button
+                          key={color.name}
+                          type="button"
+                          onClick={() => {
+                            setStep(2);
+                            selectColor(color.hex);
+                          }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition-transform relative ${isSelected ? 'scale-110 ring-2 ring-black ring-offset-1' : 'hover:scale-105'}`}
+                          style={{ backgroundColor: color.hex }}
+                          title={color.name}
+                        />
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Selected indicator */}
+                  <div className="flex items-center space-x-2 pl-1 pt-1">
+                    <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Active Brand Color:</span>
+                    <span className="w-4 h-4 rounded border border-neutral-200 inline-block" style={{ backgroundColor: formData.primaryColor }} />
+                    <span className="font-mono text-[10px] text-neutral-700 font-bold uppercase">{formData.primaryColor}</span>
+                  </div>
+                </div>
               </div>
+
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className={`w-full bg-[#080c16] border ${errors.phone ? 'border-red-500' : 'border-gray-800 hover:border-gray-700Focus'} focus:border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-gray-600 transition-colors focus:outline-none`}
-                  placeholder="E.g. +919876543210"
-                />
-                {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
+            {/* Pricing Details summary */}
+            <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200 space-y-2">
+              <div className="flex justify-between items-center text-xs font-bold">
+                <span className="text-neutral-500 uppercase tracking-wide">VM Instance Provisioning Setup Fee</span>
+                <span className="text-neutral-900 font-black text-sm">₹15,000</span>
               </div>
-
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">PG Brand Name</label>
-                <input
-                  type="text"
-                  name="pgBrandName"
-                  value={formData.pgBrandName}
-                  onChange={handleChange}
-                  className={`w-full bg-[#080c16] border ${errors.pgBrandName ? 'border-red-500' : 'border-gray-800 hover:border-gray-700Focus'} focus:border-indigo-500 rounded-xl px-4 py-3 text-white placeholder-gray-600 transition-colors focus:outline-none`}
-                  placeholder="E.g. Stanza Living, Zolo Stay"
-                />
-                {errors.pgBrandName && <p className="text-red-500 text-xs mt-1.5">{errors.pgBrandName}</p>}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">Desired Subdomain</label>
-              <div className="flex rounded-xl bg-[#080c16] border border-gray-800 hover:border-gray-700 focus-within:border-indigo-500 transition-colors overflow-hidden">
-                <input
-                  type="text"
-                  name="domainName"
-                  value={formData.domainName}
-                  onChange={handleChange}
-                  className="bg-transparent flex-1 px-4 py-3 text-white placeholder-gray-600 transition-colors focus:outline-none"
-                  placeholder="my-awesome-pg"
-                />
-                <span className="bg-[#181f37] border-l border-gray-800 text-gray-400 px-4 py-3 font-medium flex items-center">
-                  .pgcrm.com
+              <div className="flex justify-between items-center text-xs font-bold border-t border-neutral-100 pt-2">
+                <span className="text-neutral-500 uppercase tracking-wide flex items-center space-x-1">
+                  <span>1-Year Maintenance Upkeep</span>
+                  <Sparkles className="w-3 h-3 text-black" />
                 </span>
-              </div>
-              {errors.domainName ? (
-                <p className="text-red-500 text-xs mt-1.5">{errors.domainName}</p>
-              ) : (
-                <p className="text-gray-500 text-xs mt-1.5">
-                  Subdomain will host your single-tenant React frontend.
-                </p>
-              )}
-            </div>
-
-            {/* Pricing details indicator */}
-            <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-500/10 space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">VM Instance Setup Fee</span>
-                <span className="text-white font-semibold">₹15,000</span>
-              </div>
-              <div className="flex justify-between items-center text-sm border-t border-indigo-950/50 pt-2">
-                <span className="text-gray-400 flex items-center space-x-1">
-                  <span>1-Year Maintenance Contract</span>
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                </span>
-                <span className="text-emerald-400 font-bold uppercase text-xs">Included</span>
+                <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest">Included</span>
               </div>
             </div>
 
@@ -311,17 +447,19 @@ export default function OnboardingForm() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-lg transition-all duration-200 shadow-xl shadow-indigo-600/35 hover:shadow-indigo-600/50 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-indigo-600 disabled:hover:to-purple-600"
+              className="group relative inline-flex items-center justify-between border-2 border-black rounded-full px-8 py-4 bg-black text-white hover:bg-transparent hover:text-black transition-all duration-300 w-full"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  <span>Processing Checkout...</span>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <span>Processing Checkout Gateway...</span>
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="w-5 h-5" />
-                  <span>Pay with Razorpay</span>
+                  <span className="text-sm font-bold tracking-wider uppercase mr-6">Pay & Provision Setup Fee (₹15,000)</span>
+                  <div className="w-6 h-6 rounded-full bg-white group-hover:bg-black flex items-center justify-center transition-all duration-300 shrink-0">
+                    <ArrowRight className="w-3.5 h-3.5 text-black group-hover:text-white" />
+                  </div>
                 </>
               )}
             </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Database, Globe, RefreshCw, Plus, ShieldAlert, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Database, Globe, RefreshCw, Plus, Sparkles, Cpu } from 'lucide-react';
 
 export default function LandingPage() {
   const [typedText, setTypedText] = useState('');
@@ -88,51 +88,117 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-6 md:px-12 pt-28 pb-20 relative">
-        <div className="space-y-8">
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
-            <span className="text-xs font-black uppercase tracking-widest text-neutral-500">
-              Decoupled SaaS Infrastructure
-            </span>
+      <section className="max-w-6xl mx-auto px-6 md:px-12 pt-24 pb-20 relative">
+        {/* Decorative background grid */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808005_1px,transparent_1px),linear-gradient(to_bottom,#80808005_1px,transparent_1px)] bg-[size:16px_28px] pointer-events-none" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+          
+          {/* Hero Content */}
+          <div className="lg:col-span-7 space-y-8">
+            <div className="flex items-center space-x-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-650 animate-pulse animate-ping" />
+              <span className="text-xs font-black uppercase tracking-widest text-neutral-500">
+                Decoupled SaaS Infrastructure
+              </span>
+            </div>
+
+            {/* Typewriter phrase container */}
+            <div className="h-8 md:h-10 flex items-center">
+              <span className="text-md md:text-lg font-black tracking-widest text-red-650 bg-red-50 px-3 py-1.5 border border-red-200 rounded-lg">
+                {typedText}
+                <span className="typed-cursor font-bold">|</span>
+              </span>
+            </div>
+
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight leading-none text-black max-w-xl uppercase">
+              Automated Billing. <br />
+              Dedicated Isolation. <br />
+              <span className="text-neutral-400">100% Secure.</span>
+            </h1>
+
+            <p className="text-neutral-600 text-lg md:text-xl max-w-2xl leading-relaxed font-medium">
+              We deploy secure, white-labeled single-tenant property management platforms. 
+              Because isolated databases are structural assets that protect your customer and your back pocket.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-4">
+              <Link
+                to="/signup"
+                className="group relative inline-flex items-center justify-between border-2 border-black rounded-full px-8 py-4 bg-black text-white hover:bg-transparent hover:text-black transition-all duration-300 text-center"
+              >
+                <span className="text-lg font-bold tracking-wider uppercase mr-6">Start Your Onboarding</span>
+                <div className="w-8 h-8 rounded-full bg-white group-hover:bg-black flex items-center justify-center transition-all duration-300 shrink-0">
+                  <ArrowRight className="w-4 h-4 text-black group-hover:text-white" />
+                </div>
+              </Link>
+
+              <a
+                href="#pricing"
+                className="group relative inline-flex items-center justify-center border-2 border-neutral-300 rounded-full px-8 py-4 bg-transparent text-neutral-800 hover:border-black hover:text-black transition-all duration-300 text-center font-bold uppercase tracking-wider"
+              >
+                View Pricing
+              </a>
+            </div>
           </div>
 
-          {/* Typewriter phrase container */}
-          <div className="h-8 md:h-10 flex items-center">
-            <span className="text-md md:text-lg font-black tracking-widest text-red-600 bg-red-50 px-3 py-1.5 border border-red-200 rounded-lg">
-              {typedText}
-              <span className="typed-cursor font-bold">|</span>
-            </span>
-          </div>
-
-          <h1 className="text-5xl md:text-8xl font-black tracking-tight leading-none text-black max-w-5xl uppercase">
-            Enterprise PG Operations <br />
-            <span className="text-neutral-400">Fully Isolated.</span>
-          </h1>
-
-          <p className="text-neutral-600 text-lg md:text-2xl max-w-3xl leading-relaxed font-medium">
-            We deploy secure, white-labeled single-tenant property management platforms. 
-            Because isolated databases are structural assets that protect your customer and your back pocket.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-6">
-            <Link
-              to="/signup"
-              className="group relative inline-flex items-center justify-between border-2 border-black rounded-full px-8 py-4 bg-black text-white hover:bg-transparent hover:text-black transition-all duration-300 text-center"
-            >
-              <span className="text-lg font-bold tracking-wider uppercase mr-6">Start Your Onboarding</span>
-              <div className="w-8 h-8 rounded-full bg-white group-hover:bg-black flex items-center justify-center transition-all duration-300 shrink-0">
-                <ArrowRight className="w-4 h-4 text-black group-hover:text-white" />
+          {/* Database Nodes Illustration (Stark Minimalist Style) */}
+          <div className="lg:col-span-5 flex justify-center">
+            <div className="w-full max-w-[360px] bg-white border-2 border-black rounded-3xl p-6 shadow-sm relative overflow-hidden">
+              <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-6">
+                <span className="text-[10px] uppercase font-black tracking-widest text-neutral-900">VM Instance Routing</span>
+                <span className="px-2 py-0.5 rounded-full border border-black bg-neutral-50 text-[9px] font-black uppercase tracking-wider">Active</span>
               </div>
-            </Link>
 
-            <a
-              href="#pricing"
-              className="group relative inline-flex items-center justify-center border-2 border-neutral-300 rounded-full px-8 py-4 bg-transparent text-neutral-800 hover:border-black hover:text-black transition-all duration-300 text-center font-bold uppercase tracking-wider"
-            >
-              View Pricing
-            </a>
+              {/* Graphic container */}
+              <div className="space-y-6 relative py-2">
+                <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+                  <path d="M 50 20 L 170 90 M 50 90 L 170 90 M 50 160 L 170 90" stroke="#000000" strokeWidth="1.5" fill="none" strokeDasharray="3 3" />
+                </svg>
+
+                <div className="flex flex-col space-y-4 relative" style={{ zIndex: 1 }}>
+                  <div className="flex items-center space-x-3 bg-white border border-neutral-300 p-2.5 rounded-xl max-w-[170px]">
+                    <div className="w-6 h-6 rounded-full border border-black flex items-center justify-center shrink-0 bg-neutral-50">
+                      <Globe className="w-3.5 h-3.5 text-black" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-black">client-a.pgcrm.com</p>
+                      <p className="text-[8px] font-bold text-neutral-400 uppercase">PORT 8081</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 bg-white border border-neutral-300 p-2.5 rounded-xl max-w-[170px]">
+                    <div className="w-6 h-6 rounded-full border border-black flex items-center justify-center shrink-0 bg-neutral-50">
+                      <Globe className="w-3.5 h-3.5 text-black" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-black">client-b.pgcrm.com</p>
+                      <p className="text-[8px] font-bold text-neutral-400 uppercase">PORT 8082</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-3 bg-white border border-neutral-300 p-2.5 rounded-xl max-w-[170px]">
+                    <div className="w-6 h-6 rounded-full border border-black flex items-center justify-center shrink-0 bg-neutral-50">
+                      <Globe className="w-3.5 h-3.5 text-black" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-black">client-c.pgcrm.com</p>
+                      <p className="text-[8px] font-bold text-neutral-400 uppercase">PORT 8083</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 bg-white border-2 border-black p-4 rounded-2xl flex flex-col items-center justify-center w-28 text-center" style={{ zIndex: 1 }}>
+                  <div className="w-10 h-10 rounded-full border border-black bg-neutral-50 flex items-center justify-center mb-2">
+                    <Database className="w-5 h-5 text-black" />
+                  </div>
+                  <p className="text-[10px] font-black uppercase text-black tracking-wider">PG data</p>
+                  <p className="text-[8px] font-bold text-neutral-400 uppercase">Isolated DBs</p>
+                </div>
+              </div>
+            </div>
           </div>
+          
         </div>
       </section>
 
@@ -142,34 +208,43 @@ export default function LandingPage() {
         <div className="flex-1 h-[1px] bg-neutral-200" />
       </div>
 
-      {/* Features Grid: 3-Column Dinergy Border Outline Style */}
+      {/* Features Grid: 4-Column Dinergy Border Outline Style */}
       <section className="max-w-6xl mx-auto px-6 md:px-12 py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 border border-neutral-200 bg-white rounded-3xl divide-y md:divide-y-0 md:divide-x divide-neutral-200 overflow-hidden shadow-sm">
-          <div className="p-8 space-y-4 hover:bg-neutral-50/50 transition-colors">
-            <div className="w-12 h-12 rounded-full border border-black flex items-center justify-center text-black">
+        <div className="grid grid-cols-1 md:grid-cols-4 border border-neutral-200 bg-white rounded-3xl divide-y md:divide-y-0 md:divide-x divide-neutral-200 overflow-hidden shadow-sm">
+          <div className="p-6 space-y-4 hover:bg-neutral-50/50 transition-colors">
+            <div className="w-10 h-10 rounded-full border border-black flex items-center justify-center text-black bg-neutral-50">
               <Database className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold tracking-tight uppercase text-black">Database Isolation</h3>
-            <p className="text-neutral-500 text-sm leading-relaxed">
+            <h3 className="text-sm font-bold tracking-wider uppercase text-black">Database Isolation</h3>
+            <p className="text-neutral-500 text-xs leading-relaxed font-semibold">
               Full PostgreSQL datastore isolation per tenant. Eliminates cross-tenant data leaks and satisfies security compliance checks.
             </p>
           </div>
-          <div className="p-8 space-y-4 hover:bg-neutral-50/50 transition-colors">
-            <div className="w-12 h-12 rounded-full border border-black flex items-center justify-center text-black">
+          <div className="p-6 space-y-4 hover:bg-neutral-50/50 transition-colors">
+            <div className="w-10 h-10 rounded-full border border-black flex items-center justify-center text-black bg-neutral-50">
               <RefreshCw className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold tracking-tight uppercase text-black">Arrears Automation</h3>
-            <p className="text-neutral-500 text-sm leading-relaxed">
+            <h3 className="text-sm font-bold tracking-wider uppercase text-black">Arrears Automation</h3>
+            <p className="text-neutral-500 text-xs leading-relaxed font-semibold">
               Hands-free monthly rent generation, utility split algorithms, and automated daily email check-in reminders.
             </p>
           </div>
-          <div className="p-8 space-y-4 hover:bg-neutral-50/50 transition-colors">
-            <div className="w-12 h-12 rounded-full border border-black flex items-center justify-center text-black">
+          <div className="p-6 space-y-4 hover:bg-neutral-50/50 transition-colors">
+            <div className="w-10 h-10 rounded-full border border-black flex items-center justify-center text-black bg-neutral-50">
               <Globe className="w-5 h-5" />
             </div>
-            <h3 className="text-xl font-bold tracking-tight uppercase text-black">White-Label Portals</h3>
-            <p className="text-neutral-500 text-sm leading-relaxed">
+            <h3 className="text-sm font-bold tracking-wider uppercase text-black">White-Label Portals</h3>
+            <p className="text-neutral-500 text-xs leading-relaxed font-semibold">
               Run client environments under custom subdomains. Dynamically updates logos, brands, and theme color parameters at startup.
+            </p>
+          </div>
+          <div className="p-6 space-y-4 hover:bg-neutral-50/50 transition-colors">
+            <div className="w-10 h-10 rounded-full border border-black flex items-center justify-center text-black bg-neutral-50">
+              <Cpu className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-bold tracking-wider uppercase text-black">Resident Portal</h3>
+            <p className="text-neutral-500 text-xs leading-relaxed font-semibold">
+              Seamless central guest inbox system displaying checks, checkouts, and custom maintenance logs.
             </p>
           </div>
         </div>
@@ -183,18 +258,18 @@ export default function LandingPage() {
 
       {/* Pricing Tier: Hybrid Asset Model Card */}
       <section id="pricing" className="max-w-6xl mx-auto px-6 md:px-12 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           <div className="lg:col-span-5 space-y-4">
-            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tight text-black">
+            <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tight text-black leading-none">
               Hybrid Asset Pricing.
             </h2>
-            <p className="text-neutral-600 leading-relaxed text-lg">
+            <p className="text-neutral-500 leading-relaxed text-sm font-semibold">
               We offer structured, transparent pricing tailored to your B2B property business. 
               Own your isolated customer portal with central subscription upkeep.
             </p>
           </div>
 
-          <div className="lg:col-span-7 bg-white border-2 border-black rounded-3xl p-8 md:p-10 shadow-lg relative overflow-hidden">
+          <div className="lg:col-span-7 bg-white border-2 border-black rounded-3xl p-8 md:p-10 shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-8 px-4 py-1.5 bg-black text-white text-xs font-bold uppercase tracking-widest rounded-b-xl">
               Standard Plan
             </div>
@@ -202,7 +277,7 @@ export default function LandingPage() {
             <div className="space-y-6">
               <h3 className="text-2xl font-bold uppercase tracking-tight text-black">The Hybrid Model</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 border-t border-b border-neutral-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 border-t border-b border-neutral-150">
                 <div className="space-y-1">
                   <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider block">One-Time Setup Fee</span>
                   <span className="text-4xl font-black text-black">₹15,000</span>
@@ -217,7 +292,7 @@ export default function LandingPage() {
                 <p className="text-xs uppercase font-black tracking-widest text-neutral-400">Included Features</p>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {priceCheckmarks.map((feature, idx) => (
-                    <li key={idx} className="flex items-start space-x-2.5 text-neutral-600 text-sm">
+                    <li key={idx} className="flex items-start space-x-2.5 text-neutral-600 text-xs font-semibold">
                       <CheckCircle2 className="w-4 h-4 text-black shrink-0 mt-0.5" />
                       <span>{feature}</span>
                     </li>
@@ -251,7 +326,7 @@ export default function LandingPage() {
         <div className="flex-1 h-[1px] bg-neutral-200" />
       </div>
 
-      {/* FAQ / How it Works Accordions: Dinergy style drawer menu */}
+      {/* FAQ Accordions Drawer */}
       <section className="max-w-6xl mx-auto px-6 md:px-12 py-10 pb-28">
         <div className="border-t border-neutral-300">
           <div className="border-b border-neutral-300 py-6">
@@ -259,7 +334,7 @@ export default function LandingPage() {
               onClick={() => toggleDrawer(0)}
               className="w-full flex justify-between items-center text-left focus:outline-none group"
             >
-              <span className="text-xl md:text-2xl font-black uppercase tracking-tight text-neutral-900">
+              <span className="text-lg font-black uppercase tracking-tight text-neutral-900">
                 1. How does automated provisioning work?
               </span>
               <div className={`w-8 h-8 rounded-full border border-black flex items-center justify-center transition-all duration-300 shrink-0 ${activeDrawer === 0 ? 'bg-black text-white' : 'bg-transparent text-black'}`}>
@@ -267,7 +342,7 @@ export default function LandingPage() {
               </div>
             </button>
             <div className={`overflow-hidden transition-all duration-300 ${activeDrawer === 0 ? 'max-h-40 mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <p className="text-neutral-600 leading-relaxed text-sm">
+              <p className="text-neutral-500 leading-relaxed text-xs font-semibold">
                 Once payment is confirmed, the control plane triggers an asynchronous script that reserves a unique port, creates a PostgreSQL database schema, sets up file structures under /opt/pgcrm, and builds a dedicated Docker Compose runtime environment.
               </p>
             </div>
@@ -278,15 +353,15 @@ export default function LandingPage() {
               onClick={() => toggleDrawer(1)}
               className="w-full flex justify-between items-center text-left focus:outline-none group"
             >
-              <span className="text-xl md:text-2xl font-black uppercase tracking-tight text-neutral-900">
-                2. Can I use my own custom subdomain?
+              <span className="text-lg font-black uppercase tracking-tight text-neutral-900">
+                2. Can I use my own custom settings?
               </span>
               <div className={`w-8 h-8 rounded-full border border-black flex items-center justify-center transition-all duration-300 shrink-0 ${activeDrawer === 1 ? 'bg-black text-white' : 'bg-transparent text-black'}`}>
                 <Plus className={`w-3.5 h-3.5 transition-transform duration-300 ${activeDrawer === 1 ? 'rotate-45' : ''}`} />
               </div>
             </button>
             <div className={`overflow-hidden transition-all duration-300 ${activeDrawer === 1 ? 'max-h-40 mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <p className="text-neutral-600 leading-relaxed text-sm">
+              <p className="text-neutral-500 leading-relaxed text-xs font-semibold">
                 Yes. During onboarding, you register your desired domain name prefix (e.g. brandname). The system configures Nginx reverse proxy routes automatically, serving your whitelabel properties directly under brandname.pgcrm.com.
               </p>
             </div>
@@ -297,7 +372,7 @@ export default function LandingPage() {
               onClick={() => toggleDrawer(2)}
               className="w-full flex justify-between items-center text-left focus:outline-none group"
             >
-              <span className="text-xl md:text-2xl font-black uppercase tracking-tight text-neutral-900">
+              <span className="text-lg font-black uppercase tracking-tight text-neutral-900">
                 3. What happens if the AMC expires?
               </span>
               <div className={`w-8 h-8 rounded-full border border-black flex items-center justify-center transition-all duration-300 shrink-0 ${activeDrawer === 2 ? 'bg-black text-white' : 'bg-transparent text-black'}`}>
@@ -305,7 +380,7 @@ export default function LandingPage() {
               </div>
             </button>
             <div className={`overflow-hidden transition-all duration-300 ${activeDrawer === 2 ? 'max-h-40 mt-4 opacity-100' : 'max-h-0 opacity-0'}`}>
-              <p className="text-neutral-600 leading-relaxed text-sm">
+              <p className="text-neutral-500 leading-relaxed text-xs font-semibold">
                 Our scheduled alert engine sends notifications 30, 7, and 1 days before expiration. If the contract expires, portal access is suspended. Access is instantly restored once a renewal payment is processed in the billing command center.
               </p>
             </div>
@@ -327,4 +402,3 @@ export default function LandingPage() {
     </div>
   );
 }
-

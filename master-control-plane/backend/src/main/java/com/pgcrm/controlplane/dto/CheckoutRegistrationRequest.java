@@ -31,4 +31,9 @@ public class CheckoutRegistrationRequest {
     @NotBlank(message = "Desired domain/subdomain name is required")
     @Pattern(regexp = "^[a-z0-9-]+$", message = "Domain name must be alphanumeric and hyphen only")
     private String domainName;
+
+    private String whatsappToken;
+    private String razorpayKeyId;
+    private String razorpayKeySecret;
+    private String primaryColor;
 }
