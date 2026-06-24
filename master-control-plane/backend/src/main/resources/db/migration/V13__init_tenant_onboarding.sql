@@ -2,6 +2,16 @@
 --  Control Plane — Tenant Onboarding & Subscriptions (V13)
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255),
+    name VARCHAR(255),
+    role VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE tenant_profiles (
     id UUID PRIMARY KEY,
     owner_user_id UUID NOT NULL,
