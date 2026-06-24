@@ -26,6 +26,10 @@ spring:
           starttls:
             enable: true
             required: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
 
 razorpay:
   key:
