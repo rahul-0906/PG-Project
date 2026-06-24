@@ -318,6 +318,7 @@ public class DataSeeder implements CommandLineRunner {
         java.util.Optional<User> ownerOpt = userRepository.findByEmailIgnoreCase("owner@pgcrm.com");
         if (ownerOpt.isPresent()) {
             owner = ownerOpt.get();
+            log.info("Super Admin already exists, skipping seed.");
         } else {
             owner = createUser("owner@pgcrm.com", "PG Owner", Role.PG_OWNER, null);
             log.info("✅ PG_OWNER seeded: owner@pgcrm.com / Owner@123");

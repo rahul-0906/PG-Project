@@ -4,6 +4,7 @@ import com.pgcrm.entity.User;
 import com.pgcrm.entity.enums.Role;
 import com.pgcrm.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Component;
 @Component
 @Profile("!prod")
 @RequiredArgsConstructor
+@Slf4j
 public class DatabaseSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
@@ -45,12 +47,9 @@ public class DatabaseSeeder implements CommandLineRunner {
                     .mustChangePassword(true)
                     .build();
             userRepository.save(owner);
+            log.info("🔒 Super Admin account seeded.");
         } else {
-            User owner = ownerOpt.get();
-            owner.setPassword(passwordEncoder.encode("Admin@123"));
-            owner.setMustChangePassword(true);
-            userRepository.save(owner);
+            log.info("Super Admin already exists, skipping seed.");
         }
-        System.out.println("🔒 Super Admin account verified. Local password sync'd to 'Admin@123' for seamless QA login.");
     }
 }

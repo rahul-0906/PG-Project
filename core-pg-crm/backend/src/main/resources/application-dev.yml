@@ -26,5 +26,3 @@ spring:
   flyway:
     enabled: true
     clean-disabled: false
-    clean-at-start: ${DB_WIPE_ON_STARTUP:false}
-

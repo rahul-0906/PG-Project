@@ -11,4 +11,3 @@ spring:
     password: ${DB_PASSWORD:admin}
   flyway:
     clean-disabled: false
-    clean-at-start: ${DB_WIPE_ON_STARTUP:false}

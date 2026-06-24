@@ -42,12 +42,11 @@ if exist "%ROOT_DIR%.env" (
 :: Set profile environments
 set SPRING_PROFILES_ACTIVE=dev
 
-echo.
 echo Starting CONTROL PLANE Backend (Port 8090) in a separate window...
-start "CONTROL PLANE Backend" cmd /k "cd /d %ROOT_DIR%master-control-plane\backend && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-DDB_WIPE_ON_STARTUP=%DB_WIPE_ON_STARTUP%\""
+start "CONTROL PLANE Backend" cmd /k "set DB_WIPE_ON_STARTUP=%DB_WIPE_ON_STARTUP%&& cd /d "%ROOT_DIR%master-control-plane\backend" && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run"
 
 echo Starting CONTROL PLANE Frontend (Port 5176) in a separate window...
-start "CONTROL PLANE Frontend" cmd /k "cd /d %ROOT_DIR%master-control-plane\frontend && npm run dev"
+start "CONTROL PLANE Frontend" cmd /k "cd /d "%ROOT_DIR%master-control-plane\frontend" && npm run dev"
 
 echo.
 echo ===================================================

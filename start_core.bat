@@ -42,12 +42,11 @@ if exist "%ROOT_DIR%.env" (
 :: Set profile environments
 set SPRING_PROFILES_ACTIVE=dev
 
-echo.
 echo Starting PG CORE Backend (Port 8080) in a separate window...
-start "PG CORE Backend" cmd /k "cd /d %ROOT_DIR%core-pg-crm\backend && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run -Dspring-boot.run.jvmArguments=\"-DDB_WIPE_ON_STARTUP=%DB_WIPE_ON_STARTUP%\""
+start "PG CORE Backend" cmd /k "set DB_WIPE_ON_STARTUP=%DB_WIPE_ON_STARTUP%&& cd /d "%ROOT_DIR%core-pg-crm\backend" && ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run"
 
 echo Starting PG CORE Frontend (Port 5173) in a separate window...
-start "PG CORE Frontend" cmd /k "cd /d %ROOT_DIR%core-pg-crm\frontend && npm run dev"
+start "PG CORE Frontend" cmd /k "cd /d "%ROOT_DIR%core-pg-crm\frontend" && npm run dev"
 
 echo.
 echo ===================================================

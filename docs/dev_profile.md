@@ -60,3 +60,45 @@ spring:
 > [!WARNING]
 > **Production Safety:**
 > Under the production configuration (`application-prod.yml`), Flyway's clean feature is strictly disabled (`spring.flyway.clean-disabled=true`) and `DB_WIPE_ON_STARTUP` is ignored to prevent accidental data loss in live environments.
+
+
+Step 1: Arm the Wipe Toggle
+Open your root .env file (E:\Antigravity Project\PG Project\.env).
+
+Ensure this exact line is present:
+DB_WIPE_ON_STARTUP=true
+
+Save the file.
+
+Step 2: Launch the Core Application
+Double-click your updated start_core.bat file.
+
+Watch the initial black terminal window. Make sure it prints:  - Loaded: DB_WIPE_ON_STARTUP=true.
+
+Step 3: Verify the Logs (The Proof)
+Keep your eyes on the "PG CORE Backend" terminal window as Spring Boot starts up. Because we added the Java Bean, you are looking for this exact sequence of events in the logs:
+
+The Clean: You should see a log explicitly stating Flyway is dropping the schema:
+INFO ... Flyway cleaned database "pgcrmdb" (or similar wording indicating the drop).
+
+The Rebuild: Immediately after the clean, you should see Flyway migrating all 12 of your existing scripts from scratch:
+INFO ... Migrating schema "public" to version "1 - init schema"
+...
+INFO ... Successfully applied 12 migrations
+
+The Seeder: Finally, because the database was wiped, your DataSeeder should run an INSERT command for your Super Admin, rather than an UPDATE.
+
+Step 4: Test Persistence (Crucial)
+Once the server has fully booted and you confirmed the wipe:
+
+Stop the servers completely.
+
+Open your .env file and change it to: DB_WIPE_ON_STARTUP=false.
+
+Run start_core.bat one more time.
+
+Verify the logs say: Schema "public" is up to date. No migration necessary.
+
+If you see the database cleanly drop and rebuild on true, and safely persist on false, your automated local environment is 100% verified and bulletproof.
+
+Run this test now and let me know if you see the successful wipe in the terminal!
