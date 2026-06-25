@@ -14,14 +14,14 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/tenant")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class TenantOnboardingController {
 
     private final TenantOnboardingService tenantOnboardingService;
     private final com.pgcrm.controlplane.repository.TenantProfileRepository tenantProfileRepository;
 
-    @PostMapping("/onboard")
+    @PostMapping("/onboarding/signup")
     public ResponseEntity<Void> onboard(@RequestBody TenantOnboardingRequest request) {
         log.info("REST request to onboard tenant with domain: {}", request.getCustomDomain());
         
@@ -31,7 +31,7 @@ public class TenantOnboardingController {
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    @GetMapping("/me")
+    @GetMapping("/tenant/me")
     public ResponseEntity<com.pgcrm.controlplane.dto.TenantProfileResponse> getMyTenant() {
         UUID currentUserId = getCurrentUserId();
         log.info("Fetching tenant profile for owner: {}", currentUserId);

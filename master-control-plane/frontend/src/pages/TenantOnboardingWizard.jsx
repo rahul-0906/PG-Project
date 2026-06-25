@@ -126,7 +126,7 @@ export default function TenantOnboardingWizard() {
         headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
       }
 
-      const response = await fetch('/api/tenant/onboard', {
+      const response = await fetch('/api/onboarding/signup', {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(formData)
