@@ -20,15 +20,36 @@ To prevent port allocation conflicts, ensure that all host-level services and le
 
 ## 2. Local DNS Configuration (One-Time Setup)
 
-To resolve subdomains dynamically for your tenant apps, you must map the master test domain to your localhost loopback interface.
+In our multi-tenant SaaS architecture, the Spring Boot Control Plane dynamic orchestrator provisions isolated PG Core containers mapped to subdomains under a master domain structure. Since standard public DNS servers cannot route local requests to dynamically generated containers running on your host, you must configure a local DNS mapping via your system's `hosts` file. This intercepts browser requests and forces resolution to the localhost interface.
 
-1. Open **Notepad** (or your favorite text editor) **as Administrator**.
-2. Open the Windows hosts file: `C:\Windows\System32\drivers\etc\hosts`.
-3. Add the following entry to the end of the file:
+> [!CAUTION]
+> **Safety Warning:** The system `hosts` file is critical for all local networking. Ensure you only append the requested lines. Editing or deleting existing entries can disrupt system network resolution, active VPN connections, or local development environments.
+
+### **Configuration Steps:**
+
+1. **Launch a text editor with administrative privileges:** Search for **Notepad** (or your preferred editor) in your system search bar, right-click the application icon, and select **Run as Administrator**.
+2. **Open the system hosts file:** In the editor, browse to and open the Windows `hosts` configuration file:
    ```text
-   127.0.0.1       test.pgcrm.com
+   C:\Windows\System32\drivers\etc\hosts
    ```
-4. Save and close the file.
+3. **Append the local DNS mappings:** Navigate to the bottom of the file and paste the following block. This includes our main E2E testing domain along with several placeholders to accommodate future multi-tenant testing scenarios:
+   ```text
+   # B2B SaaS local multi-tenant routing
+   127.0.0.1       test.pgcrm.com
+   127.0.0.1       stanza.pgcrm.com
+   127.0.0.1       dev-tenant.pgcrm.com
+   ```
+4. **Save and close the file:** Save the changes (`Ctrl + S`) and close your editor.
+
+### **Verification Step:**
+Validate that your operating system resolves the mapped domains correctly by executing a network test in your terminal:
+```powershell
+ping test.pgcrm.com
+```
+**Expected Outcome:** The command should initiate requests resolving to `127.0.0.1` (or `::1`). If it displays the correct IP loopback address, DNS resolution has taken effect immediately. If the domain fails to resolve, flush your system DNS resolver cache and re-verify your modifications:
+```powershell
+ipconfig /flushdns
+```
 
 ---
 
