@@ -53,9 +53,11 @@ public class TenantProfile {
     @Column(name = "razorpay_secret")
     private String razorpaySecret;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "theme_config", columnDefinition = "jsonb")
-    private String themeConfig;
+    @Column(name = "whatsapp_token")
+    private String whatsappToken;
+
+    @Column(name = "whatsapp_key")
+    private String whatsappKey;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

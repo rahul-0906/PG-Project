@@ -21,7 +21,8 @@ public class TenantOnboardingRequest {
     private String contactEmail;
     private String razorpayKey;
     private String razorpaySecret;
-    private String themeConfig;
+    private String whatsappToken;
+    private String whatsappKey;
     private SubscriptionPlan planType;
-    private BigDecimal amcFee;
+    private java.math.BigDecimal amcFee;
 }
