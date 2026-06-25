@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
 import OnboardingForm from './pages/OnboardingForm';
 import SuccessPage from './pages/SuccessPage';
 import AdminLayout from './components/AdminLayout';
@@ -15,7 +14,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={<Navigate to="/onboard" replace />} />
         <Route path="/signup" element={<OnboardingForm />} />
         <Route path="/onboard" element={<TenantOnboardingWizard />} />
         <Route path="/provisioning" element={<ClientProvisioningTracker />} />
