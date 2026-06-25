@@ -44,6 +44,11 @@ public class TenantProvisioningWorker {
 
         String dbPrefix = sanitizeDbPrefix(profile.getCustomDomain());
         String adminEmail = profile.getContactEmail();
+        
+        String rzpKey = profile.getRazorpayKey() != null && !profile.getRazorpayKey().isEmpty() ? profile.getRazorpayKey() : "NONE";
+        String rzpSecret = profile.getRazorpaySecret() != null && !profile.getRazorpaySecret().isEmpty() ? profile.getRazorpaySecret() : "NONE";
+        String waToken = profile.getWhatsappToken() != null && !profile.getWhatsappToken().isEmpty() ? profile.getWhatsappToken() : "NONE";
+        String waKey = profile.getWhatsappKey() != null && !profile.getWhatsappKey().isEmpty() ? profile.getWhatsappKey() : "NONE";
 
         // 3. Resolve the script file location
         File scriptFile = new File("src/main/resources/scripts/provision_tenant.sh");
@@ -65,7 +70,11 @@ public class TenantProvisioningWorker {
                     scriptFile.getAbsolutePath(),
                     tenantId.toString(),
                     dbPrefix,
-                    adminEmail
+                    adminEmail,
+                    rzpKey,
+                    rzpSecret,
+                    waToken,
+                    waKey
             );
 
             // Merge error stream into standard output stream
