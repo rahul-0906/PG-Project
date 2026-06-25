@@ -44,6 +44,7 @@ public class TenantProvisioningWorker {
 
         String dbPrefix = sanitizeDbPrefix(profile.getCustomDomain());
         String adminEmail = profile.getContactEmail();
+        String routerIp = profile.getRouterIp() != null && !profile.getRouterIp().isEmpty() ? profile.getRouterIp() : "NONE";
         
         String rzpKey = profile.getRazorpayKey() != null && !profile.getRazorpayKey().isEmpty() ? profile.getRazorpayKey() : "NONE";
         String rzpSecret = profile.getRazorpaySecret() != null && !profile.getRazorpaySecret().isEmpty() ? profile.getRazorpaySecret() : "NONE";
@@ -71,6 +72,7 @@ public class TenantProvisioningWorker {
                     tenantId.toString(),
                     dbPrefix,
                     adminEmail,
+                    routerIp,
                     rzpKey,
                     rzpSecret,
                     waToken,
