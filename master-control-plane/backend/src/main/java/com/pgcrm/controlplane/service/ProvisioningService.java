@@ -125,6 +125,8 @@ public class ProvisioningService {
                     ? tenant.getWhatsappToken() : "NONE";
             String waKey = tenant.getWhatsappKey() != null && !tenant.getWhatsappKey().isEmpty() 
                     ? tenant.getWhatsappKey() : "NONE";
+            String customTld = tenant.getCustomTld() != null && !tenant.getCustomTld().isEmpty() 
+                    ? tenant.getCustomTld() : "NONE";
 
             // Update status to PROVISIONING
             tenant.setStatus(com.pgcrm.controlplane.model.enums.TenantStatus.PROVISIONING);
@@ -141,7 +143,8 @@ public class ProvisioningService {
                     rzpKey,
                     rzpSecret,
                     waToken,
-                    waKey
+                    waKey,
+                    customTld
             );
             pb.redirectErrorStream(true);
 

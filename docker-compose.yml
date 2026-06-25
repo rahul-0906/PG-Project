@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  controlplane-db:
+    image: postgres:15-alpine
+    container_name: controlplane-db
+    environment:
+      POSTGRES_DB: controlplane_db
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-pgcrm123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - controlplane_db_data:/var/lib/postgresql/data
+    networks:
+      - pgcrm-network
+
+  controlplane-backend:
+    build:
+      context: ./master-control-plane/backend
+      dockerfile: Dockerfile
+    container_name: controlplane-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://controlplane-db:5432/controlplane_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-pgcrm123}
+      DB_WIPE_ON_STARTUP: ${DB_WIPE_ON_STARTUP:-true}
+      JWT_SECRET: ${JWT_SECRET}
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      RAZORPAY_ENABLED: ${RAZORPAY_ENABLED:-false}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
+      TWILIO_ENABLED: ${TWILIO_ENABLED:-true}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM}
+    ports:
+      - "8090:8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - controlplane-db
+    networks:
+      - pgcrm-network
+
+  controlplane-frontend:
+    build:
+      context: ./master-control-plane/frontend
+      dockerfile: Dockerfile
+    container_name: controlplane-frontend
+    ports:
+      - "5176:80"
+    depends_on:
+      - controlplane-backend
+    networks:
+      - pgcrm-network
+
+volumes:
+  controlplane_db_data:
+
+networks:
+  pgcrm-network:
+    name: pgcrm-network
+    driver: bridge

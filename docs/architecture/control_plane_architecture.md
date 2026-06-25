@@ -277,6 +277,28 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Stri
 | `/api/onboarding/verify` | `POST` | Public | Verifies setup Razorpay signature, creates transaction record, and opens provisioning ticket. |
 | `/api/admin/tenants` | `GET` | Admin | Fetches list of B2B clients, their subdomains, statuses, and instances. |
 | `/api/admin/tenants/{id}/suspend` | `POST` | Admin | Manually suspends a B2B tenant instance (stops container/revokes access). |
+| `/api/admin/tenants/{id}/activate` | `POST` | Admin | Manually activates a B2B tenant instance. |
 | `/api/admin/onboarding/tickets` | `GET` | Admin | Lists active/pending/completed provisioning status tickets. |
 | `/api/billing/renew-amc` | `POST` | Tenant Owner | Generates an AMC renewal Razorpay order for an existing B2B tenant. |
 | `/api/billing/verify-amc` | `POST` | Tenant Owner | Verifies payment for AMC renewal and updates subscription `end_date` by +1 year. |
+
+---
+
+## 6. Onboarding Data Payload & Entity Mapping
+
+To support isolated configurations, integration credentials, and custom domains, the onboarding registration payload is mapped from the frontend form to persistent database columns and transient fields on the `TenantProfile` entity.
+
+### 6.1 Entity Field Mappings
+
+The onboarding DTO `TenantOnboardingRequest` binds frontend inputs and maps them directly to the `TenantProfile` entity. 
+
+| Parameter Name | Data Type | Database Column | Transient / Persistent | Description | Fallback Value (on Provision) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `customTld` | `String` | `custom_tld` | Persistent | Optional custom top-level domain (e.g. `stanza.in`) for isolated hosting. | `"NONE"` |
+| `whatsappToken` | `String` | `whatsapp_token` | Persistent | Meta WhatsApp Business API Cloud Access Token. | `"NONE"` |
+| `whatsappKey` | `String` | `whatsapp_key` | Persistent | Phone number ID key parameter for WhatsApp messages. | `"NONE"` |
+| `razorpayKey` | `String` | `razorpay_key` | Persistent | Razorpay API Key ID. | `"NONE"` |
+| `razorpaySecret` | `String` | `razorpay_secret` | Persistent | Razorpay API Secret key. | `"NONE"` |
+| `planType` | `SubscriptionPlan` | *N/A (Mapped to Subscription)* | Transient | Auto-mapped to subscription plan type enum (`MONTHLY` or `YEARLY`). | *N/A* |
+| `paymentStatus` | `PaymentStatus` | *N/A (Mapped to Subscription)* | Transient | Auto-mapped to subscription payment status. | *N/A* |
+| `subscriptionExpiry` | `LocalDateTime` | *N/A (Mapped to Subscription)* | Transient | Mapped from `next_billing_date` in `TenantSubscription`. | *N/A* |

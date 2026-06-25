@@ -46,6 +46,7 @@ public class TenantOnboardingServiceImpl implements TenantOnboardingService {
                 .razorpaySecret(request.getRazorpaySecret())
                 .whatsappToken(request.getWhatsappToken())
                 .whatsappKey(request.getWhatsappKey())
+                .customTld(request.getCustomTld())
                 .status(TenantStatus.PENDING_PAYMENT)
                 .build();
 

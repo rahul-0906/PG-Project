@@ -24,13 +24,7 @@ public class AdminTenantController {
 
     private final AdminTenantService adminTenantService;
 
-    @GetMapping("/tenants")
-    @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'ROLE_PG_OWNER', 'SUPER_ADMIN', 'PG_OWNER')")
-    public ResponseEntity<List<TenantSummaryResponse>> getAllTenants() {
-        log.info("REST request to fetch all tenants summary");
-        List<TenantSummaryResponse> responses = adminTenantService.getAllTenantsSummary();
-        return ResponseEntity.ok(responses);
-    }
+
 
     @PutMapping("/tenants/{tenantId}/status")
     @PreAuthorize("hasAnyRole('ROLE_SUPER_ADMIN', 'SUPER_ADMIN', 'ROLE_PG_OWNER', 'PG_OWNER')")

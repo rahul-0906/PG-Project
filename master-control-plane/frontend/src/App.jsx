@@ -9,6 +9,7 @@ import BillingDashboard from './pages/BillingDashboard';
 import TenantOnboardingWizard from './pages/TenantOnboardingWizard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import ClientProvisioningTracker from './pages/ClientProvisioningTracker';
+import Dashboard from './pages/Dashboard';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="clients" element={<ClientRoster />} />
           <Route path="tenants" element={<SuperAdminDashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

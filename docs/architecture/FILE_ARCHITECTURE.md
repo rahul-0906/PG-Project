@@ -418,6 +418,12 @@ The backend codebase is written in Java 23, built on Spring Boot 3.2.5, and resi
 * **`BillingServiceImpl.java`**: Manages AMC renewal checkout orders and updates expiration timelines (+1 Year) upon verified payment.
 * **`EmailService.java`**: Integrates SMTP templates to deliver invoice notifications, AMC renewal warnings, and account suspension alerts.
 
+#### Database Migrations (`src/main/resources/db/migration`)
+* **`V12__create_users_table.sql`**: Flyway schema migration to initialize user database tables before onboarding.
+* **`V13__init_tenant_onboarding.sql`**: Flyway schema migration establishing `tenant_profiles` and `tenant_subscriptions` tables.
+* **`V14__add_whatsapp_credentials.sql`**: Flyway schema migration adding Razorpay/WhatsApp credential columns to profiles.
+* **`V15__add_custom_tld.sql`**: Flyway schema migration altering `tenant_profiles` to add the `custom_tld` column.
+
 ---
 
 ### 5.2 Frontend Admin & Portal Registries (`master-control-plane/frontend`)
@@ -427,7 +433,8 @@ The frontend application uses React 18, Vite, and Tailwind CSS to serve both pla
 #### Page Components (`src/pages`)
 * **`LandingPage.jsx`**: The public marketing page. Displays value propositions (database isolation moats, billing automation), interactive pricing cards for the Hybrid Asset model (₹15,000 one-time setup + ₹35,000 AMC), and calls-to-action routing to onboarding.
 * **`BillingDashboard.jsx`**: Self-service billing portal for client PG owners. Visualizes their subscription license status, expiry dates, transaction history, and handles AMC payments.
-* **`Dashboard.jsx`**: Administrator viewport for tracking active tenants, provisioning ticket statuses, and payment records.
+* **`Dashboard.jsx`**: The fleet management command center with 2.5s real-time status polling. Enables platform administrators to monitor tenant profiles and trigger override actions (suspend and activate).
+* **`TenantOnboardingWizard.jsx`**: Multi-step client onboarding form wizard. Features client workspace details setup (including optional custom TLD configurations), communications credential setup, and contract plan selection.
 
 #### UI Components (`src/components`)
 * **`AmcStatusCard.jsx`**: Component mounted inside the billing dashboard. Displays license state badges (Green/Yellow/Red) and a primary call-to-action ("Renew Subscription") which integrates the Razorpay checkout overlay.

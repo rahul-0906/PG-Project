@@ -13,7 +13,8 @@ import {
   Loader2,
   Mail,
   Smartphone,
-  Server
+  Server,
+  Globe
 } from 'lucide-react';
 
 const PLAN_FEE_MAPPING = {
@@ -27,6 +28,7 @@ export default function TenantOnboardingWizard() {
     pgName: '',
     pgShortTitle: '',
     customDomain: '',
+    customTld: '',
     routerIp: '',
     whatsappNumber: '',
     contactEmail: '',
@@ -55,6 +57,9 @@ export default function TenantOnboardingWizard() {
     const { name, value } = e.target;
     if (name === 'customDomain') {
       const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+      setFormData(prev => ({ ...prev, [name]: sanitized }));
+    } else if (name === 'customTld') {
+      const sanitized = value.toLowerCase().replace(/[^a-z0-9.-]/g, '');
       setFormData(prev => ({ ...prev, [name]: sanitized }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
@@ -291,6 +296,21 @@ export default function TenantOnboardingWizard() {
                         onChange={handleChange}
                         className="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 focus:bg-white focus:border-blue-500 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
                         placeholder="e.g. 192.168.1.1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 font-bold uppercase tracking-wider text-[10px] mb-2 pl-1">Custom Domain (Optional)</label>
+                    <div className="relative">
+                      <Globe className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-400" />
+                      <input
+                        type="text"
+                        name="customTld"
+                        value={formData.customTld}
+                        onChange={handleChange}
+                        className="w-full bg-slate-50 border border-slate-200 hover:border-slate-350 focus:bg-white focus:border-blue-500 rounded-xl pl-11 pr-4 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition-all"
+                        placeholder="e.g., stanza.in"
                       />
                     </div>
                   </div>

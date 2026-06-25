@@ -1,6 +1,8 @@
 package com.pgcrm.controlplane.model.entity;
 
 import com.pgcrm.controlplane.model.enums.TenantStatus;
+import com.pgcrm.controlplane.model.enums.PaymentStatus;
+import com.pgcrm.controlplane.model.enums.SubscriptionPlan;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -59,6 +61,9 @@ public class TenantProfile {
     @Column(name = "whatsapp_key")
     private String whatsappKey;
 
+    @Column(name = "custom_tld")
+    private String customTld;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private TenantStatus status;
@@ -70,4 +75,17 @@ public class TenantProfile {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Transient
+    private SubscriptionPlan planType;
+
+    @Transient
+    private PaymentStatus paymentStatus;
+
+    @Transient
+    private LocalDateTime subscriptionExpiry;
+
+    public UUID getTenantId() {
+        return this.id;
+    }
 }

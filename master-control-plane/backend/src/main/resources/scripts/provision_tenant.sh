@@ -3,8 +3,8 @@
 # Exit immediately if any command exits with a non-zero status
 set -e
 
-if [ "$#" -lt 8 ]; then
-    echo "Usage: $0 <TENANT_ID> <DB_PREFIX> <ADMIN_EMAIL> <ROUTER_IP> <RZP_KEY> <RZP_SECRET> <WA_TOKEN> <WA_KEY>"
+if [ "$#" -lt 9 ]; then
+    echo "Usage: $0 <TENANT_ID> <DB_PREFIX> <ADMIN_EMAIL> <ROUTER_IP> <RZP_KEY> <RZP_SECRET> <WA_TOKEN> <WA_KEY> <CUSTOM_TLD>"
     exit 1
 fi
 
@@ -16,6 +16,7 @@ RAZORPAY_KEY=$5
 RAZORPAY_SECRET=$6
 WHATSAPP_TOKEN=$7
 WHATSAPP_KEY=$8
+CUSTOM_TLD=$9
 
 echo "===================================================="
 echo "Starting provisioning pipeline for Tenant ID: ${TENANT_ID}"
@@ -45,6 +46,7 @@ echo "RAZORPAY_KEY_ID=$RAZORPAY_KEY" >> "$ENV_FILE"
 echo "RAZORPAY_KEY_SECRET=$RAZORPAY_SECRET" >> "$ENV_FILE"
 echo "META_WHATSAPP_ACCESS_TOKEN=$WHATSAPP_TOKEN" >> "$ENV_FILE"
 echo "META_WHATSAPP_PHONE_NUMBER_ID=$WHATSAPP_KEY" >> "$ENV_FILE"
+echo "CUSTOM_TLD=$CUSTOM_TLD" >> "$ENV_FILE"
 
 echo "Generated .env configuration at $ENV_FILE"
 

@@ -23,6 +23,7 @@ public class TenantOnboardingRequest {
     private String razorpaySecret;
     private String whatsappToken;
     private String whatsappKey;
+    private String customTld;
     private SubscriptionPlan planType;
     private java.math.BigDecimal amcFee;
 }

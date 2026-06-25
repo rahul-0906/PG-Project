@@ -79,7 +79,7 @@ sequenceDiagram
     Backend->>Backend: Trigger Async provisionNewTenant()
     rect rgb(30, 41, 59)
         Note over Backend: Invokes ProcessBuilder to run provision_tenant.sh
-        Backend->>Script: Execute bash scripts/provision_tenant.sh [domain] [password] [port] [email]
+        Backend->>Script: Execute bash src/main/resources/scripts/provision_tenant.sh [tenantId] [dbPrefix] [adminEmail] [routerIp] [rzpKey] [rzpSecret] [waToken] [waKey] [customTld]
         Script->>Script: 1. Sanitizes database name (e.g. pgcrm_subdomain)<br/>2. Creates isolated DB via psql
         Script->>Script: 3. Creates directories under /opt/pgcrm/[domain]/deploy<br/>4. Generates unique JWT secret key
         Script->>Script: 5. Outputs custom .env configuration file<br/>6. Copies docker-compose.prod.yml template
@@ -97,11 +97,12 @@ sequenceDiagram
 * If signatures match, the payment is logged, and the provisioning queue is triggered.
 
 ### 2.2 Provisioning Orchestration
-* `ProvisioningService.java` identifies the next free host port (starting at `8081`).
-* It spins up a shell process calling `scripts/provision_tenant.sh` with parameter bindings:
+* `ProvisioningService.java` executes the provisioning pipeline by calling Nginx reverse proxy configurations and setting up directories.
+* It spins up a shell process calling `src/main/resources/scripts/provision_tenant.sh` with parameter bindings:
   ```bash
-  bash scripts/provision_tenant.sh <domain_name> <db_password> <app_port> <client_email>
+  bash src/main/resources/scripts/provision_tenant.sh <tenant_id> <db_prefix> <admin_email> <router_ip> <rzp_key> <rzp_secret> <wa_token> <wa_key> <custom_tld>
   ```
+* **Fallback Safety Mechanism**: To prevent shell script argument alignment shifts due to blank parameters, any empty or null integration parameters (such as `customTld`, `rzpKey`, `rzpSecret`, `waToken`, or `waKey`) are automatically converted to `"NONE"` by `ProvisioningService.java` prior to execution.
 * Output stream is piped directly into Spring Boot log framework prefixed with `[PROVISIONING SCRIPT]`.
 
 ---
@@ -133,3 +134,47 @@ Clients can renew their subscription directly from the Client Billing Dashboard:
 4. Upon successful payment verification on `/api/billing/verify-amc`, the subscription is updated:
    $$\text{New Expiry Date} = \text{Current Expiry Date} + 1 \text{ Year}$$
    `Subscription.licenseState` is reset to `LicenseState.ACTIVE`, and `TenantInstance.status` is reset to `TenantStatus.ACTIVE`.
+
+---
+
+## 4. Advanced Ingress & Propagation Architecture
+
+### 4.1 Custom Domain Reverse Proxy Flow
+Custom domains allow tenants to access their isolated core application directly through their own top-level domain (TLD), while the control plane manages traffic.
+
+```mermaid
+graph TD
+    UserSub["User: stanza.pgcrm.com"] -->|Resolve URL| Nginx["Nginx Reverse Proxy"]
+    UserCustom["User: stanza.in"] -->|Resolve URL| Nginx
+    
+    Nginx -->|Match Subdomain Header| RouteSub["Route to Port 8081 / Container A"]
+    Nginx -->|Match Custom TLD Host Header| RouteCustom["Route to Port 8081 / Container A"]
+    
+    RouteSub --> ContainerA["Tenant A Isolated PG Core Container"]
+    RouteCustom --> ContainerA
+```
+
+### 4.2 Credentials Propagation Pipeline
+This flow illustrates how onboarding integration keys and custom domains are securely passed from the UI down to the isolated container's environment variables.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Owner as PG Owner / Admin
+    participant UI as Onboarding Wizard UI (React)
+    participant API as Onboarding API Controller
+    participant DB as controlplane_db (PostgreSQL)
+    participant Service as ProvisioningService (Java)
+    participant Script as provision_tenant.sh (Bash)
+    participant Env as .env Configuration File
+
+    Owner->>UI: Fills credentials & customTld details
+    UI->>API: POST /api/onboarding/signup (JSON Payload)
+    API->>DB: Save TenantProfile Entity
+    Note over Service: Async Provisioning Pipeline Triggered
+    Service->>DB: Query TenantProfile (Extract keys & customTld)
+    Service->>Service: Inject "NONE" fallbacks for empty parameters
+    Service->>Script: Run ProcessBuilder (Pass 9 arguments)
+    Script->>Env: Append variables (echo KEY=VALUE >> .env)
+    Note over Env: Isolated container reads .env at startup
+```
