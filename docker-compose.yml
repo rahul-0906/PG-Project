@@ -8,10 +8,16 @@ services:
       POSTGRES_DB: controlplane_db
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pgcrm123}
+    # Port 5433 is mapped on the host instead of 5432 to avoid conflicts with a local PostgreSQL service running on the host.
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - controlplane_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d controlplane_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - pgcrm-network
 
@@ -42,7 +48,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
-      - controlplane-db
+      controlplane-db:
+        condition: service_healthy
     networks:
       - pgcrm-network
 
