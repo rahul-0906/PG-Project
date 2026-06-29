@@ -15,12 +15,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/webhooks/**", "/api/public/**")
-            )
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/webhooks/**", "/api/public/**").permitAll()
-                .anyRequest().permitAll() // Allow other requests for now to prevent local dev lockout
+                .requestMatchers("/api/onboarding/**", "/api/webhooks/**", "/api/public/**").permitAll()
+                .anyRequest().authenticated()
             );
         return http.build();
     }
