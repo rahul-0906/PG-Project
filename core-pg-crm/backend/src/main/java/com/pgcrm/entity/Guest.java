@@ -130,19 +130,44 @@ public class Guest {
      * Distinct from {@link User#getFullName()} to allow independent updates
      * (e.g., name correction after check-in without altering the login identity).
      */
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "full_name")
     private String fullName;
 
     /**
      * Primary email address of the guest, used for invoice delivery and OTP verification.
      * May differ from {@link User#getEmail()} if the guest has updated their contact email.
      */
-    @Column(nullable = false)
+    @Column
     private String email;
 
     /** Primary contact phone number of the guest, stored in E.164 format. */
-    @Column(nullable = false)
+    @Column
     private String phone;
+
+    /** First name of the guest (used in anonymization flow). */
+    @Column(name = "first_name")
+    private String firstName;
+
+    /** Last name of the guest (used in anonymization flow). */
+    @Column(name = "last_name")
+    private String lastName;
+
+    /** Detailed contact phone number. */
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
+    /** Emergency contact information. */
+    @Column(name = "emergency_contact")
+    private String emergencyContact;
+
+    /** URL linking to uploaded KYC identity document. */
+    @Column(name = "id_proof_url")
+    private String idProofUrl;
+
+    /** Retention policy state flag. */
+    @Column(name = "is_anonymized", nullable = false)
+    @Builder.Default
+    private boolean isAnonymized = false;
 
     /**
      * WhatsApp-enabled phone number for push notification delivery.

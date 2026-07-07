@@ -2,9 +2,11 @@ package com.pgcrm.repository;
 
 import com.pgcrm.entity.Guest;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -258,4 +260,31 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
     List<Guest> findActiveOrHistoricallyActiveInPeriod(
             @Param("periodStart") LocalDate periodStart,
             @Param("periodEnd")   LocalDate periodEnd);
+
+    /**
+     * Bulk updates and anonymizes expired guest records whose actual check-out date
+     * is older than the provided threshold date and who have not yet been anonymized.
+     *
+     * @param threshold the date threshold (e.g., 1 year ago)
+     * @return the number of guest records anonymized
+     */
+    @Modifying
+    @Transactional
+    @Query("""
+            UPDATE Guest g
+            SET g.firstName = 'Archived',
+                g.lastName = 'Guest',
+                g.fullName = 'Archived Guest',
+                g.email = NULL,
+                g.phone = NULL,
+                g.phoneNumber = NULL,
+                g.emergencyContact = NULL,
+                g.idProofUrl = NULL,
+                g.whatsappNumber = NULL,
+                g.vehicleRegistration = NULL,
+                g.isAnonymized = true
+            WHERE g.actualCheckOutDate < :threshold
+              AND g.isAnonymized = false
+            """)
+    int anonymizeExpiredGuests(@Param("threshold") LocalDate threshold);
 }

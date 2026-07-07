@@ -179,11 +179,14 @@ public class GuestResponse {
     @com.fasterxml.jackson.annotation.JsonProperty("isAc")
     private boolean isAc;
 
-    /**
-     * Whether the guest booked the entire room.
-     */
     @com.fasterxml.jackson.annotation.JsonProperty("isBookEntireRoom")
     private boolean isBookEntireRoom;
+
+    /**
+     * Whether this guest profile has been anonymized.
+     */
+    @com.fasterxml.jackson.annotation.JsonProperty("isAnonymized")
+    private boolean isAnonymized;
 
     /**
      * List of all bed labels assigned to this guest.
@@ -273,6 +276,7 @@ public class GuestResponse {
                 .vegPreference(guest.isVegPreference())
                 .isAc(isAc)
                 .isBookEntireRoom(guest.isBookEntireRoom())
+                .isAnonymized(guest.isAnonymized())
                 .build();
     }
 }
