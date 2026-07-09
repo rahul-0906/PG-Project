@@ -36,29 +36,18 @@ An invoice generated on **June 1st, 2026** targets the billing month of **May 20
 
 ---
 
-### 1.2 Rent Pro-ration
-When a guest checks in during the middle of a billing period, their rent is prorated based on their active occupancy duration. The base rent is calculated using a daily rate determined by dividing the monthly rate by the actual number of days in that billing month.
+### 1.2 Flat-Rate Rent Model
+Under the flat-rate rent model, if a guest has an active status during any portion of a billing month, they are billed their full, exact monthly rent value. Mid-month check-ins do not receive partial or daily pro-rated discounts.
 
 #### Mathematical Formula:
-$$\text{Daily Rate} = \frac{\text{Monthly Base Rent}}{\text{Total Days in Billing Month}}$$
-
-$$\text{Active Occupancy Days} = (\text{End Date of Occupancy}) - (\text{Start Date of Occupancy}) + 1$$
-
-$$\text{Prorated Rent} = \text{Daily Rate} \times \text{Active Occupancy Days}$$
-
-*Note: If the guest stays for the entire month, the calculation evaluates to the flat Monthly Base Rent.*
+$$\text{Base Rent Charge} = \text{guest.getMonthlyRent()}$$
 
 #### Numerical Example:
 A guest checks into a room with a monthly base rent of **₹9,000** on **May 10th, 2026**.
 * **Monthly Base Rent**: ₹9,000
-* **Total Days in Billing Month (May)**: 31
 * **Check-In Date**: May 10th, 2026
-* **Active Occupancy Days (May 10 to May 31)**: 
-  $$\text{Active Days} = 31 - 10 + 1 = 22\text{ Days}$$
-* **Daily Rate Calculation**:
-  $$\text{Daily Rate} = \frac{₹9,000}{31} \approx ₹290.3225\text{ per day}$$
-* **Prorated Rent Calculation**:
-  $$\text{Prorated Rent} = ₹290.3225 \times 22 \approx ₹6,387.09\text{ (Rounded to ₹6,387)}$$
+* **Rent Calculation**:
+  $$\text{Rent Charge} = \text{guest.getMonthlyRent()} = ₹9,000$$
 
 ---
 
@@ -66,13 +55,10 @@ A guest checks into a room with a monthly base rent of **₹9,000** on **May 10t
 When a guest is assigned multiple beds or checks in with the **Whole Room Booking** toggle enabled (`isBookEntireRoom = true`), the monthly base rent is calculated by multiplying the room's base rent by the sharing capacity (sharing type) of that room:
 
 #### Mathematical Formula:
-$$\text{Adjusted Base Rent} = \text{Room Base Rent} \times \text{Room Sharing Type}$$
+$$\text{Adjusted Base Rent} = \text{guest.getMonthlyRent()} \times \text{guest.getRoom().getSharingType()}$$
 
 * **Single Bed Allocation**: The guest is billed only the standard `Room Base Rent`.
 * **Whole Room Booking**: The guest is billed the `Adjusted Base Rent` reflecting the cost of all beds in the room.
-* **Prorated Adjusted Rent**: If checking in mid-month under a whole room booking, the daily rate uses the adjusted base rent:
-  $$\text{Daily Rate} = \frac{\text{Adjusted Base Rent}}{\text{Total Days in Billing Month}}$$
-  $$\text{Prorated Rent} = \text{Daily Rate} \times \text{Active Occupancy Days}$$
 
 #### Numerical Example:
 A guest checks in under a whole room booking for a double-sharing room (sharing type = 2) on **May 10th, 2026** where the room rent is **₹9,000**.
@@ -80,11 +66,6 @@ A guest checks in under a whole room booking for a double-sharing room (sharing 
 * **Room Sharing Type**: 2 (Double-Sharing)
 * **Adjusted Base Rent Calculation**:
   $$\text{Adjusted Base Rent} = ₹9,000 \times 2 = ₹18,000\text{ per month}$$
-* **Active Occupancy Days (May 10 to May 31)**: 22 Days
-* **Daily Rate Calculation**:
-  $$\text{Daily Rate} = \frac{₹18,000}{31} \approx ₹580.6452\text{ per day}$$
-* **Prorated Rent Calculation**:
-  $$\text{Prorated Rent} = ₹580.6452 \times 22 \approx ₹12,774.19\text{ (Rounded to ₹12,774)}$$
 
 ---
 
@@ -92,16 +73,16 @@ A guest checks in under a whole room booking for a double-sharing room (sharing 
 The total amount of a generated invoice (`totalAmount` field of the `Invoice` entity) is compile-aggregated as the sum of all individual service and utility line items.
 
 #### Mathematical Formula:
-$$\text{Invoice Total Amount} = \text{Base / Prorated Rent} + \text{EB Utility Dues} + \sum (\text{Add-on Quantity} \times \text{Add-on Rate})$$
+$$\text{Invoice Total Amount} = \text{Flat-Rate Rent} + \text{EB Utility Dues} + \sum (\text{Add-on Quantity} \times \text{Add-on Rate})$$
 
 #### Numerical Example:
 For the billing month of May 2026, a guest has the following charges:
-* **Prorated Rent**: ₹6,387
+* **Flat-Rate Rent**: ₹9,000
 * **EB Utility Split Dues**: ₹450
 * **Food Add-ons (Omelettes)**: ₹300
 * **Service Add-ons (Washing Machine)**: ₹200
 * **Invoice Total Calculation**:
-  $$\text{Total Amount} = ₹6,387 + ₹450 + ₹300 + ₹200 = ₹7,337$$
+  $$\text{Total Amount} = ₹9,000 + ₹450 + ₹300 + ₹200 = ₹9,950$$
 
 ---
 
@@ -186,7 +167,7 @@ A guest has daily logs in May 2026 showing omelette breakfast orders and washing
 When a guest requests a checkout notice or final settlement, the `SettlementService` computes the final financial calculations. This aggregates the deposit refund, subtracting unpaid items and unbilled accrued dues.
 
 ### 4.1 Deduction Formula
-$$\text{Total Current Unbilled Dues} = \text{Current Month Prorated Rent} + \text{Current Month Unbilled EB} + \text{Current Month Unbilled Add-ons}$$
+$$\text{Total Current Unbilled Dues} = \text{Full Flat Exit-Month Rent} + \text{Current Month Unbilled EB} + \text{Current Month Unbilled Add-ons}$$
 
 $$\text{Deduction Balance} = \text{Unpaid Past Invoices} + \text{Total Current Unbilled Dues}$$
 
@@ -200,15 +181,15 @@ A guest checks out on May 22nd, 2026.
 * **Advance Deposit (Paid at Check-in)**: ₹7,000
 * **Unpaid Invoices (Past Months)**: ₹1,500
 * **Current Month (May) Unbilled Dues**:
-  * **Prorated Rent (May 1 to May 22)**: ₹5,000
+  * **Flat Exit-Month Rent (May)**: ₹5,000 (Option A charges full flat monthly rent)
   * **Unbilled EB Utility Share**: ₹300
   * **Unbilled Add-on Meals**: ₹200
 * **Total Current Unbilled Dues Calculation**:
   $$\text{Unbilled Dues} = ₹5,000 + ₹300 + ₹200 = ₹5,500$$
 * **Total Deduction Balance Calculation**:
-  $$\text{Deductions} = ₹1,500\text (Past Dues) + ₹5,500\text (Current Unbilled Dues) = ₹7,000$$
+  $$\text{Deductions} = ₹1,500\text{ (Past Dues)} + ₹5,500\text{ (Current Unbilled Dues)} = ₹7,000$$
 * **Settlement Balance Calculation**:
-  $$\text{Settlement Balance} = ₹7,000\text (Deposit) - ₹7,000\text (Deductions) = ₹0$$
+  $$\text{Settlement Balance} = ₹7,000\text{ (Deposit)} - ₹7,000\text{ (Deductions)} = ₹0$$
   *(Neutral Settlement - No refund due, no outstanding balance.)*
 
 #### Numerical Example (Due Case):
@@ -216,16 +197,16 @@ A guest checks out on May 25th, 2026.
 * **Advance Deposit**: ₹7,000
 * **Unpaid Invoices (Past Months)**: ₹1,500
 * **Current Month Unbilled Dues**:
-  * **Prorated Rent (May 1 to May 25)**: ₹6,500
+  * **Flat Exit-Month Rent (May)**: ₹7,000 (Option A charges full flat monthly rent)
   * **Unbilled EB Utility Share**: ₹400
   * **Unbilled Add-on Meals**: ₹300
 * **Total Current Unbilled Dues Calculation**:
-  $$\text{Unbilled Dues} = ₹6,500 + ₹400 + ₹300 = ₹7,200$$
+  $$\text{Unbilled Dues} = ₹7,000 + ₹400 + ₹300 = ₹7,700$$
 * **Total Deduction Balance Calculation**:
-  $$\text{Deductions} = ₹1,500 + ₹7,200 = ₹8,700$$
+  $$\text{Deductions} = ₹1,500 + ₹7,700 = ₹9,200$$
 * **Settlement Balance Calculation**:
-  $$\text{Settlement Balance} = ₹7,000 - ₹8,700 = -₹1,700$$
-  *(Guest owes ₹1,700 before checkout can be checked out.)*
+  $$\text{Settlement Balance} = ₹7,000 - ₹9,200 = -₹2,200$$
+  *(Guest owes ₹2,200 before checkout can be checked out.)*
 
 ---
 

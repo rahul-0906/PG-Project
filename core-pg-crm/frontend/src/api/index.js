@@ -121,6 +121,10 @@ export const managerApi = {
   }),
   getGuests: () => cachedApi.get('/manager/guests'),
   checkIn: (data) => cachedApi.post('/manager/guests', data),
+  bulkImport: (formData, buildingId) => cachedApi.post('/manager/guests/bulk-import', formData, {
+    params: buildingId ? { buildingId } : {},
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   updateGuest: (id, data) => cachedApi.put(`/manager/guests/${id}`, data),
   switchBed: (guestId, newBedId) => cachedApi.put(`/manager/guests/${guestId}/switch-bed/${newBedId}`),
   deleteGuest: (id) => cachedApi.delete(`/manager/guests/${id}`),

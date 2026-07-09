@@ -156,20 +156,13 @@ public class SettlementService {
             final LocalDate  today        = LocalDate.now();
             final YearMonth  currentMonth = YearMonth.now();
 
-            // ── 1. Pro-rated rent ─────────────────────────────────────────────────
-            BigDecimal baseRent = BigDecimal.ZERO;
-            if (guest.getBed() != null) {
-                final com.pgcrm.entity.Room room = guest.getBed().getRoom();
-                baseRent = room.getBaseRent();
-                if (guest.isBookEntireRoom()) {
-                    baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
-                }
+            // ── 1. Full exit month rent ───────────────────────────────────────────
+            BigDecimal baseRent = guest.getMonthlyRent();
+            if (guest.isBookEntireRoom() && guest.getRoom() != null) {
+                baseRent = baseRent.multiply(BigDecimal.valueOf(guest.getRoom().getSharingType()));
             }
-            final int        daysInMonth  = currentMonth.lengthOfMonth();
-            final long       daysStayed   = today.getDayOfMonth();
-            final BigDecimal proratedRent = baseRent
-                    .multiply(BigDecimal.valueOf(daysStayed))
-                    .divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
+            final BigDecimal proratedRent = baseRent;
+            log.info("Flat-Rate Rent Applied for checkout guest ID {} (exit month: {}): ₹{}", guest.getId(), currentMonth, proratedRent);
 
             // ── 2. Pending food & laundry this month ──────────────────────────────
             final LocalDate      monthStart = currentMonth.atDay(1);

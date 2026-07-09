@@ -169,6 +169,11 @@ public class Guest {
     @Builder.Default
     private boolean isAnonymized = false;
 
+    /** Meal plan status toggle. */
+    @Column(name = "has_meal_plan", nullable = false)
+    @Builder.Default
+    private boolean hasMealPlan = false;
+
     /**
      * WhatsApp-enabled phone number for push notification delivery.
      * May differ from {@link #phone} if the guest uses a separate WhatsApp number.
@@ -321,6 +326,22 @@ public class Guest {
      */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    public BigDecimal getMonthlyRent() {
+        Bed bed = getBed();
+        if (bed != null && bed.getRoom() != null) {
+            return bed.getRoom().getBaseRent();
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public Room getRoom() {
+        Bed bed = getBed();
+        if (bed != null) {
+            return bed.getRoom();
+        }
+        return null;
+    }
 
     /**
      * JPA {@code @PrePersist} lifecycle callback that stamps {@link #createdAt}

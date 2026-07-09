@@ -23,6 +23,13 @@ The centralized command center and automated public front door for the software 
 * **Scope**: B2B client onboarding, Razorpay payment capture (Setup Fees & Annual Maintenance Contracts), automatic instance deployment, subscription renewal, status monitoring, and license suspension.
 * **Security**: Enforces strict HMAC-SHA256 signature verification on Razorpay webhook notifications to trigger automated deployments only after successful payment captures.
 
+### 🚀 Core Operational & Financial Features
+
+* **1-Click Excel Bulk Import**: Instant batch-onboarding of hundreds of rooms and guests using Apache POI. Features self-healing floor/room auto-creation, overflow bed provisioning, and historical data migration (Opening Rent Arrears, initial EB Sub-Meter Readings, and Meal Plan preferences).
+* **Flat-Rate / Fixed Rent Model**: Strict flat-rate monthly billing that eliminates pro-rated daily rates. Active status during a billing month bills the exact monthly rate (with full room capacity multiplication for Whole Room Bookings). Exit-month checkout settlements charge the full exit month (Option A).
+* **Electricity (EB) Bill Sub-Meter Split**: Automated calculations matching physical configurations—Equal Split among active residents, Per-Bed flat rate, or Sub-Meter usage differences (`currentReading - previousReading`).
+* **Automated Data Compliance Scheduler**: Programmatic daily PII Anonymization sweep at 3:00 AM. Scrubs guests checked out over 365 days ago, overwriting names and phone numbers with random tokens while preserving financial, billing, and transactional integrity.
+
 ---
 
 ## 2. Ports and Routing Registry

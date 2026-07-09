@@ -86,6 +86,47 @@ sequenceDiagram
 
 ---
 
+## 3b. 1-Click Excel Bulk Import & Historical Migration Flow
+Supports onboarding hundreds of rooms and guests from a spreadsheet. Automatically configures floor/room hierarchy, provisions overflow beds, resolves credentials, and registers historical rent arrears, sub-meter baselines, and meal preferences in a single transaction block.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Admin as Tier 2 Manager (PG Manager)
+    participant App as BulkImportModal Component
+    participant Controller as GuestImportController
+    participant Service as BulkImportService
+    participant POI as Apache POI (WorkbookFactory)
+    participant DB as PostgreSQL DB
+
+    Admin->>App: Uploads spreadsheet file (.xlsx / .csv)
+    App->>Controller: POST /api/manager/guests/bulk-import (MultipartFile, buildingId)
+    Controller->>Service: importGuests(file, buildingId)
+    Note over Service, DB: Transactional Boundary (@Transactional)
+    Service->>POI: Parse spreadsheet input stream
+    POI->>Service: Yields sheet rows containing guest roster
+    loop For Each Data Row (Skip Header)
+        Service->>Service: Parse cell values (Room, Name, Phone, Rent, Date, Arrears, EB Reading, Meal Plan)
+        Service->>DB: Resolve/Create Floor & Room layout (Self-healing bed allocation)
+        Service->>DB: Resolve/Create User Login Profile (guest.[phone]@pgcrm.com)
+        Service->>DB: Resolve/Create Guest Entity (allocated to Bed status = OCCUPIED)
+        alt Opening Rent Arrears > 0
+            Service->>DB: Instantiate & Save Invoice (status = GENERATED, type = RENT, description = "Opening Balance")
+        end
+        alt Initial EB Reading > 0 & No baseline exists
+            Service->>DB: Instantiate & Save MeterReading (type = MIGRATION_BASELINE)
+        end
+        alt Meal Plan Opt-In = Yes/True
+            Service->>DB: Set Guest.hasMealPlan = true
+        end
+    end
+    Service->>Controller: Return ImportSummaryDTO (totalImported, roomsCreated)
+    Controller->>App: 200 OK (Displays import stats results)
+    App->>Admin: Refreshes Guest Roster grid
+```
+
+---
+
 ## 4. Checkout Notice & Financial Settlement Flow
 Tracks the transition from notice registration (notice period) to final account settlement, pro-rated rent calculation (accounting for whole room bookings), and releasing all allocated beds. Managed by Tier 2 Managers.
 
@@ -113,9 +154,9 @@ sequenceDiagram
     Admin->>App: Clicks "Checkout" & Confirms
     App->>Controller: POST /api/manager/guests/{id}/confirm-checkout
     Controller->>Service: confirmCheckout(...)
-    Service->>DB: Calculate pro-rated rent for current month (Room Rent * Sharing Type if isBookEntireRoom = true)
+    Service->>DB: Calculate flat-rate rent for exit month (guest.getMonthlyRent() * room.getSharingType() if isBookEntireRoom = true)
     Service->>DB: Calculate pending unbilled meal & laundry logs
-    Service->>DB: Settle account: advanceDeposit - (proratedRent + dues)
+    Service->>DB: Settle account: advanceDeposit - (flatRent + dues)
     loop For Each Allocated Bed in Guest.getBeds()
         Service->>DB: Update Bed status to VACANT
     end
@@ -475,7 +516,7 @@ sequenceDiagram
         Billing->>Invoice: generateMonthlyInvoices(buildingId)
         Invoice->>DB: Find active checked-in guests
         loop For Each Active Guest
-            Invoice->>DB: Compute rent, EB utilities, and daily log add-ons
+            Invoice->>DB: Compute flat-rate rent, EB utilities, and daily log add-ons
             Invoice->>DB: Persist Invoice (status = PENDING)
             Invoice->>Notif: sendNewInvoiceAlert(guest)
             Notif->>WhatsApp: Trigger WhatsApp invoice text notification

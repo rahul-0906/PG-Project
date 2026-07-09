@@ -334,29 +334,18 @@ public class InvoiceService {
      * @return the pro-rated or full rent amount, rounded to 2 decimal places.
      */
     private BigDecimal calculateProRatedRent(final Guest guest, final YearMonth ym) {
-        BigDecimal baseRent = BigDecimal.ZERO;
-        if (guest.getBed() != null) {
-            final com.pgcrm.entity.Room room = guest.getBed().getRoom();
-            baseRent = room.getBaseRent();
-            if (guest.isBookEntireRoom()) {
-                baseRent = baseRent.multiply(BigDecimal.valueOf(room.getSharingType()));
-            }
+        BigDecimal baseRent = guest.getMonthlyRent();
+        if (guest.isBookEntireRoom() && guest.getRoom() != null) {
+            baseRent = baseRent.multiply(BigDecimal.valueOf(guest.getRoom().getSharingType()));
         }
+        
         final LocalDate checkIn = guest.getCheckInDate();
-        if (checkIn == null) return baseRent;
+        if (checkIn != null && checkIn.isAfter(ym.atEndOfMonth())) {
+            return BigDecimal.ZERO;
+        }
 
-        final int       totalDays    = ym.lengthOfMonth();
-        final LocalDate monthStart   = ym.atDay(1);
-        final LocalDate monthEnd     = ym.atEndOfMonth();
-
-        if (checkIn.isAfter(monthEnd)) return BigDecimal.ZERO;
-
-        final LocalDate effectiveStart = checkIn.isBefore(monthStart) ? monthStart : checkIn;
-        final int       activeDays     = (int) (monthEnd.toEpochDay() - effectiveStart.toEpochDay()) + 1;
-
-        if (activeDays >= totalDays) return baseRent;
-        return baseRent.multiply(BigDecimal.valueOf(activeDays))
-                       .divide(BigDecimal.valueOf(totalDays), 2, RoundingMode.HALF_UP);
+        log.info("Flat-Rate Rent Applied for guest ID {} (month: {}): ₹{}", guest.getId(), ym, baseRent);
+        return baseRent;
     }
 
     /**

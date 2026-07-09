@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../components/AppLayout';
+import BulkImportModal from './BulkImportModal';
 import { managerApi } from '../../api';
 import { 
   Users, 
   X, 
   Plus, 
+  FileSpreadsheet, 
   MapPin, 
   Layers, 
   Home, 
@@ -39,6 +41,7 @@ export default function ManagerGuests() {
   const [guests, setGuests] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [showCheckInModal, setShowCheckInModal] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   const [sameAsPhone, setSameAsPhone] = useState(false);
   const [toast, setToast] = useState(null);
   const [depositError, setDepositError] = useState('');
@@ -664,7 +667,7 @@ export default function ManagerGuests() {
 
       {/* Filter Toolbar for Guests List */}
       <div className="card mb-6" style={{ padding: '1rem' }}>
-        <div className="flex gap-4 flex-wrap items-center">
+        <div className="flex gap-4 flex-wrap items-end">
           <div className="form-group mb-0 flex-1 min-w-[200px]">
             <label className="form-label flex items-center gap-1.5">
               <Search className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
@@ -692,6 +695,17 @@ export default function ManagerGuests() {
                 <option key={floor} value={floor}>{floor}</option>
               ))}
             </select>
+          </div>
+          <div className="form-group mb-0 flex items-end">
+            <button
+              type="button"
+              onClick={() => setShowBulkImportModal(true)}
+              className="btn btn-primary flex items-center gap-2"
+              style={{ height: '38px' }}
+            >
+              <FileSpreadsheet className="w-4 h-4" strokeWidth={2} />
+              <span>Excel Import</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1560,6 +1574,11 @@ export default function ManagerGuests() {
         </div>,
         document.body
       )}
+      <BulkImportModal 
+        isOpen={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        onRefresh={() => managerApi.getGuests().then(r => setGuests(r.data)).catch(() => {})}
+      />
     </AppLayout>
   );
 }
