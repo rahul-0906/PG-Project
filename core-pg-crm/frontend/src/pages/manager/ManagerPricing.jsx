@@ -109,6 +109,16 @@ export default function ManagerPricing() {
   const [savingConfig, setSavingConfig] = useState(false);
   const [enablePremiumSurcharges, setEnablePremiumSurcharges] = useState(false);
 
+  const getAddonLabel = (key) => {
+    if (key === 'omelette') return pricingData?.omeletteLabel || 'Omelette';
+    if (key === 'boiled_egg') return pricingData?.boiledEggLabel || 'Boiled Egg';
+    if (key === 'washing_machine') return pricingData?.washingMachineLabel || 'Washing Machine';
+    if (key === 'breakfast') return 'Breakfast';
+    if (key === 'lunch') return 'Lunch';
+    if (key === 'dinner') return 'Dinner';
+    return key;
+  };
+
   // Local state for configuration edits
   const [localFoodIncluded, setLocalFoodIncluded] = useState(false);
   const [localMealCancellations, setLocalMealCancellations] = useState(true);
@@ -602,7 +612,7 @@ export default function ManagerPricing() {
                 <div key={key} className="flex items-center justify-between p-3.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-slate-200 transition-all">
                   <div className="flex items-center gap-2">
                     <Icon strokeWidth={1.5} className={iconClass} />
-                    <span className="text-sm font-medium text-slate-700">{label}</span>
+                    <span className="text-sm font-medium text-slate-700">{getAddonLabel(key)}</span>
                   </div>
                   <EditablePrice
                     value={foodPricing[key] ?? 0}

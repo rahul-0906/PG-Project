@@ -199,9 +199,16 @@ public class InvoiceService {
             if (systemConfig.getRules().isHasWashingMachine()) {
                 laundryTotal = calculateLaundryTotal(guest, periodStart, periodEnd, pricing);
             }
+            String wmLabel = "Washing Machine";
+            if (buildingId != null) {
+                wmLabel = buildingConfigRepository.findById(buildingId)
+                        .map(BuildingConfig::getWashingMachineLabel)
+                        .filter(l -> l != null && !l.trim().isEmpty())
+                        .orElse(wmLabel);
+            }
             lineItems.add(InvoiceLineItem.builder()
                     .type(InvoiceLineType.LAUNDRY)
-                    .description("Washing Machine")
+                    .description(wmLabel)
                     .amount(laundryTotal)
                     .build());
             total = total.add(laundryTotal);

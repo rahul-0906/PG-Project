@@ -624,7 +624,7 @@ export default function GuestDashboard() {
               <Utensils strokeWidth={1.5} className="text-amber-600 w-5 h-5" />
             </div>
             <div>
-              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Omelettes</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.rules?.omeletteLabel || 'Omelette'}</div>
               <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalOmelettes} pcs</div>
               <div className="text-[9px] text-slate-500 font-medium">₹{totalOmelettes * oPrice} total</div>
             </div>
@@ -634,7 +634,7 @@ export default function GuestDashboard() {
               <Egg strokeWidth={1.5} className="text-amber-500 w-5 h-5" />
             </div>
             <div>
-              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Boiled Eggs</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.rules?.boiledEggLabel || 'Boiled Egg'}</div>
               <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalEggs} pcs</div>
               <div className="text-[9px] text-slate-500 font-medium">₹{totalEggs * ePrice} total</div>
             </div>
@@ -644,7 +644,7 @@ export default function GuestDashboard() {
               <Shirt strokeWidth={1.5} className="text-blue-500 w-5 h-5" />
             </div>
             <div>
-              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Laundry</div>
+              <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.rules?.washingMachineLabel || 'Washing Machine'}</div>
               <div className="text-sm font-semibold text-slate-800 mt-0.5">{totalWashing} uses</div>
               <div className="text-[9px] text-slate-500 font-medium">₹{totalWashing * wPrice} total</div>
             </div>
@@ -694,21 +694,21 @@ export default function GuestDashboard() {
                       {oCount > 0 && (
                         <span className="inline-flex items-center text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-100 px-2.5 py-0.5 rounded-full">
                           <Utensils strokeWidth={1.5} className="text-amber-600 w-3 h-3 mr-1" />
-                          <span>Omelette</span>
+                          <span>{config?.rules?.omeletteLabel || 'Omelette'}</span>
                           <span className="bg-amber-200/60 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-amber-800">x{oCount}</span>
                         </span>
                       )}
                       {eCount > 0 && (
                         <span className="inline-flex items-center text-[10px] font-bold text-yellow-700 bg-yellow-50/60 border border-yellow-100/60 px-2.5 py-0.5 rounded-full">
                           <Egg strokeWidth={1.5} className="text-amber-500 w-3 h-3 mr-1" />
-                          <span>Boiled Egg</span>
+                          <span>{config?.rules?.boiledEggLabel || 'Boiled Egg'}</span>
                           <span className="bg-yellow-200/50 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-yellow-800">x{eCount}</span>
                         </span>
                       )}
                       {wCount > 0 && (
                         <span className="inline-flex items-center text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-0.5 rounded-full">
                           <Shirt strokeWidth={1.5} className="text-blue-500 w-3 h-3 mr-1" />
-                          <span>Laundry</span>
+                          <span>{config?.rules?.washingMachineLabel || 'Washing Machine'}</span>
                           <span className="bg-blue-200/60 ml-1.5 px-1 py-0.2 rounded text-[9px] font-black text-blue-800">x{wCount}</span>
                         </span>
                       )}

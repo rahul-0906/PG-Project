@@ -358,13 +358,13 @@ export default function DailyLog() {
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Dinner (D)
               </div>
               <div className="flex items-center gap-1">
-                <span>🍳</span> Omelette
+                <span>🍳</span> {config?.omeletteLabel || 'Omelette'}
               </div>
               <div className="flex items-center gap-1">
-                <span>🥚</span> Boiled Egg
+                <span>🥚</span> {config?.boiledEggLabel || 'Boiled Egg'}
               </div>
               <div className="flex items-center gap-1">
-                <span>🧺</span> Washing Machine
+                <span>🧺</span> {config?.washingMachineLabel || 'Washing Machine'}
               </div>
             </div>
           </div>
@@ -491,19 +491,19 @@ export default function DailyLog() {
                     </span>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex flex-col justify-between">
-                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Omelettes</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.omeletteLabel || 'Omelettes'}</span>
                     <span className="text-[11px] font-black text-slate-700 mt-1">
                       {log.omeletteCount || 0} pcs
                     </span>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex flex-col justify-between">
-                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Boiled Eggs</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.boiledEggLabel || 'Boiled Eggs'}</span>
                     <span className="text-[11px] font-black text-slate-700 mt-1">
                       {log.boiledEggCount || 0} pcs
                     </span>
                   </div>
                   <div className="bg-slate-50 border border-slate-200 p-2.5 rounded-xl flex flex-col justify-between">
-                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Washing Machine</span>
+                    <span className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">{config?.washingMachineLabel || 'Washing Machine'}</span>
                     <span className="text-[11px] font-black text-slate-700 mt-1">
                       {log.washingMachineCount || 0} use
                     </span>

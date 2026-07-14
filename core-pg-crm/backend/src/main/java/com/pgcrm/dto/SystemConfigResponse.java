@@ -199,6 +199,10 @@ public class SystemConfigResponse {
          * {@code LocalTime.toString()} at mapping time.
          */
         private String dinnerLockoutTime;
+
+        private String omeletteLabel;
+        private String boiledEggLabel;
+        private String washingMachineLabel;
     }
 
     // ── Factory Method ────────────────────────────────────────────────────────
@@ -252,6 +256,9 @@ public class SystemConfigResponse {
                                 properties.getRules().getDinnerLockoutTime() != null
                                         ? properties.getRules().getDinnerLockoutTime().toString()
                                         : null)
+                        .omeletteLabel("Omelette")
+                        .boiledEggLabel("Boiled Egg")
+                        .washingMachineLabel("Washing Machine")
                         .build())
                 .build();
     }

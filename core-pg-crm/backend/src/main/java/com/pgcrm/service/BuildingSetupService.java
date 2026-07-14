@@ -121,9 +121,15 @@ public class BuildingSetupService {
         @JsonProperty("omelettePrice")
         private BigDecimal omelettePrice;
 
+        @JsonProperty("omeletteLabel")
+        private String omeletteLabel;
+
         /** Per-building boiled-egg add-on price override; falls back to YAML default if null. */
         @JsonProperty("boiledEggPrice")
         private BigDecimal boiledEggPrice;
+
+        @JsonProperty("boiledEggLabel")
+        private String boiledEggLabel;
 
         /** Whether the building config allows Omelette add-on. */
         @JsonProperty("offerOmelette")
@@ -136,6 +142,9 @@ public class BuildingSetupService {
         /** Per-building washing machine usage price override; falls back to YAML default if null. */
         @JsonProperty("washingMachinePrice")
         private BigDecimal washingMachinePrice;
+
+        @JsonProperty("washingMachineLabel")
+        private String washingMachineLabel;
 
         /** The EB split method for this building (e.g., {@code "EQUAL_SPLIT"}, {@code "METER_BASED"}). */
         @JsonProperty("ebSplitMethod")
@@ -275,10 +284,13 @@ public class BuildingSetupService {
         private BigDecimal      lunchPrice;
         private BigDecimal      dinnerPrice;
         private BigDecimal      omelettePrice;
+        private String          omeletteLabel;
         private BigDecimal      boiledEggPrice;
+        private String          boiledEggLabel;
         private Boolean         offerOmelette;
         private Boolean         offerBoiledEgg;
         private BigDecimal      washingMachinePrice;
+        private String          washingMachineLabel;
         private String          ebSplitMethod;
         private LocalTime       breakfastCutoffTime;
         private LocalTime       dinnerCutoffTime;
@@ -373,8 +385,11 @@ public class BuildingSetupService {
                 .lunchPrice(req.getLunchPrice()               != null ? req.getLunchPrice()           : systemConfig.getPricing().getLunch())
                 .dinnerPrice(req.getDinnerPrice()             != null ? req.getDinnerPrice()           : systemConfig.getPricing().getDinner())
                 .omelettePrice(req.getOmelettePrice()         != null ? req.getOmelettePrice()         : BigDecimal.ZERO)
+                .omeletteLabel(req.getOmeletteLabel()         != null && !req.getOmeletteLabel().isBlank() ? req.getOmeletteLabel() : "Omelette")
                 .boiledEggPrice(req.getBoiledEggPrice()       != null ? req.getBoiledEggPrice()       : BigDecimal.ZERO)
+                .boiledEggLabel(req.getBoiledEggLabel()       != null && !req.getBoiledEggLabel().isBlank() ? req.getBoiledEggLabel() : "Boiled Egg")
                 .washingMachinePrice(req.getWashingMachinePrice() != null ? req.getWashingMachinePrice() : BigDecimal.ZERO)
+                .washingMachineLabel(req.getWashingMachineLabel() != null && !req.getWashingMachineLabel().isBlank() ? req.getWashingMachineLabel() : "Washing Machine")
                 .ebSplitMethod(splitMethod)
                 .breakfastCutoffTime(req.getBreakfastCutoffTime() != null ? req.getBreakfastCutoffTime() : LocalTime.of(22, 0))
                 .dinnerCutoffTime(req.getDinnerCutoffTime()       != null ? req.getDinnerCutoffTime()     : LocalTime.of(14, 0))
@@ -495,10 +510,13 @@ public class BuildingSetupService {
             req.setLunchPrice(config.getLunchPrice());
             req.setDinnerPrice(config.getDinnerPrice());
             req.setOmelettePrice(config.getOmelettePrice());
+            req.setOmeletteLabel(config.getOmeletteLabel());
             req.setBoiledEggPrice(config.getBoiledEggPrice());
+            req.setBoiledEggLabel(config.getBoiledEggLabel());
             req.setOfferOmelette(config.isOfferOmelette());
             req.setOfferBoiledEgg(config.isOfferBoiledEgg());
             req.setWashingMachinePrice(config.getWashingMachinePrice());
+            req.setWashingMachineLabel(config.getWashingMachineLabel());
             req.setEbSplitMethod(config.getEbSplitMethod() != null ? config.getEbSplitMethod().name() : null);
             req.setBreakfastCutoffTime(config.getBreakfastCutoffTime());
             req.setDinnerCutoffTime(config.getDinnerCutoffTime());
@@ -584,10 +602,13 @@ public class BuildingSetupService {
         if (req.getLunchPrice()            != null) config.setLunchPrice(req.getLunchPrice());
         if (req.getDinnerPrice()           != null) config.setDinnerPrice(req.getDinnerPrice());
         if (req.getOmelettePrice()         != null) config.setOmelettePrice(req.getOmelettePrice());
+        if (req.getOmeletteLabel()         != null) config.setOmeletteLabel(req.getOmeletteLabel());
         if (req.getBoiledEggPrice()        != null) config.setBoiledEggPrice(req.getBoiledEggPrice());
+        if (req.getBoiledEggLabel()        != null) config.setBoiledEggLabel(req.getBoiledEggLabel());
         if (req.getOfferOmelette()         != null) config.setOfferOmelette(req.getOfferOmelette());
         if (req.getOfferBoiledEgg()        != null) config.setOfferBoiledEgg(req.getOfferBoiledEgg());
         if (req.getWashingMachinePrice()   != null) config.setWashingMachinePrice(req.getWashingMachinePrice());
+        if (req.getWashingMachineLabel()   != null) config.setWashingMachineLabel(req.getWashingMachineLabel());
         if (req.getBreakfastCutoffTime()   != null) config.setBreakfastCutoffTime(req.getBreakfastCutoffTime());
         if (req.getDinnerCutoffTime()      != null) config.setDinnerCutoffTime(req.getDinnerCutoffTime());
         if (req.getIsPreviousDay()         != null) config.setPreviousDay(req.getIsPreviousDay());

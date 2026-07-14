@@ -289,6 +289,9 @@ public class GuestController {
         java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
         boolean isPreviousDay = true;
         String allowedPaymentModes = "BOTH";
+        String omeletteLabel = "Omelette";
+        String boiledEggLabel = "Boiled Egg";
+        String washingMachineLabel = "Washing Machine";
 
         if (buildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(buildingId);
@@ -306,6 +309,15 @@ public class GuestController {
                 if (cfg.getAllowedPaymentModes() != null) {
                     allowedPaymentModes = cfg.getAllowedPaymentModes();
                 }
+                if (cfg.getOmeletteLabel() != null) {
+                    omeletteLabel = cfg.getOmeletteLabel();
+                }
+                if (cfg.getBoiledEggLabel() != null) {
+                    boiledEggLabel = cfg.getBoiledEggLabel();
+                }
+                if (cfg.getWashingMachineLabel() != null) {
+                    washingMachineLabel = cfg.getWashingMachineLabel();
+                }
             }
         }
 
@@ -322,7 +334,10 @@ public class GuestController {
             Map.entry("breakfastCutoffTime",     breakfastCutoffTime.toString()),
             Map.entry("dinnerCutoffTime",        dinnerCutoffTime.toString()),
             Map.entry("isPreviousDay",          isPreviousDay),
-            Map.entry("allowedPaymentModes",     allowedPaymentModes)
+            Map.entry("allowedPaymentModes",     allowedPaymentModes),
+            Map.entry("omeletteLabel",          omeletteLabel),
+            Map.entry("boiledEggLabel",          boiledEggLabel),
+            Map.entry("washingMachineLabel",     washingMachineLabel)
         ));
     }
 

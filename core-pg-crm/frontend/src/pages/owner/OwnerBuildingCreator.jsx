@@ -30,8 +30,8 @@ function makeFloor(number) {
 function makeBlock(name = 'Block A') {
   return { _id: uid(), name, roomConfigs: [makeRoomConfig()] };
 }
-function makeRoomConfig(sharing = 2) {
-  return { _id: uid(), sharing, count: 1, baseRent: '', roomNumbers: [''], isAc: true, bedLabels: '' };
+function makeRoomConfig(sharing = '') {
+  return { _id: uid(), sharing, count: '', roomNumbers: [], isAc: true, bedLabels: '' };
 }
 
 // ── Step components for Creator ───────────────────────────────────
@@ -125,9 +125,10 @@ function Step2({ floors, onChange }) {
 function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
   const placeholders = [];
   const blockCode = blockName ? (blockName.split(' ').pop() || 'A') : '';
-  for (let i = 0; i < rc.count; i++) {
+  const roomCount = parseInt(rc.count) || 0;
+  for (let i = 0; i < roomCount; i++) {
     if (blockName) {
-      placeholders.push(`${floorNumber}${blockCode}-${rc.sharing}S${rc.count > 1 ? (i + 1) : ''}`);
+      placeholders.push(`${floorNumber}${blockCode}-${rc.sharing || 'S'}S${roomCount > 1 ? (i + 1) : ''}`);
     } else {
       const prefix = floorNumber === 0 ? 'G' : String(floorNumber);
       placeholders.push(`${prefix}-${String(i + 1).padStart(2, '0')}`);
@@ -138,7 +139,6 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
 
   const handleRoomNumberChange = (index, val) => {
     const updated = [...roomNumbers];
-    while (updated.length < rc.count) updated.push('');
     updated[index] = val;
     onUpdate({ ...rc, roomNumbers: updated });
   };
@@ -147,10 +147,11 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
     <div className="flex flex-col gap-2 p-2.5 rounded-xl bg-white border border-slate-200">
       <div className="flex items-center gap-2">
         <select
-          className="form-input py-1 text-xs flex-shrink-0 w-28"
-          value={rc.sharing}
-          onChange={e => onUpdate({ ...rc, sharing: parseInt(e.target.value) })}
+          className="form-input py-1 text-xs flex-shrink-0 w-32 cursor-pointer bg-white"
+          value={rc.sharing || ''}
+          onChange={e => onUpdate({ ...rc, sharing: e.target.value === '' ? '' : parseInt(e.target.value) })}
         >
+          <option value="" disabled>Select Sharing</option>
           {[1, 2, 3, 4].map(s => (
             <option key={s} value={s}>{SHARING_LABELS[s]}</option>
           ))}
@@ -158,15 +159,15 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
         <input
           type="text"
           className="form-input py-1 text-xs w-20 flex-shrink-0"
-          placeholder="Count"
-          value={rc.count}
+          placeholder="0"
+          value={rc.count ?? ''}
           onChange={e => {
             const valStr = e.target.value.replace(/[^0-9]/g, '');
             if (valStr === '') {
               onUpdate({ ...rc, count: '', roomNumbers: [] });
               return;
             }
-            const newCount = parseInt(valStr) || 1;
+            const newCount = parseInt(valStr) || 0;
             const updatedRooms = [...roomNumbers];
             if (updatedRooms.length < newCount) {
               while (updatedRooms.length < newCount) updatedRooms.push('');
@@ -208,39 +209,72 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
 
       <div className="border-t border-slate-100 pt-2 mt-1">
         <div className="flex flex-col gap-2">
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
-              <span>Bed Labels (comma-separated)</span>
-              <span className="text-slate-300 normal-case font-normal">(Optional — e.g. Lower, Upper)</span>
+          {/* 2 Column Layout for Room Numbers and Bed Labels */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Column 1: Room Numbers */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
+                <span>Room Numbers</span>
+                <span className="text-[9px] text-slate-300 normal-case font-normal">(Optional — defaults shown as placeholders)</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: parseInt(rc.count) || 0 }).map((_, idx) => (
+                  <div key={idx} className="flex items-center gap-1">
+                    {(parseInt(rc.count) || 0) > 1 && <span className="text-[10px] text-slate-400 font-medium">#{idx + 1}:</span>}
+                    <input
+                      type="text"
+                      className="form-input py-0.5 px-2 text-[11px] w-24 font-semibold"
+                      placeholder={placeholders[idx]}
+                      value={roomNumbers[idx] || ''}
+                      onChange={e => handleRoomNumberChange(idx, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-            <input
-              type="text"
-              className="form-input py-1 px-2 text-[11px] w-full"
-              placeholder={Array.from({ length: rc.sharing }).map((_, i) => `B${i + 1}`).join(', ')}
-              value={rc.bedLabels || ''}
-              onChange={e => onUpdate({ ...rc, bedLabels: e.target.value })}
-            />
+
+            {/* Column 2: Bed Labels */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
+                <span>Bed Labels (comma-separated)</span>
+                <span className="text-[9px] text-slate-300 normal-case font-normal">(Optional — e.g. Lower, Upper)</span>
+              </div>
+              <input
+                type="text"
+                className="form-input py-1 px-2 text-[11px] w-full"
+                placeholder={rc.sharing ? Array.from({ length: rc.sharing }).map((_, i) => `B${i + 1}`).join(', ') : 'e.g. B1, B2'}
+                value={rc.bedLabels || ''}
+                onChange={e => onUpdate({ ...rc, bedLabels: e.target.value })}
+              />
+            </div>
           </div>
-          <div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
-              <span>Room Numbers</span>
-              <span className="text-slate-300 normal-case font-normal">(Optional — defaults shown as placeholders)</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: rc.count }).map((_, idx) => (
-                <div key={idx} className="flex items-center gap-1">
-                  {rc.count > 1 && <span className="text-[10px] text-slate-400 font-medium">#{idx + 1}:</span>}
-                  <input
-                    type="text"
-                    className="form-input py-0.5 px-2 text-[11px] w-24 font-semibold"
-                    placeholder={placeholders[idx]}
-                    value={roomNumbers[idx] || ''}
-                    onChange={e => handleRoomNumberChange(idx, e.target.value)}
-                  />
+
+          {/* Generated Bed Numbers Preview */}
+          {rc.sharing && rc.count && (() => {
+            const labels = rc.bedLabels
+              ? rc.bedLabels.split(',').map(s => s.trim()).filter(Boolean)
+              : [];
+            const sampleRoom = roomNumbers[0] || placeholders[0] || 'Room';
+            const sharingCount = parseInt(rc.sharing) || 1;
+            const generatedBeds = Array.from({ length: sharingCount }).map((_, idx) => {
+              const bLabel = labels[idx] || `B${idx + 1}`;
+              return `${sampleRoom}-${bLabel}`;
+            });
+            return (
+              <div className="mt-1 bg-slate-100/50 border border-slate-200/60 rounded-lg p-2 flex flex-col gap-1">
+                <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+                  Generated Bed Numbers Preview:
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex flex-wrap gap-1">
+                  {generatedBeds.map((bed, idx) => (
+                    <span key={idx} className="bg-white border border-slate-200 text-slate-600 rounded px-1.5 py-0.5 text-[10px] font-semibold font-mono shadow-sm">
+                      {bed}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -444,26 +478,47 @@ function Step3({ floors, onChange }) {
 }
 
 function Step4Pricing({ data, onChange, isEditMode = false }) {
-  const FOOD_ITEMS = [
-    { key: 'breakfastPrice',      label: 'Breakfast Price (₹)',       placeholder: '60' },
-    { key: 'lunchPrice',          label: 'Lunch Price (₹)',            placeholder: '65' },
-    { key: 'dinnerPrice',         label: 'Dinner Price (₹)',           placeholder: '60' },
-    { key: 'omelettePrice',       label: 'Omelette Price (₹)',         placeholder: '18' },
-    { key: 'boiledEggPrice',      label: 'Boiled Egg Price (₹)',       placeholder: '18' },
-    { key: 'washingMachinePrice', label: 'Washing Machine Price (₹)',  placeholder: '50' }
+  const availablePool = [
+    { key: 'omelette', priceKey: 'omelettePrice', labelKey: 'omeletteLabel', defaultLabel: 'Omelette', placeholder: '0', premium: true },
+    { key: 'boiledEgg', priceKey: 'boiledEggPrice', labelKey: 'boiledEggLabel', defaultLabel: 'Boiled Egg', placeholder: '0', premium: true },
+    { key: 'washingMachine', priceKey: 'washingMachinePrice', labelKey: 'washingMachineLabel', defaultLabel: 'Washing Machine', placeholder: '0', premium: false }
   ];
 
-  const [enablePremiumSurcharges, setEnablePremiumSurcharges] = useState(
-    data.foodIncludedInRent && (parseFloat(data.omelettePrice || 0) > 0 || parseFloat(data.boiledEggPrice || 0) > 0)
-  );
+  const activeAddons = data.activeAddons || [];
+  const enablePremiumSurcharges = data.enablePremiumSurcharges || false;
 
   useEffect(() => {
-    if (!data.foodIncludedInRent) {
-      setEnablePremiumSurcharges(false);
-    } else {
-      setEnablePremiumSurcharges(parseFloat(data.omelettePrice || 0) > 0 || parseFloat(data.boiledEggPrice || 0) > 0);
+    if (data.foodIncludedInRent && !enablePremiumSurcharges) {
+      const nextActive = activeAddons.filter(k => k !== 'omelette' && k !== 'boiledEgg');
+      if (nextActive.length !== activeAddons.length) {
+        onChange({
+          ...data,
+          omelettePrice: '0',
+          omeletteLabel: '',
+          boiledEggPrice: '0',
+          boiledEggLabel: '',
+          activeAddons: nextActive
+        });
+      }
     }
-  }, [data.foodIncludedInRent, data.omelettePrice, data.boiledEggPrice]);
+  }, [enablePremiumSurcharges, data.foodIncludedInRent, activeAddons]);
+
+  const removeAddon = (item) => {
+    const nextActive = activeAddons.filter(k => k !== item.key);
+    onChange({
+      ...data,
+      [item.priceKey]: '0',
+      [item.labelKey]: '',
+      activeAddons: nextActive
+    });
+  };
+
+  const inactiveAddons = availablePool.filter(item => {
+    if (item.premium && data.foodIncludedInRent && !enablePremiumSurcharges) {
+      return false;
+    }
+    return !activeAddons.includes(item.key);
+  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -494,84 +549,150 @@ function Step4Pricing({ data, onChange, isEditMode = false }) {
               } else {
                 onChange({
                   ...data,
-                  foodIncludedInRent: checked
+                  foodIncludedInRent: checked,
+                  breakfastPrice: '',
+                  lunchPrice: '',
+                  dinnerPrice: ''
                 });
               }
             }}
           />
           <span>Food Included in Rent (Guests won't be charged extra for daily meals)</span>
         </label>
+
         {data.foodIncludedInRent && (
-          <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 pl-6 cursor-pointer`}>
+          <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer pl-4">
             <input
               type="checkbox"
+              id="enable-premium-surcharges"
               checked={enablePremiumSurcharges}
-              disabled={isEditMode}
-              onChange={e => {
-                const checked = e.target.checked;
-                setEnablePremiumSurcharges(checked);
-                if (!checked) {
-                  onChange({
-                    ...data,
-                    omelettePrice: '0',
-                    boiledEggPrice: '0'
-                  });
-                }
-              }}
+              onChange={() => onChange({ ...data, enablePremiumSurcharges: !enablePremiumSurcharges })}
             />
-            <span>Enable Premium Add-on Surcharges</span>
+            <span>Enable Premium Add-on Surcharges (Allows charging extra for specialized items e.g. eggs/omelettes)</span>
           </label>
         )}
-        <label className={`flex items-center gap-2.5 text-xs font-semibold text-slate-700 ${isEditMode ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+
+        <label className="flex items-center gap-2.5 text-xs font-semibold text-slate-700 cursor-pointer">
           <input
             type="checkbox"
             checked={data.allowMealCancellations}
-            disabled={isEditMode}
             onChange={e => onChange({ ...data, allowMealCancellations: e.target.checked })}
           />
           <span>Allow Meal Cancellations (Guests can cancel meals up to lockout time)</span>
         </label>
-        <div className="form-group mb-0">
-          <label className="form-label text-xs">EB Split Method</label>
+
+        <div className="flex flex-col gap-1.5 border-t border-slate-200 pt-3">
+          <label className="text-xs font-semibold text-slate-700">EB SPLIT METHOD</label>
           <select
-            className={`form-input text-xs py-1 ${isEditMode ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
-            value={data.ebSplitMethod || 'EQUAL_SPLIT'}
-            disabled={isEditMode}
+            className="form-input text-xs py-1.5 cursor-pointer bg-white border-slate-200 rounded-lg"
+            value={data.ebSplitMethod}
             onChange={e => onChange({ ...data, ebSplitMethod: e.target.value })}
           >
             <option value="EQUAL_SPLIT">Equal Split</option>
             <option value="PER_BED">Per Bed Rate</option>
             <option value="METER_BASED">Meter-based split</option>
-            <option value="MANAGER_MANUAL">Manager Manual</option>
           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {FOOD_ITEMS.filter(({ key }) => {
-          if (data.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(key)) {
-            return false;
-          }
-          if (data.foodIncludedInRent && ['omelettePrice', 'boiledEggPrice'].includes(key) && !enablePremiumSurcharges) {
-            return false;
-          }
-          return true;
-        }).map(({ key, label, placeholder }) => (
-          <div key={key} className="form-group mb-0">
-            <label className="form-label text-xs">{label}</label>
-            <input
-              type="text"
-              className={`form-input text-xs py-1.5 ${isEditMode ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
-              placeholder={placeholder}
-              value={data[key]}
-              disabled={isEditMode}
-              onChange={e => {
-                const clean = e.target.value.replace(/[^0-9.]/g, '');
-                onChange({ ...data, [key]: clean });
+      {/* Standard Meals */}
+      {!data.foodIncludedInRent && (
+        <div className="grid grid-cols-3 gap-4 bg-slate-50/30 p-3 rounded-xl border border-slate-100 mb-2">
+          {[
+            { key: 'breakfastPrice', label: 'Breakfast Price (₹)', placeholder: '0' },
+            { key: 'lunchPrice', label: 'Lunch Price (₹)', placeholder: '0' },
+            { key: 'dinnerPrice', label: 'Dinner Price (₹)', placeholder: '0' }
+          ].map(({ key, label, placeholder }) => (
+            <div key={key} className="form-group mb-0">
+              <label className="form-label text-xs">{label}</label>
+              <input
+                type="text"
+                className="form-input text-xs py-1.5"
+                placeholder={placeholder}
+                value={data[key] ?? ''}
+                onChange={e => {
+                  const clean = e.target.value.replace(/[^0-9.]/g, '');
+                  onChange({ ...data, [key]: clean });
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add-ons with Custom Names & Prices */}
+      <div className="flex flex-col gap-4 border-t border-slate-100 pt-4">
+        <div className="flex justify-between items-center">
+          <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Configure Add-on Services</h4>
+          {inactiveAddons.length > 0 && (
+            <button
+              type="button"
+              disabled={data.foodIncludedInRent && !enablePremiumSurcharges}
+              onClick={() => {
+                const nextKey = ['omelette', 'boiledEgg', 'washingMachine'].find(k => !activeAddons.includes(k));
+                if (nextKey) {
+                  const item = availablePool.find(p => p.key === nextKey);
+                  onChange({
+                    ...data,
+                    [item.labelKey]: '',
+                    [item.priceKey]: '',
+                    activeAddons: [...activeAddons, nextKey]
+                  });
+                }
               }}
-            />
-          </div>
-        ))}
+              className="btn btn-primary py-1 px-3 flex items-center gap-1.5 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={2} />
+              <span>Add On</span>
+            </button>
+          )}
+        </div>
+        
+        {availablePool.filter(item => {
+          if (item.premium && data.foodIncludedInRent && !enablePremiumSurcharges) {
+            return false;
+          }
+          return activeAddons.includes(item.key);
+        }).map((item) => {
+          const { priceKey, labelKey, defaultLabel, placeholder } = item;
+          return (
+            <div key={priceKey} className="relative bg-slate-50/50 p-4 rounded-xl border border-slate-100 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => removeAddon(item)}
+                className="absolute top-2.5 right-2.5 text-slate-400 hover:text-red-500 transition-colors"
+                title="Remove Add-on"
+              >
+                <Trash2 className="w-4 h-4" strokeWidth={1.5} />
+              </button>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="form-group mb-0">
+                  <label className="form-label text-xs">Add-on Display Name</label>
+                  <input
+                    type="text"
+                    className="form-input text-xs py-1.5"
+                    placeholder="Enter Add On Name"
+                    value={data[labelKey] ?? ''}
+                    onChange={e => onChange({ ...data, [labelKey]: e.target.value })}
+                  />
+                </div>
+                <div className="form-group mb-0">
+                  <label className="form-label text-xs">Price (₹)</label>
+                  <input
+                    type="text"
+                    className="form-input text-xs py-1.5"
+                    placeholder={placeholder}
+                    value={data[priceKey] ?? ''}
+                    onChange={e => {
+                      const clean = e.target.value.replace(/[^0-9.]/g, '');
+                      onChange({ ...data, [priceKey]: clean });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -679,14 +800,6 @@ export default function OwnerBuildingCreator() {
   const [buildings, setBuildings] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
 
-  useEffect(() => {
-    if (editParam) {
-      handleStartEdit(editParam);
-    } else {
-      setMode('list');
-    }
-  }, [editParam]);
-
   // Wizard state (create mode)
   const [step, setStep] = useState(1);
   const [building, setBuilding] = useState({
@@ -694,13 +807,18 @@ export default function OwnerBuildingCreator() {
     address: '',
     foodIncludedInRent: false,
     allowMealCancellations: true,
-    breakfastPrice: '0',
-    lunchPrice: '0',
-    dinnerPrice: '0',
-    omelettePrice: '0',
-    boiledEggPrice: '0',
-    washingMachinePrice: '0',
-    ebSplitMethod: 'EQUAL_SPLIT'
+    breakfastPrice: '',
+    lunchPrice: '',
+    dinnerPrice: '',
+    omelettePrice: '',
+    omeletteLabel: '',
+    boiledEggPrice: '',
+    boiledEggLabel: '',
+    washingMachinePrice: '',
+    washingMachineLabel: '',
+    ebSplitMethod: 'EQUAL_SPLIT',
+    activeAddons: [],
+    enablePremiumSurcharges: false
   });
   const [floors, setFloors] = useState([makeFloor(0)]);
   const [saving, setSaving] = useState(false);
@@ -718,6 +836,38 @@ export default function OwnerBuildingCreator() {
   const [deletingId, setDeletingId] = useState('');
 
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (editParam) {
+      handleStartEdit(editParam);
+    } else if (searchParams.get('create') === 'true') {
+      setStep(1);
+      setBuilding({
+        name: '',
+        address: '',
+        foodIncludedInRent: false,
+        allowMealCancellations: true,
+        breakfastPrice: '',
+        lunchPrice: '',
+        dinnerPrice: '',
+        omelettePrice: '',
+        omeletteLabel: '',
+        boiledEggPrice: '',
+        boiledEggLabel: '',
+        washingMachinePrice: '',
+        washingMachineLabel: '',
+        ebSplitMethod: 'EQUAL_SPLIT',
+        activeAddons: [],
+        enablePremiumSurcharges: false
+      });
+      setFloors([makeFloor(0)]);
+      setResult(null);
+      setError('');
+      setMode('create');
+    } else {
+      setMode('list');
+    }
+  }, [editParam, searchParams]);
 
   // ── Loading Buildings List ───────────────────────────────────────
   const fetchBuildings = async () => {
@@ -833,6 +983,17 @@ export default function OwnerBuildingCreator() {
       data.boiledEggPrice = data.boiledEggPrice !== undefined && data.boiledEggPrice !== null ? String(data.boiledEggPrice) : '0';
       data.washingMachinePrice = data.washingMachinePrice !== undefined && data.washingMachinePrice !== null ? String(data.washingMachinePrice) : '0';
       data.ebSplitMethod = data.ebSplitMethod || 'EQUAL_SPLIT';
+      data.omeletteLabel = data.omeletteLabel || 'Omelette';
+      data.boiledEggLabel = data.boiledEggLabel || 'Boiled Egg';
+      data.washingMachineLabel = data.washingMachineLabel || 'Washing Machine';
+
+      const active = [];
+      if (parseFloat(data.omelettePrice || 0) > 0 || (data.omeletteLabel && data.omeletteLabel !== 'Omelette')) active.push('omelette');
+      if (parseFloat(data.boiledEggPrice || 0) > 0 || (data.boiledEggLabel && data.boiledEggLabel !== 'Boiled Egg')) active.push('boiledEgg');
+      if (parseFloat(data.washingMachinePrice || 0) > 0 || (data.washingMachineLabel && data.washingMachineLabel !== 'Washing Machine')) active.push('washingMachine');
+      data.activeAddons = active;
+
+      data.enablePremiumSurcharges = data.foodIncludedInRent && (parseFloat(data.omelettePrice || 0) > 0 || parseFloat(data.boiledEggPrice || 0) > 0);
 
       data.floors = data.floors.map(f => ({
         ...f,
@@ -1091,8 +1252,11 @@ export default function OwnerBuildingCreator() {
         lunchPrice: parseFloat(editData.lunchPrice) || 0,
         dinnerPrice: parseFloat(editData.dinnerPrice) || 0,
         omelettePrice: parseFloat(editData.omelettePrice) || 0,
+        omeletteLabel: editData.omeletteLabel || 'Omelette',
         boiledEggPrice: parseFloat(editData.boiledEggPrice) || 0,
+        boiledEggLabel: editData.boiledEggLabel || 'Boiled Egg',
         washingMachinePrice: parseFloat(editData.washingMachinePrice) || 0,
+        washingMachineLabel: editData.washingMachineLabel || 'Washing Machine',
         ebSplitMethod: editData.ebSplitMethod,
         breakfastCutoffTime: editData.breakfastCutoffTime,
         dinnerCutoffTime: editData.dinnerCutoffTime,
@@ -1135,13 +1299,29 @@ export default function OwnerBuildingCreator() {
   const canNext = () => {
     if (step === 1) {
       const pricingKeys = ['breakfastPrice', 'lunchPrice', 'dinnerPrice', 'omelettePrice', 'boiledEggPrice', 'washingMachinePrice'];
-      return pricingKeys.every(k => {
+      const pricesValid = pricingKeys.every(k => {
         if (building.foodIncludedInRent && ['breakfastPrice', 'lunchPrice', 'dinnerPrice'].includes(k)) {
           return true;
         }
         const val = building[k];
+        if (['omelettePrice', 'boiledEggPrice', 'washingMachinePrice'].includes(k)) {
+          if (val === undefined || val === null || val.toString().trim() === '') {
+            return true;
+          }
+        }
         return val !== undefined && val !== null && val.toString().trim() !== '' && !isNaN(parseFloat(val)) && parseFloat(val) >= 0;
       });
+
+      if (!pricesValid) return false;
+
+      const active = building.activeAddons || [];
+      const labelsValid = active.every(addonKey => {
+        const labelKey = addonKey + 'Label';
+        const labelVal = building[labelKey];
+        return labelVal !== undefined && labelVal !== null && labelVal.toString().trim().length > 0;
+      });
+
+      return labelsValid;
     }
     if (step === 2) return building.name.trim().length > 0 && building.address !== undefined && building.address !== null && building.address.trim().length > 0;
     if (step === 3) {
@@ -1194,8 +1374,11 @@ export default function OwnerBuildingCreator() {
         lunchPrice: parseFloat(building.lunchPrice) || 0,
         dinnerPrice: parseFloat(building.dinnerPrice) || 0,
         omelettePrice: parseFloat(building.omelettePrice) || 0,
+        omeletteLabel: building.omeletteLabel || 'Omelette',
         boiledEggPrice: parseFloat(building.boiledEggPrice) || 0,
+        boiledEggLabel: building.boiledEggLabel || 'Boiled Egg',
         washingMachinePrice: parseFloat(building.washingMachinePrice) || 0,
+        washingMachineLabel: building.washingMachineLabel || 'Washing Machine',
         ebSplitMethod: building.ebSplitMethod,
         floors: floors.map(f => ({
           number: f.number,

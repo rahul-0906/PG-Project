@@ -193,10 +193,19 @@ export default function OwnerDashboard() {
       
       <div className="grid-2">
         <div className="card" style={{ padding: '1.25rem' }}>
-          <h3 className="font-heading text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <GitBranch className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
-            <span>Branches ({branches.length})</span>
-          </h3>
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-heading text-base font-semibold text-slate-900 flex items-center gap-2">
+              <GitBranch className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
+              <span>Branches ({branches.length})</span>
+            </h3>
+            <Link
+              to="/owner/buildings?create=true"
+              className="btn btn-primary py-1.5 px-3 flex items-center gap-2 text-xs"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>Create Building</span>
+            </Link>
+          </div>
           {branches.map(b => (
             <div key={b.id} className="p-3.5 rounded-xl bg-slate-50 border border-slate-100 mb-2 flex justify-between items-center">
               <div>

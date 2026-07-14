@@ -100,6 +100,9 @@ public class PricingController {
         java.time.LocalTime dinnerCutoffTime = systemConfig.getRules().getDinnerLockoutTime();
         boolean isPreviousDay = true;
         String allowedPaymentModes = "BOTH";
+        String omeletteLabel = "Omelette";
+        String boiledEggLabel = "Boiled Egg";
+        String washingMachineLabel = "Washing Machine";
 
         if (effectiveBuildingId != null) {
             Optional<BuildingConfig> configOpt = buildingConfigRepository.findById(effectiveBuildingId);
@@ -121,6 +124,15 @@ public class PricingController {
                 isPreviousDay = cfg.isPreviousDay();
                 if (cfg.getAllowedPaymentModes() != null) {
                     allowedPaymentModes = cfg.getAllowedPaymentModes();
+                }
+                if (cfg.getOmeletteLabel() != null) {
+                    omeletteLabel = cfg.getOmeletteLabel();
+                }
+                if (cfg.getBoiledEggLabel() != null) {
+                    boiledEggLabel = cfg.getBoiledEggLabel();
+                }
+                if (cfg.getWashingMachineLabel() != null) {
+                    washingMachineLabel = cfg.getWashingMachineLabel();
                 }
             } else {
                 foodIncludedInRent = systemConfig.getRules().isFoodIncludedInRent();
@@ -146,6 +158,9 @@ public class PricingController {
         pricingDetails.put("dinnerCutoffTime", dinnerCutoffTime.toString());
         pricingDetails.put("isPreviousDay", isPreviousDay);
         pricingDetails.put("allowedPaymentModes", allowedPaymentModes);
+        pricingDetails.put("omeletteLabel", omeletteLabel);
+        pricingDetails.put("boiledEggLabel", boiledEggLabel);
+        pricingDetails.put("washingMachineLabel", washingMachineLabel);
         return ResponseEntity.ok(pricingDetails);
     }
 
@@ -239,6 +254,15 @@ public class PricingController {
         }
         if (body.containsKey("offerBoiledEgg")) {
             cfg.setOfferBoiledEgg(Boolean.parseBoolean(body.get("offerBoiledEgg").toString()));
+        }
+        if (body.containsKey("omeletteLabel")) {
+            cfg.setOmeletteLabel(body.get("omeletteLabel").toString());
+        }
+        if (body.containsKey("boiledEggLabel")) {
+            cfg.setBoiledEggLabel(body.get("boiledEggLabel").toString());
+        }
+        if (body.containsKey("washingMachineLabel")) {
+            cfg.setWashingMachineLabel(body.get("washingMachineLabel").toString());
         }
 
         BuildingConfig savedCfg = buildingConfigRepository.save(cfg);

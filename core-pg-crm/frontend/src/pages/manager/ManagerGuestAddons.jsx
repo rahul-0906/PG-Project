@@ -31,7 +31,7 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true }) {
+function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true, omeletteLabel = 'Omelette', boiledEggLabel = 'Boiled Egg', washingMachineLabel = 'Washing Machine' }) {
   if (!log) return (
     <div className="flex items-center justify-center gap-0.5 text-slate-200">
       <span>•</span><span>•</span><span>•</span>
@@ -82,9 +82,9 @@ function DailyRosterCell({ log, day, offerOmelette = true, offerBoiledEgg = true
         <div>B: {bText} | L: {lText} | D: {dText}</div>
         {hasAddons && (
           <div className="mt-0.5 border-t border-slate-700 pt-0.5 font-semibold text-indigo-300">
-            {offerOmelette && log.omelettes > 0 && `Omelettes: ${log.omelettes} `}
-            {offerBoiledEgg && log.boiledEggs > 0 && `Boiled Eggs: ${log.boiledEggs} `}
-            {log.laundry > 0 && `Washing Machine: ${log.laundry} `}
+            {offerOmelette && log.omelettes > 0 && `${omeletteLabel}: ${log.omelettes} `}
+            {offerBoiledEgg && log.boiledEggs > 0 && `${boiledEggLabel}: ${log.boiledEggs} `}
+            {log.laundry > 0 && `${washingMachineLabel}: ${log.laundry} `}
           </div>
         )}
       </div>
@@ -117,12 +117,18 @@ export default function ManagerGuestAddons() {
   // Building configuration for add-on toggles
   const [offerOmelette, setOfferOmelette] = useState(true);
   const [offerBoiledEgg, setOfferBoiledEgg] = useState(true);
+  const [omeletteLabel, setOmeletteLabel] = useState('Omelette');
+  const [boiledEggLabel, setBoiledEggLabel] = useState('Boiled Egg');
+  const [washingMachineLabel, setWashingMachineLabel] = useState('Washing Machine');
 
   useEffect(() => {
     managerApi.getPricing()
       .then(res => {
         setOfferOmelette(res.data.offerOmelette ?? true);
         setOfferBoiledEgg(res.data.offerBoiledEgg ?? true);
+        setOmeletteLabel(res.data.omeletteLabel || 'Omelette');
+        setBoiledEggLabel(res.data.boiledEggLabel || 'Boiled Egg');
+        setWashingMachineLabel(res.data.washingMachineLabel || 'Washing Machine');
       })
       .catch(err => {
         console.error("Failed to fetch pricing config for add-on toggles", err);
@@ -440,9 +446,9 @@ export default function ManagerGuestAddons() {
       {activeTab === 'daily' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
           {[
-            offerOmelette && { icon: ChefHat, label:'Omelettes', val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), bg: 'bg-indigo-50', color: 'text-indigo-600' },
-            offerBoiledEgg && { icon: Egg, label:'Boiled Eggs', val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), bg: 'bg-amber-50', color: 'text-amber-600' },
-            { icon: Shirt, label:'Washing Machine', val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), bg: 'bg-blue-50', color: 'text-blue-600' },
+            offerOmelette && { icon: ChefHat, label: omeletteLabel, val: Object.values(logs).reduce((s,l) => s+(l.omeletteCount||0), 0), bg: 'bg-indigo-50', color: 'text-indigo-600' },
+            offerBoiledEgg && { icon: Egg, label: boiledEggLabel, val: Object.values(logs).reduce((s,l) => s+(l.boiledEggCount||0), 0), bg: 'bg-amber-50', color: 'text-amber-600' },
+            { icon: Shirt, label: washingMachineLabel, val: Object.values(logs).reduce((s,l) => s+(l.washingMachineCount||0), 0), bg: 'bg-blue-50', color: 'text-blue-600' },
             { icon: Leaf, label:'Veg Guests', val: Object.values(logs).filter(l => l.isVeg).length, bg: 'bg-emerald-50', color: 'text-emerald-600' },
             { icon: Utensils, label:'Non-Veg', val: Object.values(logs).filter(l => !l.isVeg).length, bg: 'bg-rose-50', color: 'text-rose-600' },
           ].filter(Boolean).map(s => {
@@ -534,12 +540,12 @@ export default function ManagerGuestAddons() {
                       </div>
                     </th>
                     {offerOmelette && (
-                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Omelette (₹{config?.pricing?.omelette ?? 18})</th>
+                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">{omeletteLabel} (₹{config?.pricing?.omelette ?? 18})</th>
                     )}
                     {offerBoiledEgg && (
-                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Boiled Egg (₹{config?.pricing?.boiledEgg ?? 18})</th>
+                      <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">{boiledEggLabel} (₹{config?.pricing?.boiledEgg ?? 18})</th>
                     )}
-                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">Washing Machine (₹{config?.pricing?.washingMachine ?? 50})</th>
+                    <th className="py-3 px-3 text-left font-semibold text-slate-600 text-xs">{washingMachineLabel} (₹{config?.pricing?.washingMachine ?? 50})</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -841,7 +847,7 @@ export default function ManagerGuestAddons() {
                                       >
                                         <span className="text-[9px] font-medium text-slate-400 mb-0.5">{dayNum}</span>
                                         <div className="h-5 flex items-center justify-center">
-                                          <DailyRosterCell log={isOutside ? null : dayLog} day={dayNum} offerOmelette={offerOmelette} offerBoiledEgg={offerBoiledEgg} />
+                                          <DailyRosterCell log={isOutside ? null : dayLog} day={dayNum} offerOmelette={offerOmelette} offerBoiledEgg={offerBoiledEgg} omeletteLabel={omeletteLabel} boiledEggLabel={boiledEggLabel} washingMachineLabel={washingMachineLabel} />
                                         </div>
                                       </div>
                                     );

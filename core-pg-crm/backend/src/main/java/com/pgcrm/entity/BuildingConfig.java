@@ -107,15 +107,27 @@ public class BuildingConfig {
     @Builder.Default
     private BigDecimal omelettePrice = BigDecimal.ZERO;
 
+    @Column(name = "omelette_label", nullable = false)
+    @Builder.Default
+    private String omeletteLabel = "Omelette";
+
     /** Per-item price charged for a boiled egg add-on, in Indian Rupees (₹). Defaults to ₹0. */
     @Column(name = "boiled_egg_price", nullable = false)
     @Builder.Default
     private BigDecimal boiledEggPrice = BigDecimal.ZERO;
 
+    @Column(name = "boiled_egg_label", nullable = false)
+    @Builder.Default
+    private String boiledEggLabel = "Boiled Egg";
+
     /** Per-use price charged for washing machine usage, in Indian Rupees (₹). Defaults to ₹0. */
     @Column(name = "washing_machine_price", nullable = false)
     @Builder.Default
     private BigDecimal washingMachinePrice = BigDecimal.ZERO;
+
+    @Column(name = "washing_machine_label", nullable = false)
+    @Builder.Default
+    private String washingMachineLabel = "Washing Machine";
 
     // ── Electricity Bill Settings ──────────────────────────────────────────────
 
