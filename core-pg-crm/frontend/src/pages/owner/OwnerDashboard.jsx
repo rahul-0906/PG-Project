@@ -225,7 +225,12 @@ export default function OwnerDashboard() {
               <UserCheck className="w-5 h-5 text-slate-400" strokeWidth={1.5} />
               <span>Managers ({managers.length})</span>
             </h3>
-            <button className="btn btn-primary flex items-center gap-2 px-2.5 py-1 text-xs font-semibold" onClick={openCreateManager}>
+            <button 
+              className="btn btn-primary flex items-center gap-2 px-2.5 py-1 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed" 
+              onClick={openCreateManager}
+              disabled={branches.length === 0}
+              title={branches.length === 0 ? "Create a branch first before adding a manager" : "Add a new manager"}
+            >
               <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
               <span>Add Manager</span>
             </button>
