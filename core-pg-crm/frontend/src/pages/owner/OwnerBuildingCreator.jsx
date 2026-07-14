@@ -1371,7 +1371,7 @@ export default function OwnerBuildingCreator() {
                   </ul>
                 </div>
                 <div className="form-group mb-4">
-                  <label className="form-label text-xs font-bold text-slate-600">
+                  <label className="form-label text-xs font-bold text-slate-600" style={{ textTransform: 'none' }}>
                     To confirm, type <span className="text-rose-600 font-extrabold">"{buildingToDelete.name}"</span> below:
                   </label>
                   <input
