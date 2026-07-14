@@ -756,7 +756,7 @@ export default function OwnerBuildingCreator() {
 
   const handleDeleteBuilding = async () => {
     if (!buildingToDelete) return;
-    if (deleteConfirmInput !== buildingToDelete.name) {
+    if (deleteConfirmInput.trim().toLowerCase() !== buildingToDelete.name.trim().toLowerCase()) {
       alert("Please type the building name exactly to confirm deletion.");
       return;
     }
@@ -1382,7 +1382,7 @@ export default function OwnerBuildingCreator() {
                     onChange={e => setDeleteConfirmInput(e.target.value)}
                     autoFocus
                     onKeyDown={e => {
-                      if (e.key === 'Enter' && deleteConfirmInput === buildingToDelete.name) {
+                      if (e.key === 'Enter' && deleteConfirmInput.trim().toLowerCase() === buildingToDelete.name.trim().toLowerCase()) {
                         handleDeleteBuilding();
                       }
                     }}
@@ -1404,7 +1404,7 @@ export default function OwnerBuildingCreator() {
                     type="button"
                     className="btn bg-rose-600 hover:bg-rose-700 text-white border border-rose-600 hover:border-rose-700 py-2 px-4 font-semibold shadow-sm flex items-center gap-1.5 disabled:opacity-50"
                     onClick={handleDeleteBuilding}
-                    disabled={deleteConfirmInput !== buildingToDelete.name || deletingId !== ''}
+                    disabled={deleteConfirmInput.trim().toLowerCase() !== buildingToDelete.name.trim().toLowerCase() || deletingId !== ''}
                   >
                     {deletingId ? (
                       <>
