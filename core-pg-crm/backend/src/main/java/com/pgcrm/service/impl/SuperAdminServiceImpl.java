@@ -223,14 +223,14 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
-        if (user.getRole() == Role.SUPER_ADMIN) {
-            throw new IllegalArgumentException("Cannot delete Super Admin account.");
+        if (user.getRole() != Role.PG_OWNER) {
+            throw new IllegalArgumentException("Super Admin is only permitted to delete PG_OWNER accounts.");
         }
 
         userRepository.delete(user);
-        String desc = String.format("Super Admin deleted %s account: '%s' (ID: %s)",
-                user.getRole(), user.getEmail(), user.getId());
+        String desc = String.format("Super Admin deleted PG_OWNER account: '%s' (ID: %s)",
+                user.getEmail(), user.getId());
         auditService.log(AuditAction.TENANT_CONFIG_UPDATED, "User", userId, desc);
-        log.info("✅ User deleted by Super Admin: {}", desc);
+        log.info("✅ PG_OWNER account deleted by Super Admin: {}", desc);
     }
 }

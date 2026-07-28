@@ -674,16 +674,16 @@ export default function SuperAdminDashboard() {
                           >
                             Modify Role
                           </button>
-                          {u.role !== 'SUPER_ADMIN' && (
+                          {u.role === 'PG_OWNER' && (
                             <button
                               onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete user account '${u.email}' (${u.role})?`)) {
+                                if (window.confirm(`Are you sure you want to delete PG Owner account '${u.email}'?`)) {
                                   deleteUserMutation.mutate(u.id);
                                 }
                               }}
                               disabled={deleteUserMutation.isPending}
                               className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 shadow-2xs"
-                              title="Delete Account"
+                              title="Delete PG Owner Account"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                               <span>Delete</span>
