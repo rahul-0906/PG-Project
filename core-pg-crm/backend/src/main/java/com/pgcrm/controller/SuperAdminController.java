@@ -85,7 +85,7 @@ public class SuperAdminController {
         ));
     }
 
-    @DeleteMapping("/users/{userId}")
+    @DeleteMapping({"/users/{userId}", "/owners/{userId}"})
     public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String userId,
                                                           Authentication authentication) {
         String actorId = authentication != null ? authentication.getName() : "SUPER_ADMIN";

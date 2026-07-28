@@ -68,6 +68,13 @@ public class GlobalExceptionHandler {
                 .body(error(ex.getMessage(), 404));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoResourceFound(
+            final org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(error("API Endpoint or Resource not found: " + ex.getResourcePath(), 404));
+    }
+
     /**
      * Handles {@link BedUnavailableException} — thrown when a check-in or bed-switch
      * operation targets a bed that is {@code OCCUPIED} or {@code MAINTENANCE}.
