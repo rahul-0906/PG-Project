@@ -92,7 +92,8 @@ export default function SuperAdminDashboard() {
       refetchSummary();
     },
     onError: (err) => {
-      setOwnerMsg({ type: 'error', text: err.response?.data?.message || err.message || 'Failed to provision PG Owner account.' });
+      const errorMsg = err.response?.data?.message || err.response?.data?.error || (typeof err.response?.data === 'string' ? err.response?.data : null) || err.message || 'Failed to provision PG Owner account.';
+      setOwnerMsg({ type: 'error', text: errorMsg });
     }
   });
 

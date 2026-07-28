@@ -126,13 +126,39 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Catch-all handler for any {@link RuntimeException} not covered by a more
-     * specific handler above. Ensures that no unhandled runtime exception leaks
-     * through as an unstructured Spring error response.
+     * Handles Spring MVC {@link org.springframework.web.bind.MethodArgumentNotValidException} — thrown when DTO
+     * validation annotations (e.g., {@code @NotBlank}, {@code @Email}) fail during request processing.
      *
-     * <p><strong>Note:</strong> Because this handler catches the broad
-     * {@code RuntimeException} type, it may also intercept exceptions thrown by
-     * Spring internals. Review Sentry/log output if unexpected payloads appear.</p>
+     * @param ex the validation exception carrying field errors.
+     * @return {@code 400 Bad Request} with a structured error body describing the validation error.
+     */
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<Map<String, Object>> handleValidationExceptions(
+            final org.springframework.web.bind.MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getDefaultMessage())
+                .findFirst()
+                .orElse("Validation failed");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(error(msg, 400));
+    }
+
+    /**
+     * Handles {@link IllegalArgumentException} and {@link IllegalStateException} — thrown when bad arguments
+     * or disallowed state transitions are attempted.
+     *
+     * @param ex the exception carrying the detail message.
+     * @return {@code 400 Bad Request} with a structured error body.
+     */
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentOrState(final RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(error(ex.getMessage(), 400));
+    }
+
+    /**
+     * Catch-all handler for any {@link RuntimeException} not covered by a more
+     * specific handler above.
      *
      * @param ex the unhandled runtime exception.
      * @return {@code 400 Bad Request} with a structured error body containing the
@@ -149,9 +175,6 @@ public class GlobalExceptionHandler {
      * authenticated user attempts to access a resource or operation that their
      * {@link com.pgcrm.entity.enums.Role} does not permit.
      *
-     * <p>The error message is intentionally generic ({@code "Access denied"}) to avoid
-     * leaking information about which resources exist or which roles can access them.</p>
-     *
      * @param ex the access denied exception (message suppressed in the response).
      * @return {@code 403 Forbidden} with a generic structured error body.
      */
@@ -164,13 +187,7 @@ public class GlobalExceptionHandler {
 
     /**
      * Final catch-all handler for any checked or unchecked {@link Exception} not
-     * intercepted by the handlers above. Prevents raw Spring Whitelabel error pages
-     * from being returned to API clients.
-     *
-     * <p><strong>Production Note:</strong> The raw {@code ex.getMessage()} is included
-     * in the response body for developer visibility. For production hardening, replace
-     * this with a fixed generic message and route exception details exclusively to
-     * a structured logging/APM system.</p>
+     * intercepted by the handlers above.
      *
      * @param ex the unexpected exception.
      * @return {@code 500 Internal Server Error} with a structured error body.
@@ -184,13 +201,12 @@ public class GlobalExceptionHandler {
     /**
      * Private factory method that produces the standard PG CRM API error response body.
      *
-     * <p>Returns an immutable {@link Map} with exactly three keys, consistent across
-     * all error responses in the API:</p>
+     * <p>Returns an immutable {@link Map} with consistent keys across all error responses:</p>
      * <ul>
      *   <li>{@code "error"} — the human-readable error description.</li>
-     *   <li>{@code "status"} — the integer HTTP status code (mirrors the HTTP response status).</li>
-     *   <li>{@code "timestamp"} — the server-side ISO-8601 datetime string of when
-     *       the error occurred, enabling log correlation.</li>
+     *   <li>{@code "message"} — duplicate alias for frontend compatibility.</li>
+     *   <li>{@code "status"} — the integer HTTP status code.</li>
+     *   <li>{@code "timestamp"} — ISO-8601 datetime string.</li>
      * </ul>
      *
      * @param message the error description to include in the response body.
@@ -198,8 +214,10 @@ public class GlobalExceptionHandler {
      * @return an immutable {@link Map} conforming to the standard API error shape.
      */
     private Map<String, Object> error(final String message, final int status) {
+        String safeMsg = (message != null && !message.isBlank()) ? message : "An unexpected error occurred.";
         return Map.of(
-                "error",     message,
+                "error",     safeMsg,
+                "message",   safeMsg,
                 "status",    status,
                 "timestamp", LocalDateTime.now().toString()
         );
