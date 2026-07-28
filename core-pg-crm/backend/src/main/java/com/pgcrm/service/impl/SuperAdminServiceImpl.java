@@ -216,4 +216,21 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         auditService.log(AuditAction.GUEST_CHECKOUT_CONFIRMED, "Guest", guestId, desc);
         log.info("✅ PII Anonymized for guest {}", guestId);
     }
+
+    @Override
+    @Transactional
+    public void deleteUser(String userId, String adminActorId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        if (user.getRole() == Role.SUPER_ADMIN) {
+            throw new IllegalArgumentException("Cannot delete Super Admin account.");
+        }
+
+        userRepository.delete(user);
+        String desc = String.format("Super Admin deleted %s account: '%s' (ID: %s)",
+                user.getRole(), user.getEmail(), user.getId());
+        auditService.log(AuditAction.TENANT_CONFIG_UPDATED, "User", userId, desc);
+        log.info("✅ User deleted by Super Admin: {}", desc);
+    }
 }

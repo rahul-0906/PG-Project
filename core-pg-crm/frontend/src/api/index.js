@@ -204,6 +204,7 @@ export const superAdminApi = {
   applyFinancialOverride: (data) => cachedApi.post('/super-admin/financial-override', data),
   getAuditLogs: (page = 0, size = 20, search = '') => cachedApi.get('/super-admin/audit-logs', { params: { page, size, search } }),
   anonymizeGuest: (guestId) => cachedApi.post(`/super-admin/guests/${guestId}/anonymize`),
+  deleteUser: (userId) => cachedApi.delete(`/super-admin/users/${userId}`),
 };
 
 export default cachedApi;

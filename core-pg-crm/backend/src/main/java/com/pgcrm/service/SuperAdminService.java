@@ -25,4 +25,6 @@ public interface SuperAdminService {
     Page<AuditLog> getAuditLogs(String search, Pageable pageable);
 
     void anonymizeGuest(String guestId, String adminActorId);
+
+    void deleteUser(String userId, String adminActorId);
 }

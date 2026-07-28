@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   ShieldAlert, Users, DollarSign, Activity, FileText, 
   RefreshCw, Lock, Building, Bed, CheckCircle2, Search, Key,
-  GitBranch, UserPlus, AlertCircle, ShieldCheck, FileSpreadsheet, ChevronRight
+  GitBranch, UserPlus, AlertCircle, ShieldCheck, FileSpreadsheet, ChevronRight, Trash2
 } from 'lucide-react';
 import BulkImportModal from '../manager/BulkImportModal';
 
@@ -94,6 +94,18 @@ export default function SuperAdminDashboard() {
     onError: (err) => {
       const errorMsg = err.response?.data?.message || err.response?.data?.error || (typeof err.response?.data === 'string' ? err.response?.data : null) || err.message || 'Failed to provision PG Owner account.';
       setOwnerMsg({ type: 'error', text: errorMsg });
+    }
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId) => superAdminApi.deleteUser(userId),
+    onSuccess: () => {
+      refetchUsers();
+      refetchSummary();
+    },
+    onError: (err) => {
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to delete user account.';
+      alert(msg);
     }
   });
 
@@ -655,12 +667,29 @@ export default function SuperAdminDashboard() {
                         )}
                       </td>
                       <td className="p-3">
-                        <button
-                          onClick={() => { setEditingUser(u); setRoleForm({ newRole: u.role, branchId: u.branchId || '' }); }}
-                          className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white rounded-lg transition shadow-sm"
-                        >
-                          Modify Role
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => { setEditingUser(u); setRoleForm({ newRole: u.role, branchId: u.branchId || '' }); }}
+                            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-white rounded-lg transition shadow-sm"
+                          >
+                            Modify Role
+                          </button>
+                          {u.role !== 'SUPER_ADMIN' && (
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete user account '${u.email}' (${u.role})?`)) {
+                                  deleteUserMutation.mutate(u.id);
+                                }
+                              }}
+                              disabled={deleteUserMutation.isPending}
+                              className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 shadow-2xs"
+                              title="Delete Account"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
