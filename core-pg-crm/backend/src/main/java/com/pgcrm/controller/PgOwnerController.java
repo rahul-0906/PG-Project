@@ -160,12 +160,17 @@ public class PgOwnerController {
         return ResponseEntity.ok("Use /api/system/config");
     }
 
+    private User getAuthenticatedUser(org.springframework.security.core.Authentication authentication) {
+        String identifier = authentication != null ? authentication.getName() : "";
+        return userRepository.findById(identifier)
+                .orElseGet(() -> userRepository.findByEmailIgnoreCase(identifier)
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found: " + identifier)));
+    }
+
     @PostMapping("/super-admin-permission")
     public ResponseEntity<Map<String, Object>> toggleSuperAdminPermission(@RequestParam boolean granted,
                                                                            org.springframework.security.core.Authentication authentication) {
-        String email = authentication.getName();
-        User owner = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
+        User owner = getAuthenticatedUser(authentication);
         owner.setAllowSuperAdminAccess(granted);
         userRepository.save(owner);
         return ResponseEntity.ok(Map.of(
@@ -177,9 +182,7 @@ public class PgOwnerController {
 
     @GetMapping("/super-admin-permission")
     public ResponseEntity<Map<String, Object>> getSuperAdminPermissionStatus(org.springframework.security.core.Authentication authentication) {
-        String email = authentication.getName();
-        User owner = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + email));
+        User owner = getAuthenticatedUser(authentication);
         return ResponseEntity.ok(Map.of(
                 "allowSuperAdminAccess", owner.isAllowSuperAdminAccess()
         ));
