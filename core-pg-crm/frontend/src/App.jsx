@@ -19,6 +19,8 @@ import ManagerGuestAddons from './pages/manager/ManagerGuestAddons';
 import ManagerPricing from './pages/manager/ManagerPricing';
 import ManagerInvoiceGenerator from './pages/manager/ManagerInvoiceGenerator';
 
+import SuperAdminDashboard from './pages/superadmin/SuperAdminDashboard';
+
 import Reports from './pages/Reports';
 import AuditLog from './pages/AuditLog';
 
@@ -46,6 +48,7 @@ function RoleRedirect() {
   const mustChange = user.mustChangePassword === true || user.mustChangePassword === 'true';
   if (mustChange) return <Navigate to="/change-password" />;
   const map = {
+    SUPER_ADMIN: '/super-admin',
     PG_OWNER: '/owner/dashboard',
     PG_MANAGER: '/manager/dashboard',
     GUEST: '/guest/dashboard',
@@ -103,36 +106,39 @@ export default function App() {
         <h2>🚫 Unauthorized</h2><p>You don't have permission to view this page.</p>
       </div>} />
 
+      {/* Super Admin */}
+      <Route path="/super-admin" element={
+        <PrivateRoute roles={['SUPER_ADMIN']}><SuperAdminDashboard /></PrivateRoute>} />
 
       {/* PG Owner */}
       <Route path="/owner/dashboard" element={
-        <PrivateRoute roles={['PG_OWNER']}><OwnerDashboard /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_OWNER', 'SUPER_ADMIN']}><OwnerDashboard /></PrivateRoute>} />
       <Route path="/owner/buildings" element={
-        <PrivateRoute roles={['PG_OWNER']}><OwnerBuildingCreator /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_OWNER', 'SUPER_ADMIN']}><OwnerBuildingCreator /></PrivateRoute>} />
       <Route path="/owner/reports" element={
-        <PrivateRoute roles={['PG_OWNER']}><Reports /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_OWNER', 'SUPER_ADMIN']}><Reports /></PrivateRoute>} />
       <Route path="/owner/audit" element={
-        <PrivateRoute roles={['PG_OWNER']}><AuditLog /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_OWNER', 'SUPER_ADMIN']}><AuditLog /></PrivateRoute>} />
 
       {/* PG Manager */}
       <Route path="/manager/dashboard" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerDashboard /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerDashboard /></PrivateRoute>} />
       <Route path="/manager/guests" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerGuests /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerGuests /></PrivateRoute>} />
       <Route path="/manager/eb-bill" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerEbBill /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerEbBill /></PrivateRoute>} />
       <Route path="/manager/maintenance" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerMaintenance /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerMaintenance /></PrivateRoute>} />
       <Route path="/manager/addons" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerGuestAddons /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerGuestAddons /></PrivateRoute>} />
       <Route path="/manager/pricing" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerPricing /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerPricing /></PrivateRoute>} />
       <Route path="/manager/invoices" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><ManagerInvoiceGenerator /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><ManagerInvoiceGenerator /></PrivateRoute>} />
       <Route path="/manager/reports" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><Reports /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><Reports /></PrivateRoute>} />
       <Route path="/manager/audit" element={
-        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER']}><AuditLog /></PrivateRoute>} />
+        <PrivateRoute roles={['PG_MANAGER', 'PG_OWNER', 'SUPER_ADMIN']}><AuditLog /></PrivateRoute>} />
 
       {/* Guest */}
       <Route path="/guest/dashboard" element={

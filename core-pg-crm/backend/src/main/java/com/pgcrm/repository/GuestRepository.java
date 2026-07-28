@@ -174,21 +174,26 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
             SELECT COUNT(g) FROM Guest g
             WHERE YEAR(g.checkInDate) = :year
               AND MONTH(g.checkInDate) = :month
+              AND (:buildingId IS NULL OR g.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM g.beds b WHERE b.room.floor.building.id = :buildingId
+              ))
             """)
     long countCheckInsByMonthYear(
-            @Param("year")  int year,
-            @Param("month") int month);
+            @Param("year")       int year,
+            @Param("month")      int month,
+            @Param("buildingId") String buildingId);
 
     /**
      * Returns the number of guests who checked out during a specific calendar month and year.
      *
-     * <p>Used alongside {@link #countCheckInsByMonthYear(int, int)} to compute monthly
+     * <p>Used alongside {@link #countCheckInsByMonthYear(int, int, String)} to compute monthly
      * check-in vs. check-out trend data for the reporting dashboard. Only counts guests
      * with a non-null {@code actualCheckOutDate} to exclude guests who have issued
      * notice but not yet vacated.</p>
      *
-     * @param year  the 4-digit calendar year (e.g., {@code 2026}).
-     * @param month the calendar month (1 = January … 12 = December).
+     * @param year       the 4-digit calendar year (e.g., {@code 2026}).
+     * @param month      the calendar month (1 = January … 12 = December).
+     * @param buildingId optional building ID filter.
      * @return the count of guests whose {@code actualCheckOutDate} falls within the given month/year.
      */
     @Query("""
@@ -196,10 +201,14 @@ public interface GuestRepository extends JpaRepository<Guest, String> {
             WHERE g.actualCheckOutDate IS NOT NULL
               AND YEAR(g.actualCheckOutDate) = :year
               AND MONTH(g.actualCheckOutDate) = :month
+              AND (:buildingId IS NULL OR g.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM g.beds b WHERE b.room.floor.building.id = :buildingId
+              ))
             """)
     long countCheckOutsByMonthYear(
-            @Param("year")  int year,
-            @Param("month") int month);
+            @Param("year")       int year,
+            @Param("month")      int month,
+            @Param("buildingId") String buildingId);
 
     // ── Payment Reminder Scheduler ────────────────────────────────────────────
 

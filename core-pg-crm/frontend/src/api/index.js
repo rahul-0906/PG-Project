@@ -113,13 +113,15 @@ export const ownerApi = {
   getBuildingLayout: (id) => cachedApi.get(`/owner/buildings/${id}`),
   updateBuilding: (id, data) => cachedApi.put(`/owner/buildings/${id}`, data),
   deleteBuilding: (id) => cachedApi.delete(`/owner/buildings/${id}`),
+  getSuperAdminPermission: () => cachedApi.get('/owner/super-admin-permission'),
+  toggleSuperAdminPermission: (granted) => cachedApi.post(`/owner/super-admin-permission?granted=${granted}`),
 };
 
 export const managerApi = {
   getDashboard: (buildingId) => cachedApi.get('/manager/dashboard', {
     headers: buildingId ? { 'X-Selected-Branch-Id': buildingId } : {}
   }),
-  getGuests: () => cachedApi.get('/manager/guests'),
+  getGuests: (buildingId) => cachedApi.get('/manager/guests', { params: buildingId ? { buildingId } : {} }),
   checkIn: (data) => cachedApi.post('/manager/guests', data),
   bulkImport: (formData, buildingId) => cachedApi.post('/manager/guests/bulk-import', formData, {
     params: buildingId ? { buildingId } : {},
@@ -191,6 +193,17 @@ export const notificationsApi = {
   getNotifications: () => cachedApi.get('/guest/notifications'),
   markRead: (id) => cachedApi.put(`/guest/notifications/${id}/read`),
   markAllRead: () => cachedApi.put('/guest/notifications/read-all'),
+};
+
+export const superAdminApi = {
+  getSummary: () => cachedApi.get('/super-admin/summary'),
+  getUsers: () => cachedApi.get('/super-admin/users'),
+  createPgOwner: (data) => cachedApi.post('/super-admin/owners', data),
+  createBuilding: (data) => cachedApi.post('/super-admin/buildings', data),
+  updateUserRole: (userId, newRole, branchId) => cachedApi.put('/super-admin/users/role', { userId, newRole, branchId }),
+  applyFinancialOverride: (data) => cachedApi.post('/super-admin/financial-override', data),
+  getAuditLogs: (page = 0, size = 20, search = '') => cachedApi.get('/super-admin/audit-logs', { params: { page, size, search } }),
+  anonymizeGuest: (guestId) => cachedApi.post(`/super-admin/guests/${guestId}/anonymize`),
 };
 
 export default cachedApi;

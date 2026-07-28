@@ -85,10 +85,13 @@ public class PgManagerController {
     // ── Guest Management ──────────────────────────────────────────
 
     @GetMapping("/guests")
-    public ResponseEntity<List<GuestResponse>> getActiveGuests(@RequestAttribute(required = false) String branchId) {
+    public ResponseEntity<List<GuestResponse>> getActiveGuests(
+            @RequestAttribute(required = false) String branchId,
+            @RequestParam(required = false) String buildingId) {
+        String targetBuildingId = (buildingId != null && !buildingId.isBlank()) ? buildingId : branchId;
         List<Guest> guests;
-        if (branchId != null) {
-            guests = guestRepository.findActiveGuestsByBuildingId(branchId);
+        if (targetBuildingId != null && !targetBuildingId.isBlank()) {
+            guests = guestRepository.findActiveGuestsByBuildingId(targetBuildingId);
         } else {
             guests = guestRepository.findByActiveTrue();
         }

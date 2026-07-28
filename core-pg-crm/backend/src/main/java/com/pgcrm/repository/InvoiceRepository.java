@@ -125,11 +125,15 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
             WHERE li.invoice.year  = :year
               AND li.invoice.month = :month
               AND li.invoice.status IN ('GENERATED', 'PAID')
+              AND (:buildingId IS NULL OR li.invoice.guest.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM Guest g JOIN g.beds b WHERE g.id = li.invoice.guest.id AND b.room.floor.building.id = :buildingId
+              ))
             GROUP BY li.type
             """)
     List<Object[]> getRevenueBreakdown(
-            @Param("year")  int year,
-            @Param("month") int month);
+            @Param("year")       int year,
+            @Param("month")      int month,
+            @Param("buildingId") String buildingId);
 
     /**
      * Returns the count of distinct guests who were billed in a specific month and year.
@@ -137,17 +141,22 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * <p>Used by the reporting dashboard to display monthly billing coverage statistics
      * (e.g., "42 guests invoiced in May 2026").</p>
      *
-     * @param year  the 4-digit billing year.
-     * @param month the billing month (1–12).
+     * @param year       the 4-digit billing year.
+     * @param month      the billing month (1–12).
+     * @param buildingId optional building ID filter.
      * @return the count of distinct guest IDs with invoices in the given period.
      */
     @Query("""
             SELECT COUNT(DISTINCT i.guest.id) FROM Invoice i
             WHERE i.year = :year AND i.month = :month
+              AND (:buildingId IS NULL OR i.guest.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM Guest g JOIN g.beds b WHERE g.id = i.guest.id AND b.room.floor.building.id = :buildingId
+              ))
             """)
     long countDistinctGuestsByMonthYear(
-            @Param("year")  int year,
-            @Param("month") int month);
+            @Param("year")       int year,
+            @Param("month")      int month,
+            @Param("buildingId") String buildingId);
 
     /**
      * Returns the count of invoices with the given status in a specific year.
@@ -155,14 +164,22 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * <p>Used by the Owner annual report to compute how many invoices were paid vs.
      * generated vs. overdue within a calendar year.</p>
      *
-     * @param year   the 4-digit calendar year.
-     * @param status the {@link InvoiceStatus} to count.
+     * @param year       the 4-digit calendar year.
+     * @param status     the {@link InvoiceStatus} to count.
+     * @param buildingId optional building ID filter.
      * @return the number of invoices matching the year and status.
      */
-    @Query("SELECT COUNT(i) FROM Invoice i WHERE i.year = :year AND i.status = :status")
+    @Query("""
+            SELECT COUNT(i) FROM Invoice i
+            WHERE i.year = :year AND i.status = :status
+              AND (:buildingId IS NULL OR i.guest.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM Guest g JOIN g.beds b WHERE g.id = i.guest.id AND b.room.floor.building.id = :buildingId
+              ))
+            """)
     long countByYearAndStatus(
-            @Param("year")   int year,
-            @Param("status") InvoiceStatus status);
+            @Param("year")       int year,
+            @Param("status")     InvoiceStatus status,
+            @Param("buildingId") String buildingId);
 
     /**
      * Returns the total paid revenue for a given calendar year.
@@ -171,12 +188,21 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
      * Only invoices with status {@code PAID} are summed to reflect actually collected
      * amounts rather than billed amounts.</p>
      *
-     * @param year the 4-digit calendar year.
+     * @param year       the 4-digit calendar year.
+     * @param buildingId optional building ID filter.
      * @return the sum of {@link Invoice#getTotalAmount()} for all paid invoices in the year;
      *         may return {@code null} if no paid invoices exist for that year.
      */
-    @Query("SELECT SUM(i.totalAmount) FROM Invoice i WHERE i.year = :year AND i.status = 'PAID'")
-    BigDecimal sumPaidAmountByYear(@Param("year") int year);
+    @Query("""
+            SELECT SUM(i.totalAmount) FROM Invoice i
+            WHERE i.year = :year AND i.status = 'PAID'
+              AND (:buildingId IS NULL OR i.guest.building.id = :buildingId OR EXISTS (
+                  SELECT 1 FROM Guest g JOIN g.beds b WHERE g.id = i.guest.id AND b.room.floor.building.id = :buildingId
+              ))
+            """)
+    BigDecimal sumPaidAmountByYear(
+            @Param("year")       int year,
+            @Param("buildingId") String buildingId);
 
     // ── Payment Reminder Scheduler ────────────────────────────────────────────
 

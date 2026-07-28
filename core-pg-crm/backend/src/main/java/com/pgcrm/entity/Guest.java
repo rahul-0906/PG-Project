@@ -102,8 +102,8 @@ public class Guest {
         inverseJoinColumns = @JoinColumn(name = "bed_id")
     )
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "room"})
-    @Singular("bed")
-    private List<Bed> beds;
+    @Builder.Default
+    private List<Bed> beds = new ArrayList<>();
 
     public Bed getBed() {
         if (beds == null || beds.isEmpty()) {
@@ -350,5 +350,29 @@ public class Guest {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public static class GuestBuilder {
+        private List<Bed> beds = new ArrayList<>();
+
+        public GuestBuilder bed(Bed bed) {
+            if (this.beds == null) {
+                this.beds = new ArrayList<>();
+            }
+            this.beds.clear();
+            if (bed != null) {
+                this.beds.add(bed);
+            }
+            return this;
+        }
+
+        public GuestBuilder beds(List<Bed> beds) {
+            if (beds == null) {
+                this.beds = new ArrayList<>();
+            } else {
+                this.beds = new ArrayList<>(beds);
+            }
+            return this;
+        }
     }
 }

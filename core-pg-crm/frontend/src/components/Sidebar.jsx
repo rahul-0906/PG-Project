@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutGrid, 
@@ -15,10 +15,26 @@ import {
   Building,
   Tag,
   Receipt,
+  ShieldAlert,
+  UserPlus,
+  FileSpreadsheet,
+  DollarSign,
+  Lock,
   Settings as SettingsIcon
 } from 'lucide-react';
 
 const navMap = {
+  SUPER_ADMIN: [
+    { to: '/super-admin?tab=overview', label: 'Dashboard', icon: ShieldAlert },
+    { to: '/super-admin?tab=provision', label: 'Provision PG Owner', icon: UserPlus },
+    { to: '/owner/buildings', label: 'Create Building', icon: Building },
+    { to: '/super-admin?tab=guests', label: 'Branch Guests', icon: Users },
+    { to: '/super-admin?tab=bulk_import', label: 'Bulk Excel Migration', icon: FileSpreadsheet },
+    { to: '/super-admin?tab=users', label: 'User & RBAC Controls', icon: Users },
+    { to: '/super-admin?tab=overrides', label: 'Financial Overrides', icon: DollarSign },
+    { to: '/super-admin?tab=audit', label: 'Audit Forensics', icon: FileText },
+    { to: '/settings', label: 'Settings', icon: SettingsIcon },
+  ],
   PG_OWNER: [
     { to: '/owner/dashboard', label: 'Dashboard', icon: LayoutGrid },
     { to: '/owner/buildings', label: 'Buildings', icon: Building },
@@ -51,7 +67,9 @@ const navMap = {
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const items = navMap[user?.role] || [];
+  const currentPathWithSearch = location.pathname + location.search;
 
   const handleLogout = () => {
     // Clear session state first (synchronous), then navigate
@@ -67,24 +85,22 @@ export default function Sidebar() {
       <div className="flex flex-col gap-1">
         {items.map(item => {
           const Icon = item.icon;
+          const isActive = item.to.includes('?') 
+            ? (currentPathWithSearch === item.to || (location.pathname === '/super-admin' && !location.search && item.to === '/super-admin?tab=overview'))
+            : location.pathname === item.to;
+
           return (
             <NavLink
               key={item.to}
               to={item.to}
-              className={({ isActive }) => 
-                `flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
-                  isActive 
-                    ? 'bg-slate-50 text-primary font-semibold' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`
-              }
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                isActive 
+                  ? 'bg-slate-50 text-primary font-semibold' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
             >
-              {({ isActive }) => (
-                <>
-                  <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-slate-400'}`} strokeWidth={1.5} />
-                  <span>{item.label}</span>
-                </>
-              )}
+              <Icon className={`w-4 h-4 transition-colors ${isActive ? 'text-primary' : 'text-slate-400'}`} strokeWidth={1.5} />
+              <span>{item.label}</span>
             </NavLink>
           );
         })}

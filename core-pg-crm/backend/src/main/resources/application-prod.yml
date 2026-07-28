@@ -25,3 +25,7 @@ logging:
     com.pgcrm: INFO
     org.springframework.security: WARN
     org.hibernate.SQL: WARN
+
+app:
+  seed-demo: false
+

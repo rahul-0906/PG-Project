@@ -6,18 +6,21 @@ import { managerApi, notificationsApi } from '../api';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 const ROLE_LABELS = {
+  SUPER_ADMIN: 'Super Admin',
   PG_OWNER: 'Owner',
   PG_MANAGER: 'Manager',
   GUEST: 'Guest',
 };
 
 const ROLE_CLASSES = {
+  SUPER_ADMIN: 'bg-rose-50 text-rose-700 border-rose-200',
   PG_OWNER: 'bg-amber-50 text-amber-700 border-amber-200',
   PG_MANAGER: 'bg-violet-50 text-violet-700 border-violet-200',
   GUEST: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 const ROLE_DOTS = {
+  SUPER_ADMIN: 'bg-rose-500',
   PG_OWNER: 'bg-amber-500',
   PG_MANAGER: 'bg-violet-500',
   GUEST: 'bg-emerald-500',
@@ -76,7 +79,7 @@ export default function TopHeader() {
   };
 
   useEffect(() => {
-    if (user && (user.role === 'PG_MANAGER' || user.role === 'PG_OWNER')) {
+    if (user && (user.role === 'PG_MANAGER' || user.role === 'PG_OWNER' || user.role === 'SUPER_ADMIN')) {
       managerApi.getAssignedBuildings().then(res => {
         setAssignedBuildings(res.data || []);
         const stored = sessionStorage.getItem('selectedBranchId');

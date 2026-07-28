@@ -3,6 +3,8 @@ package com.pgcrm.controller;
 import com.pgcrm.entity.AuditLog;
 import com.pgcrm.entity.enums.AuditAction;
 import com.pgcrm.repository.AuditLogRepository;
+import com.pgcrm.repository.UserRepository;
+import com.pgcrm.entity.User;
 import com.pgcrm.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.csv.CSVFormat;
@@ -29,37 +31,42 @@ public class ReportController {
 
     private final ReportService reportService;
     private final AuditLogRepository auditLogRepository;
+    private final UserRepository userRepository;
 
     // ── Revenue ───────────────────────────────────────────────────
 
     @GetMapping("/revenue")
     public ResponseEntity<List<Map<String, Object>>> getRevenue(
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year) {
-        return ResponseEntity.ok(reportService.getMonthlyRevenueSummary(year));
+            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year,
+            @RequestParam(required = false) String buildingId) {
+        return ResponseEntity.ok(reportService.getMonthlyRevenueSummary(year, buildingId));
     }
 
     // ── Occupancy ─────────────────────────────────────────────────
 
     @GetMapping("/occupancy")
     public ResponseEntity<List<Map<String, Object>>> getOccupancy(
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year) {
-        return ResponseEntity.ok(reportService.getOccupancyReport(year));
+            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year,
+            @RequestParam(required = false) String buildingId) {
+        return ResponseEntity.ok(reportService.getOccupancyReport(year, buildingId));
     }
 
     // ── Guest Turnover ────────────────────────────────────────────
 
     @GetMapping("/guests")
     public ResponseEntity<List<Map<String, Object>>> getGuestTurnover(
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year) {
-        return ResponseEntity.ok(reportService.getGuestTurnoverReport(year));
+            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year,
+            @RequestParam(required = false) String buildingId) {
+        return ResponseEntity.ok(reportService.getGuestTurnoverReport(year, buildingId));
     }
 
     // ── Payment Summary ───────────────────────────────────────────
 
     @GetMapping("/payments")
     public ResponseEntity<Map<String, Object>> getPaymentSummary(
-            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year) {
-        return ResponseEntity.ok(reportService.getPaymentSummary(year));
+            @RequestParam(defaultValue = "#{T(java.time.LocalDate).now().year}") int year,
+            @RequestParam(required = false) String buildingId) {
+        return ResponseEntity.ok(reportService.getPaymentSummary(year, buildingId));
     }
 
     // ── Audit Trail ───────────────────────────────────────────────
@@ -69,6 +76,7 @@ public class ReportController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) AuditAction action,
+            @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
 
@@ -77,7 +85,30 @@ public class ReportController {
         LocalDateTime fromDt = from != null ? from.atStartOfDay() : LocalDateTime.now().minusYears(1);
         LocalDateTime toDt   = to   != null ? to.atTime(23, 59, 59) : LocalDateTime.now();
 
-        Page<AuditLog> result = auditLogRepository.findByFilters(action, fromDt, toDt, pageable);
+        Page<AuditLog> result = auditLogRepository.findByFilters(action, fromDt, toDt, search, pageable);
+
+        // Resolve actor names and emails in bulk
+        java.util.Set<String> actorIds = result.getContent().stream()
+                .map(AuditLog::getActorId)
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .collect(java.util.stream.Collectors.toSet());
+
+        if (!actorIds.isEmpty()) {
+            List<User> users = userRepository.findAllById(actorIds);
+            Map<String, User> userMap = users.stream()
+                    .collect(java.util.stream.Collectors.toMap(User::getId, u -> u));
+
+            result.getContent().forEach(log -> {
+                if (log.getActorId() != null) {
+                    User u = userMap.get(log.getActorId());
+                    if (u != null) {
+                        log.setActorName(u.getFullName());
+                        log.setActorEmail(u.getEmail());
+                    }
+                }
+            });
+        }
+
         return ResponseEntity.ok(result);
     }
 

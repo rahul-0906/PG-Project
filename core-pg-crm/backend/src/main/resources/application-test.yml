@@ -19,3 +19,7 @@ spring:
       ddl-auto: create
   flyway:
     enabled: false
+
+app:
+  seed-demo: false
+

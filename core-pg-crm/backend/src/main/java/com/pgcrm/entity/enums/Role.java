@@ -25,6 +25,13 @@ package com.pgcrm.entity.enums;
 public enum Role {
 
     /**
+     * Master Super-Admin (Full Upper-Level Access).
+     * Has full access across all buildings, managers, owners, audit trails,
+     * financial overrides, and system-wide configurations.
+     */
+    SUPER_ADMIN,
+
+    /**
      * Platform Owner / Super-Admin.
      * Has unrestricted access to all buildings, managers, guests, and financial reports.
      * Responsible for initial building setup and manager account provisioning.

@@ -15,7 +15,17 @@ The ecosystem consists of two core applications, each containing its own isolate
 **Path:** `/core-pg-crm/`
 The property management software deployed uniquely for each PG brand/hostel branch.
 * **Scope**: Daily property operations. Manages guest check-ins, automated daily arrears billing, electricity (EB) sub-meter calculations, visual meal calendars, and maintenance ticketing.
-* **Security & Tenancy**: Multi-tenant via physical isolation. Each client runs an independent containerized stack (Vite + Spring Boot) pointing to a dedicated PostgreSQL database. Cross-tenant data leaks are physically impossible.
+* **Role Architecture & Permission Model**:
+  * **`SUPER_ADMIN` Scope & Owner Permission Guard**: Super Admin accounts can provision `PG_OWNER` profiles. Data modifications (role updates, financial overrides, PII anonymization) are strictly protected by the **Owner Permission Guard** (`users.allow_super_admin_access`). Data modifications throw an exception unless explicitly granted by the `PG_OWNER` via their dashboard.
+  * **Super Admin Control Center** (`/super-admin`): Features a streamlined sidebar navigation providing access to:
+    * **Dashboard**: System statistics, real-time database totals, occupancy rate, revenue collected, and pending rent arrears.
+    * **Provision PG Owner**: Create `PG_OWNER` accounts with default credentials.
+    * **Create Building**: Launch the Visual Interactive Floor Map, Block & Room Sharing Builder Wizard (`OwnerBuildingCreator.jsx`).
+    * **Branch Guests**: Multi-branch resident directory displaying resident profiles, monthly rent, deposits, check-in dates, and KYC verification statuses filtered by property branch.
+    * **Bulk Excel Migration**: 1-Click legacy Excel/CSV data roster importer (`BulkImportModal.jsx`).
+    * **User & RBAC Controls**: Manage account roles (`SUPER_ADMIN`, `PG_OWNER`, `PG_MANAGER`, `GUEST`).
+    * **Financial Overrides**: Apply owner-approved rent waivers or deposit adjustments.
+    * **Audit Forensics**: Security audit trails and PII data compliance tools.
 
 ### ⚙️ `[CONTROL-PLANE]` (Central B2B SaaS Billing & Provisioning)
 **Path:** `/master-control-plane/`
@@ -26,6 +36,7 @@ The centralized command center and automated public front door for the software 
 ### 🚀 Core Operational & Financial Features
 
 * **1-Click Excel Bulk Import**: Instant batch-onboarding of hundreds of rooms and guests using Apache POI. Features self-healing floor/room auto-creation, overflow bed provisioning, and historical data migration (Opening Rent Arrears, initial EB Sub-Meter Readings, and Meal Plan preferences).
+* **Interactive Visual Building Builder Wizard**: Step-by-step visual floor layout designer. Configures floor maps, blocks (Block A, Block B), single/double/triple/quad sharing rooms, AC/Non-AC status, and base rent rates.
 * **Flat-Rate / Fixed Rent Model**: Strict flat-rate monthly billing that eliminates pro-rated daily rates. Active status during a billing month bills the exact monthly rate (with full room capacity multiplication for Whole Room Bookings). Exit-month checkout settlements charge the full exit month (Option A).
 * **Electricity (EB) Bill Sub-Meter Split**: Automated calculations matching physical configurations—Equal Split among active residents, Per-Bed flat rate, or Sub-Meter usage differences (`currentReading - previousReading`).
 * **Automated Data Compliance Scheduler**: Programmatic daily PII Anonymization sweep at 3:00 AM. Scrubs guests checked out over 365 days ago, overwriting names and phone numbers with random tokens while preserving financial, billing, and transactional integrity.

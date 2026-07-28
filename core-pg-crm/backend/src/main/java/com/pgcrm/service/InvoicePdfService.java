@@ -176,7 +176,7 @@ public class InvoicePdfService {
             itemsTable.setWidths(new float[]{3, 1, 1, 1});
 
             // Table header row
-            for (final String heading : new String[]{"Description", "Qty", "Rate (Rs)", "Amount (Rs)"}) {
+            for (final String heading : new String[]{"Description", "Qty", "Rate (INR)", "Amount (INR)"}) {
                 final PdfPCell hCell = new PdfPCell(new Paragraph(heading, headerFont));
                 hCell.setBackgroundColor(ACCENT);
                 hCell.setPadding(6);
@@ -205,7 +205,7 @@ public class InvoicePdfService {
             itemsTable.addCell(totalLabelCell);
 
             final PdfPCell totalValCell = new PdfPCell(
-                    new Paragraph("Rs " + fmt(invoice.getTotalAmount()),
+                    new Paragraph("INR " + fmt(invoice.getTotalAmount()),
                             FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, ACCENT)));
             totalValCell.setBorder(Rectangle.NO_BORDER);
             totalValCell.setPaddingTop(8);
@@ -275,7 +275,10 @@ public class InvoicePdfService {
      * @return a formatted string, e.g., {@code "1,250.00"}.
      */
     private String fmt(final BigDecimal v) {
-        return v != null ? String.format("%,.2f", v) : "0.00";
+        if (v == null) return "0.00";
+        java.text.NumberFormat nf = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("en", "IN"));
+        String formatted = nf.format(v);
+        return formatted.replaceAll("[^0-9.,\\s-]", "").trim();
     }
 
     /**

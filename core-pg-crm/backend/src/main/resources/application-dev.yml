@@ -26,3 +26,7 @@ spring:
   flyway:
     enabled: true
     clean-disabled: false
+
+app:
+  seed-demo: false
+

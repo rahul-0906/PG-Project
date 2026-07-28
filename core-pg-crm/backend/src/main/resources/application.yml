@@ -65,8 +65,9 @@ pg:
     cache: false
     mode: HTML
 
-# ─── JWT ─────────────────────────────────────────────────────────
+# ─── JWT & Seed Config ─────────────────────────────────────────
 app:
+  seed-demo: ${SEED_DEMO:false}
   jwt:
     secret: ${JWT_SECRET:ThisIsAVeryLongSecretKeyForPGCRMAppThatShouldBeAtLeast256BitsForHS256}
     access-token-expiration: 900000       # 15 min

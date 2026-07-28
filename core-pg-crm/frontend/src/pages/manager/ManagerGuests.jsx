@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import AppLayout from '../../components/AppLayout';
 import BulkImportModal from './BulkImportModal';
-import { managerApi } from '../../api';
+import { managerApi, ownerApi } from '../../api';
 import { 
   Users, 
   X, 
@@ -19,7 +19,8 @@ import {
   AlertTriangle, 
   Loader2,
   Check,
-  Shuffle
+  Shuffle,
+  Building
 } from 'lucide-react';
 
 const getLocalCheckInDate = () => {
@@ -95,6 +96,8 @@ export default function ManagerGuests() {
   // Search & Filter state for Guest Main Page
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFloor, setSelectedFloor] = useState('All');
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState('All');
   
   // Bed selection floor tab state
   const [activeFloorTab, setActiveFloorTab] = useState('');
@@ -197,7 +200,14 @@ export default function ManagerGuests() {
     }
   };
 
-  useEffect(() => { managerApi.getGuests().then(r => setGuests(r.data)).catch(() => {}); }, []);
+  useEffect(() => {
+    ownerApi.getBranches().then(r => setBranches(r.data || [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const bldId = selectedBranch === 'All' ? null : selectedBranch;
+    managerApi.getGuests(bldId).then(r => setGuests(r.data || [])).catch(() => {});
+  }, [selectedBranch]);
 
   useEffect(() => {
     if (showForm) {
@@ -681,7 +691,25 @@ export default function ManagerGuests() {
               className="form-input"
             />
           </div>
-          <div className="form-group mb-0 w-[200px]">
+          {branches && branches.length > 1 && (
+            <div className="form-group mb-0 w-[220px]">
+              <label className="form-label flex items-center gap-1.5">
+                <Building className="w-4 h-4 text-indigo-500" strokeWidth={1.5}/>
+                <span>Filter by Branch / Building</span>
+              </label>
+              <select
+                value={selectedBranch}
+                onChange={e => setSelectedBranch(e.target.value)}
+                className="form-input font-medium text-slate-800"
+              >
+                <option value="All">All Branches / Buildings</option>
+                {branches.map(bld => (
+                  <option key={bld.id} value={bld.id}>{bld.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="form-group mb-0 w-[180px]">
             <label className="form-label flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-slate-400" strokeWidth={1.5}/>
               <span>Filter by Floor</span>
@@ -715,6 +743,7 @@ export default function ManagerGuests() {
           <table>
             <thead>
               <tr>
+                <th>Branch / Building</th>
                 <th>Name</th>
                 <th>Bed</th>
                 <th>Check-In</th>
@@ -725,6 +754,12 @@ export default function ManagerGuests() {
             <tbody>
               {filteredGuests.map(g => (
                 <tr key={g.id}>
+                  <td>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 text-slate-800 border border-slate-200/80 shadow-2xs">
+                      <Building className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>{g.buildingName || 'Main Building'}</span>
+                    </span>
+                  </td>
                   <td className="font-semibold text-slate-900">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span>{g.fullName}</span>

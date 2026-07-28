@@ -254,22 +254,40 @@ function RoomConfigRow({ rc, onUpdate, onRemove, floorNumber, blockName }) {
             const labels = rc.bedLabels
               ? rc.bedLabels.split(',').map(s => s.trim()).filter(Boolean)
               : [];
-            const sampleRoom = roomNumbers[0] || placeholders[0] || 'Room';
             const sharingCount = parseInt(rc.sharing) || 1;
-            const generatedBeds = Array.from({ length: sharingCount }).map((_, idx) => {
-              const bLabel = labels[idx] || `B${idx + 1}`;
-              return `${sampleRoom}-${bLabel}`;
-            });
+            const roomCount = parseInt(rc.count) || 0;
+
+            const allRoomsBeds = [];
+            for (let rIdx = 0; rIdx < roomCount; rIdx++) {
+              const roomNum = roomNumbers[rIdx] || placeholders[rIdx] || `Room-${rIdx + 1}`;
+              const beds = Array.from({ length: sharingCount }).map((_, idx) => {
+                const bLabel = labels[idx] || `B${idx + 1}`;
+                return `${roomNum}-${bLabel}`;
+              });
+              allRoomsBeds.push({ roomNum, beds });
+            }
+
             return (
-              <div className="mt-1 bg-slate-100/50 border border-slate-200/60 rounded-lg p-2 flex flex-col gap-1">
+              <div className="mt-1 bg-slate-100/50 border border-slate-200/60 rounded-lg p-2.5 flex flex-col gap-1.5">
                 <div className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                   Generated Bed Numbers Preview:
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {generatedBeds.map((bed, idx) => (
-                    <span key={idx} className="bg-white border border-slate-200 text-slate-600 rounded px-1.5 py-0.5 text-[10px] font-semibold font-mono shadow-sm">
-                      {bed}
-                    </span>
+                <div className="flex flex-col gap-1.5">
+                  {allRoomsBeds.map((roomGroup, rgIdx) => (
+                    <div key={rgIdx} className="flex items-center gap-2">
+                      {roomCount > 1 && (
+                        <span className="text-[10px] font-bold text-slate-500 font-mono flex-shrink-0">
+                          {roomGroup.roomNum}:
+                        </span>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {roomGroup.beds.map((bed, idx) => (
+                          <span key={idx} className="bg-white border border-slate-200 text-slate-600 rounded px-1.5 py-0.5 text-[10px] font-semibold font-mono shadow-sm">
+                            {bed}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -743,14 +761,26 @@ function Step4({ building, floors }) {
         </div>
         <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-xs text-slate-600">
           <div><strong className="text-slate-500">Food Included:</strong> {building.foodIncludedInRent ? 'Yes' : 'No'}</div>
-          <div><strong className="text-slate-500">Allow Meal Cancellations:</strong> {building.allowMealCancellations ? 'Yes' : 'No'}</div>
           <div><strong className="text-slate-500">EB Split Method:</strong> {building.ebSplitMethod}</div>
-          <div><strong className="text-slate-500">Breakfast Price:</strong> ₹{building.breakfastPrice}</div>
-          <div><strong className="text-slate-500">Lunch Price:</strong> ₹{building.lunchPrice}</div>
-          <div><strong className="text-slate-500">Dinner Price:</strong> ₹{building.dinnerPrice}</div>
-          <div><strong className="text-slate-500">Omelette Price:</strong> ₹{building.omelettePrice}</div>
-          <div><strong className="text-slate-500">Boiled Egg Price:</strong> ₹{building.boiledEggPrice}</div>
-          <div><strong className="text-slate-500">Washing Machine:</strong> ₹{building.washingMachinePrice}</div>
+          {!building.foodIncludedInRent && (
+            <>
+              <div><strong className="text-slate-500">Allow Meal Cancellations:</strong> {building.allowMealCancellations ? 'Yes' : 'No'}</div>
+              <div><strong className="text-slate-500">Breakfast Price:</strong> ₹{building.breakfastPrice || '0'}</div>
+              <div><strong className="text-slate-500">Lunch Price:</strong> ₹{building.lunchPrice || '0'}</div>
+              <div><strong className="text-slate-500">Dinner Price:</strong> ₹{building.dinnerPrice || '0'}</div>
+            </>
+          )}
+          {building.activeAddons && building.activeAddons.map(addonKey => {
+            const labelKey = addonKey + 'Label';
+            const priceKey = addonKey + 'Price';
+            const defaultLabel = addonKey === 'omelette' ? 'Omelette' : (addonKey === 'boiledEgg' ? 'Boiled Egg' : 'Washing Machine');
+            const displayName = building[labelKey] || defaultLabel;
+            return (
+              <div key={addonKey}>
+                <strong className="text-slate-500">{displayName} Price:</strong> ₹{building[priceKey] || '0'}
+              </div>
+            );
+          })}
         </div>
       </div>
 

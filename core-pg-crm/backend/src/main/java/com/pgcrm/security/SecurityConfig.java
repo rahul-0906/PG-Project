@@ -51,12 +51,13 @@ public class SecurityConfig {
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook
                 .requestMatchers("/api/system/config").permitAll()    // Public branding endpoint
                 .requestMatchers("/api/config/public").permitAll()    // New public config endpoint
-                .requestMatchers("/api/owner/**").hasRole("PG_OWNER")
-                .requestMatchers("/api/manager/**").hasAnyRole("PG_MANAGER", "PG_OWNER")
-                .requestMatchers("/api/guest/**").hasAnyRole("GUEST", "PG_MANAGER", "PG_OWNER")
-                .requestMatchers("/api/reports/**").hasAnyRole("PG_OWNER", "PG_MANAGER")
-                .requestMatchers("/api/inventory/**").hasAnyRole("PG_MANAGER", "PG_OWNER")
-                .requestMatchers("/api/payments/**").hasAnyRole("PG_MANAGER", "PG_OWNER")
+                .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
+                .requestMatchers("/api/owner/**").hasAnyRole("PG_OWNER", "SUPER_ADMIN")
+                .requestMatchers("/api/manager/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
+                .requestMatchers("/api/guest/**").hasAnyRole("GUEST", "PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
+                .requestMatchers("/api/reports/**").hasAnyRole("PG_OWNER", "PG_MANAGER", "SUPER_ADMIN")
+                .requestMatchers("/api/inventory/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
+                .requestMatchers("/api/payments/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
                 .requestMatchers("/**").permitAll() // React static files
                 .anyRequest().authenticated()
             )

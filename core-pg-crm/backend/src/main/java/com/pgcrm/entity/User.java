@@ -120,6 +120,15 @@ public class User {
     private boolean firstLogin = true;
 
     /**
+     * For PG_OWNER accounts: Whether this owner has granted permission to Super Admin
+     * to perform data modifications/overrides on their data.
+     * Defaults to {@code false}.
+     */
+    @Column(name = "allow_super_admin_access", columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean allowSuperAdminAccess = false;
+
+    /**
      * When {@code true}, the JWT security filter forces this user to complete a
      * password-change before accessing any protected resource. Set to {@code true}
      * by the owner/manager when creating or resetting an account with a temporary

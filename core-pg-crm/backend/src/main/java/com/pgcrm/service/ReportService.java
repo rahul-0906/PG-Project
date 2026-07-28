@@ -74,16 +74,19 @@ public class ReportService {
      * @return a 12-element {@link List} of revenue maps, ordered January → December.
      */
     public List<Map<String, Object>> getMonthlyRevenueSummary(final int year) {
+        return getMonthlyRevenueSummary(year, null);
+    }
+
+    public List<Map<String, Object>> getMonthlyRevenueSummary(final int year, final String buildingId) {
         final List<Map<String, Object>> result = new ArrayList<>();
 
         for (int m = 1; m <= 12; m++) {
-            final List<Object[]> rows = invoiceRepository.getRevenueBreakdown(year, m);
+            final List<Object[]> rows = invoiceRepository.getRevenueBreakdown(year, m, buildingId);
 
             BigDecimal rent = BigDecimal.ZERO, eb      = BigDecimal.ZERO,
                        food = BigDecimal.ZERO, laundry = BigDecimal.ZERO;
 
             for (final Object[] row : rows) {
-                // row[0] is the InvoiceLineType enum — use toString() to get the name string.
                 final String     type   = row[0] != null ? row[0].toString() : "";
                 final BigDecimal amount = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
                 switch (type) {
@@ -107,32 +110,16 @@ public class ReportService {
         return result;
     }
 
-    /**
-     * Returns the monthly bed occupancy trend for every month in the given year.
-     *
-     * <p>Occupancy is approximated by the count of distinct guests who had an invoice
-     * generated in that month ({@link InvoiceRepository#countDistinctGuestsByMonthYear}).
-     * The occupancy percentage is capped at 100 to handle edge cases where the invoiced
-     * count exceeds the total bed count (e.g., mid-month bed switches).</p>
-     *
-     * <p>Each map in the returned list contains:</p>
-     * <ul>
-     *   <li>{@code month} — abbreviated month name.</li>
-     *   <li>{@code monthNum} — 1-based month number.</li>
-     *   <li>{@code totalBeds} — total bed count across all buildings.</li>
-     *   <li>{@code occupiedBeds} — distinct guests invoiced that month.</li>
-     *   <li>{@code occupancyPct} — rounded occupancy percentage (0–100).</li>
-     * </ul>
-     *
-     * @param year the calendar year to report on.
-     * @return a 12-element {@link List} of occupancy maps, ordered January → December.
-     */
     public List<Map<String, Object>> getOccupancyReport(final int year) {
-        final long                      totalBeds = bedRepository.countTotal();
-        final List<Map<String, Object>> result    = new ArrayList<>();
+        return getOccupancyReport(year, null);
+    }
+
+    public List<Map<String, Object>> getOccupancyReport(final int year, final String buildingId) {
+        final long totalBeds = buildingId != null ? bedRepository.countTotalByBuildingId(buildingId) : bedRepository.countTotal();
+        final List<Map<String, Object>> result = new ArrayList<>();
 
         for (int m = 1; m <= 12; m++) {
-            final long   invoiced = invoiceRepository.countDistinctGuestsByMonthYear(year, m);
+            final long   invoiced = invoiceRepository.countDistinctGuestsByMonthYear(year, m, buildingId);
             final double pct      = totalBeds > 0 ? (invoiced * 100.0 / totalBeds) : 0;
             result.add(Map.of(
                     "month",        MONTH_NAMES[m - 1],
@@ -145,26 +132,16 @@ public class ReportService {
         return result;
     }
 
-    /**
-     * Returns the monthly guest check-in and check-out counts for every month in the given year.
-     *
-     * <p>Each map in the returned list contains:</p>
-     * <ul>
-     *   <li>{@code month} — abbreviated month name.</li>
-     *   <li>{@code monthNum} — 1-based month number.</li>
-     *   <li>{@code checkIns} — number of guests who checked in during the month.</li>
-     *   <li>{@code checkOuts} — number of guests who checked out during the month.</li>
-     * </ul>
-     *
-     * @param year the calendar year to report on.
-     * @return a 12-element {@link List} of turnover maps, ordered January → December.
-     */
     public List<Map<String, Object>> getGuestTurnoverReport(final int year) {
+        return getGuestTurnoverReport(year, null);
+    }
+
+    public List<Map<String, Object>> getGuestTurnoverReport(final int year, final String buildingId) {
         final List<Map<String, Object>> result = new ArrayList<>();
 
         for (int m = 1; m <= 12; m++) {
-            final long checkIns  = guestRepository.countCheckInsByMonthYear(year, m);
-            final long checkOuts = guestRepository.countCheckOutsByMonthYear(year, m);
+            final long checkIns  = guestRepository.countCheckInsByMonthYear(year, m, buildingId);
+            final long checkOuts = guestRepository.countCheckOutsByMonthYear(year, m, buildingId);
             result.add(Map.of(
                     "month",     MONTH_NAMES[m - 1],
                     "monthNum",  m,
@@ -175,25 +152,15 @@ public class ReportService {
         return result;
     }
 
-    /**
-     * Returns an aggregate payment status summary for the given year.
-     *
-     * <p>The returned map contains:</p>
-     * <ul>
-     *   <li>{@code generated} — count of invoices with status {@link InvoiceStatus#GENERATED}.</li>
-     *   <li>{@code paid} — count of invoices with status {@link InvoiceStatus#PAID}.</li>
-     *   <li>{@code overdue} — count of invoices with status {@link InvoiceStatus#OVERDUE}.</li>
-     *   <li>{@code totalRevenue} — sum of all paid invoice totals; {@link BigDecimal#ZERO} if none.</li>
-     * </ul>
-     *
-     * @param year the calendar year to aggregate.
-     * @return a {@link Map} containing the four payment summary fields.
-     */
     public Map<String, Object> getPaymentSummary(final int year) {
-        final long       generated    = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.GENERATED);
-        final long       paid         = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.PAID);
-        final long       overdue      = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.OVERDUE);
-        final BigDecimal totalRevenue = invoiceRepository.sumPaidAmountByYear(year);
+        return getPaymentSummary(year, null);
+    }
+
+    public Map<String, Object> getPaymentSummary(final int year, final String buildingId) {
+        final long       generated    = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.GENERATED, buildingId);
+        final long       paid         = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.PAID, buildingId);
+        final long       overdue      = invoiceRepository.countByYearAndStatus(year, InvoiceStatus.OVERDUE, buildingId);
+        final BigDecimal totalRevenue = invoiceRepository.sumPaidAmountByYear(year, buildingId);
 
         return Map.of(
                 "generated",    generated,

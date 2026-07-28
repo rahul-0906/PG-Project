@@ -62,6 +62,8 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        seedSuperAdmin();
+
         if (!seedDemo) {
             log.info("⚙️ app.seed-demo is FALSE. Bypassing all building layout and mock data. System will boot with ONLY the Super Admin account.");
             return;
@@ -79,6 +81,24 @@ public class DataSeeder implements CommandLineRunner {
                 guestRepository.save(g);
                 log.info("Updated default meal preferences to TRUE for guest: {}", g.getFullName());
             }
+        }
+    }
+
+    private void seedSuperAdmin() {
+        if (userRepository.findByEmailIgnoreCase("superadmin@pgcrm.com").isEmpty()) {
+            User superAdmin = User.builder()
+                    .email("superadmin@pgcrm.com")
+                    .password(passwordEncoder.encode("Password123!"))
+                    .role(Role.SUPER_ADMIN)
+                    .fullName("Master Super Admin")
+                    .phone("+919999999999")
+                    .active(true)
+                    .firstLogin(false)
+                    .mustChangePassword(false)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            userRepository.save(superAdmin);
+            log.info("✅ Master Super Admin seeded: superadmin@pgcrm.com / Password123!");
         }
     }
 

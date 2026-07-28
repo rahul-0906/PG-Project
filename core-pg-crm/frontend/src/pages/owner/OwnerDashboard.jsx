@@ -75,6 +75,17 @@ export default function OwnerDashboard() {
     queryFn: () => ownerApi.getManagers().then(r => r.data),
   });
 
+  const { data: permData, refetch: refetchPerm } = useQuery({
+    queryKey: ['superAdminPermStatus'],
+    queryFn: () => ownerApi.getSuperAdminPermission().then(r => r.data),
+    enabled: user?.role === 'PG_OWNER',
+  });
+
+  const togglePermMutation = useMutation({
+    mutationFn: (granted) => ownerApi.toggleSuperAdminPermission(granted),
+    onSuccess: () => refetchPerm(),
+  });
+
   const saveManagerMutation = useMutation({
     mutationFn: (payload) => {
       if (editingManager) {
@@ -171,6 +182,18 @@ export default function OwnerDashboard() {
               </div>
             </div>
           </div>
+
+          <button
+            onClick={() => togglePermMutation.mutate(!permData?.allowSuperAdminAccess)}
+            disabled={togglePermMutation.isPending}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border ${
+              permData?.allowSuperAdminAccess
+                ? 'bg-emerald-500/20 text-emerald-100 border-emerald-400/30'
+                : 'bg-white/10 text-white hover:bg-white/20 border-white/10'
+            }`}
+          >
+            <span>Super Admin Access: {permData?.allowSuperAdminAccess ? 'GRANTED' : 'NOT GRANTED'}</span>
+          </button>
         </div>
       </div>
 

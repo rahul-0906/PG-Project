@@ -198,11 +198,15 @@ public class GuestResponse {
      */
     private String assignedBeds;
 
+    /** Building UUID and Name for multi-branch filtering */
+    private String buildingId;
+    private String buildingName;
+
     /**
      * Null-safe static factory method that maps a {@link Guest} entity
      * (and its lazily-loaded associations) to a flat {@code GuestResponse} DTO.
      *
-     * <p>The method traverses the entity graph {@code Guest → Bed → Room → Floor}
+     * <p>The method traverses the entity graph {@code Guest → Bed → Room → Floor → Building}
      * with explicit {@code null} guards at each level to prevent
      * {@code NullPointerException} when associations are absent (e.g., a guest
      * whose bed has been unassigned after checkout).</p>
@@ -232,8 +236,10 @@ public class GuestResponse {
 
         final String bedLabel = assignedBedsStr.isEmpty() ? null : assignedBedsStr;
 
-        String roomNumber = null;
-        String floorName  = null;
+        String roomNumber   = null;
+        String floorName    = null;
+        String buildingId   = null;
+        String buildingName = null;
         BigDecimal baseRent = null;
         boolean isAc = false;
 
@@ -243,6 +249,10 @@ public class GuestResponse {
             isAc       = guest.getBed().getRoom().isAc();
             if (guest.getBed().getRoom().getFloor() != null) {
                 floorName = guest.getBed().getRoom().getFloor().getFloorLabel();
+                if (guest.getBed().getRoom().getFloor().getBuilding() != null) {
+                    buildingId   = guest.getBed().getRoom().getFloor().getBuilding().getId();
+                    buildingName = guest.getBed().getRoom().getFloor().getBuilding().getName();
+                }
             }
         }
 
@@ -255,6 +265,8 @@ public class GuestResponse {
                 .assignedBeds(assignedBedsStr)
                 .roomNumber(roomNumber)
                 .floorName(floorName)
+                .buildingId(buildingId)
+                .buildingName(buildingName)
                 .baseRent(baseRent)
                 .fullName(guest.getFullName())
                 .email(guest.getEmail())

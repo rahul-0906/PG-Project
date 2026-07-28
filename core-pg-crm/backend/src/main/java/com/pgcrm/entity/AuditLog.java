@@ -1,6 +1,7 @@
 package com.pgcrm.entity;
 
 import com.pgcrm.entity.enums.AuditAction;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -116,6 +117,14 @@ public class AuditLog {
      */
     @Column(nullable = false)
     private LocalDateTime timestamp;
+
+    @Transient
+    @JsonProperty
+    private String actorName;
+
+    @Transient
+    @JsonProperty
+    private String actorEmail;
 
     /**
      * JPA {@code @PrePersist} lifecycle callback that stamps the {@link #timestamp}

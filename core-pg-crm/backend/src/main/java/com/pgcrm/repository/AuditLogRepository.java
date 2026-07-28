@@ -67,14 +67,22 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
      */
     @Query("""
             SELECT a FROM AuditLog a
+            LEFT JOIN User u ON a.actorId = u.id
             WHERE (:action IS NULL OR a.action = :action)
               AND a.timestamp BETWEEN :from AND :to
+              AND (:search IS NULL OR :search = ''
+                OR LOWER(a.description) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(a.actorRole) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(a.entityType) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))
+                OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))
             ORDER BY a.timestamp DESC
             """)
     Page<AuditLog> findByFilters(
             @Param("action") AuditAction action,
             @Param("from")   LocalDateTime from,
             @Param("to")     LocalDateTime to,
+            @Param("search") String search,
             Pageable pageable);
 
     /**

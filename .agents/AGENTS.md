@@ -4,3 +4,5 @@
 - **Always write project documentation, design plans, SOPs, and checklists directly to the project locations** (e.g., project root `/`, `/docs`, or relevant subdirectories within the active project workspace) instead of creating them exclusively in hidden system configuration directories or temporary directories (`C:\Users\Admin\.gemini\antigravity\brain\...`).
 - Avoid code/file generation outside the workspace boundary. Maintain all architectural resources and operational artifacts inside the project structure to ensure Git tracking and team visibility.
 
+## Full Agent Documentation
+- See [AGENTS.md](file:///e:/PG-Project/AGENTS.md) in the project root for full architecture details, tech stack specifications, ports registry, business rules, and startup commands.
