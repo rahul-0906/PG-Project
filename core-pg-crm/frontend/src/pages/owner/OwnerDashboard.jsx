@@ -17,7 +17,9 @@ import {
   UserPlus,
   Pencil,
   Trash2,
-  User as UserIcon
+  User as UserIcon,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 function StatCard({ label, value, icon: Icon, iconColor = 'text-slate-500' }) {
@@ -184,15 +186,31 @@ export default function OwnerDashboard() {
           </div>
 
           <button
+            type="button"
             onClick={() => togglePermMutation.mutate(!permData?.allowSuperAdminAccess)}
             disabled={togglePermMutation.isPending}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2.5 border shadow-sm cursor-pointer ${
               permData?.allowSuperAdminAccess
-                ? 'bg-emerald-500/20 text-emerald-100 border-emerald-400/30'
-                : 'bg-white/10 text-white hover:bg-white/20 border-white/10'
+                ? 'bg-emerald-500/20 text-emerald-100 border-emerald-400/40 hover:bg-emerald-500/30'
+                : 'bg-white/10 text-white hover:bg-white/20 border-white/20'
             }`}
+            title="Click to toggle Super Admin modification permission"
           >
-            <span>Super Admin Access: {permData?.allowSuperAdminAccess ? 'GRANTED' : 'NOT GRANTED'}</span>
+            {permData?.allowSuperAdminAccess ? (
+              <ShieldCheck className="w-4 h-4 text-emerald-300" strokeWidth={2} />
+            ) : (
+              <Lock className="w-4 h-4 text-amber-300" strokeWidth={2} />
+            )}
+            <span>Super Admin Access: <strong className={permData?.allowSuperAdminAccess ? 'text-emerald-300' : 'text-amber-200'}>{permData?.allowSuperAdminAccess ? 'GRANTED' : 'NOT GRANTED'}</strong></span>
+            
+            {/* Visual Toggle Switch Slider */}
+            <div className={`w-8 h-4 rounded-full transition-colors flex items-center p-0.5 ml-1 ${
+              permData?.allowSuperAdminAccess ? 'bg-emerald-500' : 'bg-slate-500/60'
+            }`}>
+              <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-200 shadow-sm ${
+                permData?.allowSuperAdminAccess ? 'translate-x-4' : 'translate-x-0'
+              }`} />
+            </div>
           </button>
         </div>
       </div>
