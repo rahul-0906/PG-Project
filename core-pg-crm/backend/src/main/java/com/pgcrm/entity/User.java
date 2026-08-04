@@ -1,5 +1,6 @@
 package com.pgcrm.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.pgcrm.entity.enums.Role;
 import jakarta.persistence.*;
 import lombok.*;
@@ -70,11 +71,14 @@ public class User {
 
     /**
      * BCrypt-hashed password credential.
-     * <strong>Never</strong> returned in API responses; suppressed via
-     * {@code @JsonIgnoreProperties} wherever a {@code User} reference is serialised.
+     * <strong>Never</strong> returned in API responses — enforced at the field level via
+     * {@link JsonProperty#access()} set to {@code WRITE_ONLY}. This means Jackson will
+     * accept the field during deserialization (e.g. login request) but will always omit
+     * it during serialization (e.g. any API response containing a User object).
      * Replaced on first login via the forced password-change flow.
      */
     @Column(nullable = false)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     /**

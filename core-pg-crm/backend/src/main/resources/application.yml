@@ -76,11 +76,17 @@ app:
     from: ${MAIL_FROM:noreply@pgcrm.com}
     from-name: ${pg.system.branding.name:PG CRM}
     enabled: ${MAIL_ENABLED:true}        # set true after configuring Gmail App Password
+  cors:
+    # SEC-02: Explicit CORS origins for SecurityConfig. Set APP_CORS_ALLOWED_ORIGINS in production.
+    # Example: APP_CORS_ALLOWED_ORIGINS=https://app.yourpg.com,https://admin.yourpg.com
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
 
 # ─── Razorpay ────────────────────────────────────────────────────
 razorpay:
-  key-id: ${RAZORPAY_KEY_ID:rzp_test_SuLwO7L565iIkE}
-  key-secret: ${RAZORPAY_KEY_SECRET:crxqdRsIIaL2gbti1Hg9cZgG}
+  # SEC-10: Defaults cleared — must be set via RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.
+  # Real-looking test credentials as YAML defaults are a leak risk in committed code.
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
   enabled: ${RAZORPAY_ENABLED:true}     # enabled with real keys
 
 # ─── Meta WhatsApp Cloud API ─────────────────────────────────────

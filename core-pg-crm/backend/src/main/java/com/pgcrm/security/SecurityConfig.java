@@ -1,6 +1,7 @@
 package com.pgcrm.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -31,6 +33,17 @@ public class SecurityConfig {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    /**
+     * Comma-separated list of allowed CORS origins read from config.
+     * Set {@code APP_CORS_ALLOWED_ORIGINS} in production (e.g. https://app.yourpg.com).
+     * Defaults to localhost origins for local development only.
+     *
+     * <p><strong>SEC-02:</strong> Never use a wildcard (*) with {@code allowCredentials=true}.
+     * Origins must be explicitly enumerated.</p>
+     */
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:4173}")
+    private String corsAllowedOriginsRaw;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -58,7 +71,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/reports/**").hasAnyRole("PG_OWNER", "PG_MANAGER", "SUPER_ADMIN")
                 .requestMatchers("/api/inventory/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
                 .requestMatchers("/api/payments/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
-                .requestMatchers("/**").permitAll() // React static files
+                // SEC-03: The /** permitAll wildcard has been removed. Static files must be served
+                // exclusively by Nginx in production. This activates anyRequest().authenticated()
+                // so every unmatched path requires a valid JWT — nothing is accidentally public.
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -70,7 +85,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        // SEC-02: Explicit origins from config property instead of wildcard pattern.
+        // allowedOriginPatterns("*") + allowCredentials(true) is a CORS misconfiguration.
+        // Configure APP_CORS_ALLOWED_ORIGINS env var in production.
+        List<String> origins = Arrays.asList(corsAllowedOriginsRaw.split(","));
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

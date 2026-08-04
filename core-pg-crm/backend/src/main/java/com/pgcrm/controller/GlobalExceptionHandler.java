@@ -5,6 +5,7 @@ import com.pgcrm.exception.DuplicateEmailException;
 import com.pgcrm.exception.InvalidLockoutException;
 import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.exception.SignatureVerificationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -39,11 +40,10 @@ import java.util.Map;
  * specificity — domain exceptions ({@code 4xx} errors) are handled before the catch-all
  * {@link RuntimeException} and {@link Exception} handlers ({@code 500}).</p>
  *
- * <p><strong>Security Note:</strong> The {@link #handleGeneral(Exception)} handler
- * includes the raw exception message in the response for developer visibility during
- * development. In a production hardening pass, consider replacing this with a generic
- * {@code "An unexpected error occurred."} message and routing the raw detail to a
- * structured log sink only.</p>
+ * <p><strong>Security Note:</strong> The {@link #handleGeneral(Exception)} catch-all handler
+ * logs the full exception detail server-side via SLF4J but returns only a generic
+ * {@code "An unexpected error occurred."} message in the HTTP response body to prevent
+ * internal details (SQL errors, class names, file paths) from leaking to clients.</p>
  *
  * @see ResourceNotFoundException
  * @see BedUnavailableException
@@ -52,6 +52,7 @@ import java.util.Map;
  * @see DuplicateEmailException
  */
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     /**
@@ -196,13 +197,18 @@ public class GlobalExceptionHandler {
      * Final catch-all handler for any checked or unchecked {@link Exception} not
      * intercepted by the handlers above.
      *
+     * <p><strong>SEC-06:</strong> The full exception detail (including message, cause, and stack
+     * trace) is written to the server log only. The HTTP response carries a generic,
+     * non-revealing message to prevent information leakage to clients.</p>
+     *
      * @param ex the unexpected exception.
-     * @return {@code 500 Internal Server Error} with a structured error body.
+     * @return {@code 500 Internal Server Error} with a safe, generic error body.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(final Exception ex) {
+        log.error("[SEC-06] Unhandled exception — full detail suppressed from client response", ex);
         return ResponseEntity.internalServerError()
-                .body(error("Internal server error: " + ex.getMessage(), 500));
+                .body(error("An unexpected error occurred. Please contact support if this persists.", 500));
     }
 
     /**

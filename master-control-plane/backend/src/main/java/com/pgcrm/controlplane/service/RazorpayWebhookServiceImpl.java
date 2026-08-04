@@ -30,8 +30,16 @@ public class RazorpayWebhookServiceImpl implements RazorpayWebhookService {
     private final ObjectMapper objectMapper;
     private final TenantProvisioningWorker tenantProvisioningWorker;
 
-    @Value("${razorpay.webhook.secret:mockWebhookSecret}")
+    @Value("${razorpay.webhook.secret:}")
     private String webhookSecret;
+
+    /**
+     * When {@code true}, bypasses HMAC signature verification to allow sandbox/integration
+     * testing without a real Razorpay webhook secret. MUST be {@code false} in production.
+     * Controlled by the {@code RAZORPAY_BYPASS_SIGNATURE} environment variable.
+     */
+    @Value("${razorpay.bypass-signature-for-sandbox:false}")
+    private boolean bypassSignatureForSandbox;
 
     @Override
     @Transactional
@@ -91,14 +99,17 @@ public class RazorpayWebhookServiceImpl implements RazorpayWebhookService {
     }
 
     private boolean verifySignature(String payload, String signature) {
-        if (signature == null || webhookSecret == null) {
-            return false;
+        // SEC-01: Bypass is only allowed when explicitly enabled via env var.
+        // RAZORPAY_BYPASS_SIGNATURE must NEVER be true in production.
+        if (bypassSignatureForSandbox) {
+            log.warn("[SEC] Bypassing Razorpay webhook signature validation — SANDBOX MODE ONLY. " +
+                     "Ensure RAZORPAY_BYPASS_SIGNATURE=false in production.");
+            return true;
         }
 
-        // Sandbox bypass for testing convenience
-        if ("mockWebhookSecret".equals(webhookSecret) || "sandbox_mock_signature".equals(signature)) {
-            log.warn("Bypassing webhook signature validation (Sandbox/Mock environment)");
-            return true;
+        if (signature == null || webhookSecret == null || webhookSecret.isBlank()) {
+            log.error("[SEC] Webhook secret is not configured. Set RAZORPAY_WEBHOOK_SECRET env var.");
+            return false;
         }
 
         try {

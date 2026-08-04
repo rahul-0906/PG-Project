@@ -34,14 +34,22 @@ public class BillingServiceImpl implements BillingService {
     private final SubscriptionRepository subscriptionRepository;
     private final ObjectMapper objectMapper;
 
-    @Value("${razorpay.key.id:rzp_test_mockKeyId12345}")
+    @Value("${razorpay.key.id:}")
     private String razorpayKeyId;
 
-    @Value("${razorpay.key.secret:mockSecret}")
+    @Value("${razorpay.key.secret:}")
     private String razorpayKeySecret;
 
-    @Value("${razorpay.webhook.secret:mockWebhookSecret}")
+    @Value("${razorpay.webhook.secret:}")
     private String webhookSecret;
+
+    /**
+     * When {@code true}, bypasses HMAC signature verification for sandbox/integration
+     * testing. MUST be {@code false} in production.
+     * Controlled by the {@code RAZORPAY_BYPASS_SIGNATURE} environment variable.
+     */
+    @Value("${razorpay.bypass-signature-for-sandbox:false}")
+    private boolean bypassSignatureForSandbox;
 
     @Value("${billing.amc-renewal-fee-inr:35000}")
     private double amcRenewalFeeInr;
@@ -162,13 +170,17 @@ public class BillingServiceImpl implements BillingService {
     }
 
     private boolean verifySignature(String payload, String signature, String secret) {
-        if (signature == null || secret == null) {
-            return false;
-        }
-        
-        if (secret.equals("mockWebhookSecret") || signature.equals("sandbox_mock_signature")) {
-            log.warn("Bypassing webhook signature validation (Sandbox environment)");
+        // SEC-01: Bypass is only allowed when explicitly enabled via env var.
+        // RAZORPAY_BYPASS_SIGNATURE must NEVER be true in production.
+        if (bypassSignatureForSandbox) {
+            log.warn("[SEC] Bypassing Razorpay webhook signature validation — SANDBOX MODE ONLY. " +
+                     "Ensure RAZORPAY_BYPASS_SIGNATURE=false in production.");
             return true;
+        }
+
+        if (signature == null || secret == null || secret.isBlank()) {
+            log.error("[SEC] Webhook secret is not configured. Set RAZORPAY_WEBHOOK_SECRET env var.");
+            return false;
         }
 
         try {

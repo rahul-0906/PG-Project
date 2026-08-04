@@ -8,12 +8,15 @@ spring:
     password: admin
     driver-class-name: org.postgresql.Driver
   jpa:
-    show-sql: true
+    # PERF-04: show-sql disabled — SQL logging in production adds per-query overhead.
+    show-sql: false
     hibernate:
-      ddl-auto: update
+      # PERF-05: Changed from 'update' to 'validate'. Hibernate 'update' can silently
+      # corrupt production schemas. Flyway (enabled below) manages all DDL changes.
+      ddl-auto: validate
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
   mail:
     host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}
@@ -33,10 +36,15 @@ spring:
 
 razorpay:
   key:
-    id: rzp_test_mockKeyId12345
-    secret: mockSecret
+    # SEC-10: Defaults cleared — must be set via RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET env vars.
+    # Real-looking test credentials as YAML defaults are a leak risk in committed code.
+    id: ${RAZORPAY_KEY_ID:}
+    secret: ${RAZORPAY_KEY_SECRET:}
   webhook:
-    secret: mockWebhookSecret
+    secret: ${RAZORPAY_WEBHOOK_SECRET:}
+  # SEC-01: Sandbox bypass flag. Set to true ONLY for local integration testing.
+  # MUST be false (the default) in production and staging.
+  bypass-signature-for-sandbox: ${RAZORPAY_BYPASS_SIGNATURE:false}
 
 onboarding:
   setup-fee-inr: 15000
