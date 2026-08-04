@@ -9,6 +9,7 @@ import com.pgcrm.service.EmailService;
 import com.pgcrm.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,14 @@ public class PaymentReminderScheduler {
     private final NotificationService notificationService;
     private final AuditService auditService;
 
+    /**
+     * The publicly reachable URL for the guest portal. Used in WhatsApp reminder messages.
+     * Set {@code APP_FRONTEND_URL} env var in production (e.g. https://app.yourpg.com).
+     * BIZ-04: Was previously hardcoded as http://localhost:5173.
+     */
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     @Scheduled(cron = "0 0 9 * * *")  // Every day at 9:00 AM
     @Transactional
     public void sendPaymentReminders() {
@@ -52,9 +61,9 @@ public class PaymentReminderScheduler {
                 // Send WhatsApp reminder via NotificationService (handles Twilio internally)
                 String msg = String.format(
                     "⚠️ Payment Reminder: Dear %s, your invoice of ₹%s for %d/%d is due on %s. " +
-                    "Please pay to avoid any issues. Login: http://localhost:5173",
+                    "Please pay to avoid any issues. Login: %s",
                     guest.getFullName(), invoice.getTotalAmount(),
-                    invoice.getMonth(), invoice.getYear(), invoice.getDueDate());
+                    invoice.getMonth(), invoice.getYear(), invoice.getDueDate(), frontendUrl);
                 notificationService.sendWhatsApp(guest, msg);
 
                 // Stamp reminder sent
@@ -63,7 +72,9 @@ public class PaymentReminderScheduler {
 
                 // Audit log
                 auditService.log(AuditAction.PAYMENT_REMINDER_SENT, "Invoice", invoice.getId(),
-                    "Payment reminder sent to " + guest.getEmail());
+                    // COMP-05: Use guest ID instead of email to avoid storing PII in audit logs
+                    // (guest email may be anonymized after 365 days for GDPR compliance).
+                    "Payment reminder sent to guest ID: " + guest.getId());
 
                 log.info("📧 Reminder sent to {} for invoice {}", guest.getEmail(), invoice.getId());
             } catch (Exception e) {

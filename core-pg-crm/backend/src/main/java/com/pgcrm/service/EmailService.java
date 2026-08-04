@@ -72,6 +72,15 @@ public class EmailService {
     private boolean mailEnabled;
 
     /**
+     * The publicly reachable URL for the guest-facing portal. Injected into all
+     * outgoing email templates as the login/portal link.
+     * Set {@code APP_FRONTEND_URL} env var in production.
+     * BIZ-04: Was previously hardcoded as http://localhost:5173.
+     */
+    @Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
+    /**
      * Sends a welcome email to a newly checked-in guest containing their portal login URL
      * and temporary password.
      *
@@ -94,7 +103,7 @@ public class EmailService {
             ctx.setVariable("email",       guest.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
             ctx.setVariable("pgName",      fromName);
-            ctx.setVariable("loginUrl",    "http://localhost:5173/login");
+            ctx.setVariable("loginUrl",    frontendUrl + "/login");
             
             String assignedBeds = guest.getBeds() != null && !guest.getBeds().isEmpty()
                     ? guest.getBeds().stream()
@@ -150,7 +159,7 @@ public class EmailService {
             log.info("Populating welcome back email context variables. Assigned beds: {}", assignedBeds);
             ctx.setVariable("bedLabel",    assignedBeds);
             ctx.setVariable("assignedBeds", assignedBeds);
-            ctx.setVariable("loginUrl",    "http://localhost:5173/login");
+            ctx.setVariable("loginUrl",    frontendUrl + "/login");
 
             final String html = templateEngine.process("welcome-back-email", ctx);
             sendHtmlMail(guest.getEmail(), "🏠 Welcome Back to " + fromName + " — Check-in Confirmation", html);
@@ -185,7 +194,7 @@ public class EmailService {
             ctx.setVariable("guestName",   user.getFullName() != null ? user.getFullName() : "User");
             ctx.setVariable("email",       user.getEmail());
             ctx.setVariable("tempPassword", tempPassword);
-            ctx.setVariable("loginUrl",    "http://localhost:5173/login");
+            ctx.setVariable("loginUrl",    frontendUrl + "/login");
 
             final String html = templateEngine.process("password-reset-email", ctx);
             sendHtmlMail(user.getEmail(), "🔐 Password Reset Request — PG CRM", html);
@@ -258,7 +267,7 @@ public class EmailService {
             ctx.setVariable("month",       monthName + " " + invoice.getYear());
             ctx.setVariable("totalAmount", invoice.getTotalAmount());
             ctx.setVariable("dueDate",     invoice.getDueDate());
-            ctx.setVariable("loginUrl",    "http://localhost:5173/guest/invoices");
+            ctx.setVariable("loginUrl",    frontendUrl + "/guest/invoices");
 
             final String html = templateEngine.process("payment-reminder", ctx);
             sendHtmlMail(guest.getEmail(), "⚠️ Payment Reminder — " + monthName + " Invoice Due", html);

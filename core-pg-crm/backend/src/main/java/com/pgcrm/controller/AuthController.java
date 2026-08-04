@@ -2,28 +2,34 @@ package com.pgcrm.controller;
 
 import com.pgcrm.dto.AuthRequest;
 import com.pgcrm.dto.AuthResponse;
-import com.pgcrm.entity.User;
 import com.pgcrm.entity.enums.AuditAction;
-import com.pgcrm.exception.ResourceNotFoundException;
-import com.pgcrm.repository.UserRepository;
 import com.pgcrm.service.AuditService;
 import com.pgcrm.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * REST controller for all authentication lifecycle endpoints.
+ *
+ * <p>This controller is intentionally thin — it handles only HTTP concerns
+ * (request parsing, response building, HTTP status codes) and delegates all
+ * business logic to {@link AuthService}. No repositories or encoders are injected
+ * here directly.</p>
+ *
+ * <p><strong>QUAL-01:</strong> The {@code changePassword} endpoint previously contained
+ * business logic inline (user lookup, password verification, encoding, persistence).
+ * This has been moved to {@link AuthService#changePassword(String, String, String)}.</p>
+ */
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
     @PostMapping("/login")
@@ -53,7 +59,13 @@ public class AuthController {
 
     /**
      * Forces a password change for the authenticated user.
-     * Required when mustChangePassword = true (first login after check-in).
+     *
+     * <p>Required when {@code mustChangePassword = true} (first login after check-in or
+     * after a password reset). Delegates all validation and persistence logic to
+     * {@link AuthService#changePassword(String, String, String)}.</p>
+     *
+     * <p>Errors from the service layer ({@link IllegalArgumentException}) are handled
+     * by {@link GlobalExceptionHandler} and returned as {@code 400 Bad Request}.</p>
      */
     @PostMapping("/change-password")
     public ResponseEntity<Map<String, String>> changePassword(
@@ -64,29 +76,14 @@ public class AuthController {
             return ResponseEntity.status(401)
                     .body(Map.of("error", "Unauthorized: Session expired or invalid. Please login again."));
         }
-        String userId = auth.getName();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        String currentPassword = body.get("currentPassword");
-        String newPassword     = body.get("newPassword");
+        authService.changePassword(
+            auth.getName(),
+            body.get("currentPassword"),
+            body.get("newPassword")
+        );
 
-        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Current password is incorrect"));
-        }
-
-        if (newPassword == null || newPassword.length() < 8) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "New password must be at least 8 characters"));
-        }
-
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setMustChangePassword(false);
-        user.setFirstLogin(false);
-        userRepository.save(user);
-
-        auditService.log(AuditAction.PASSWORD_CHANGED, "User", userId, "Password changed by user");
+        auditService.log(AuditAction.PASSWORD_CHANGED, "User", auth.getName(), "Password changed by user");
 
         return ResponseEntity.ok(Map.of("message", "Password changed successfully"));
     }

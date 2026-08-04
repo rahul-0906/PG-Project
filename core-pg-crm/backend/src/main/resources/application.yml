@@ -41,7 +41,9 @@ pg:
     hibernate:
       ddl-auto: validate
     show-sql: false
-    open-in-view: true
+    # PERF-03: open-in-view disabled. Keeping the EntityManager open for the full HTTP
+    # lifecycle holds a DB connection for the entire request, exhausting the pool under load.
+    open-in-view: false
     properties:
       hibernate:
         format_sql: true
@@ -80,6 +82,10 @@ app:
     # SEC-02: Explicit CORS origins for SecurityConfig. Set APP_CORS_ALLOWED_ORIGINS in production.
     # Example: APP_CORS_ALLOWED_ORIGINS=https://app.yourpg.com,https://admin.yourpg.com
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:4173}
+  # BIZ-04: Frontend URL injected into email templates and WhatsApp reminders.
+  # Set APP_FRONTEND_URL env var in production (e.g. https://app.yourpg.com).
+  frontend:
+    url: ${APP_FRONTEND_URL:http://localhost:5173}
 
 # ─── Razorpay ────────────────────────────────────────────────────
 razorpay:

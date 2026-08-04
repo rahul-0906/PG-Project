@@ -26,6 +26,8 @@ import java.util.Optional;
  *   <li><strong>Token Refresh:</strong> Validates a refresh token and issues a new access token.</li>
  *   <li><strong>Forgot Password:</strong> Generates a cryptographically secure temporary password,
  *       encodes it, and dispatches a password-reset email via {@link EmailService}.</li>
+ *   <li><strong>Change Password:</strong> Verifies the current password, enforces minimum
+ *       length, re-encodes the new password, and clears the {@code mustChangePassword} flag.</li>
  * </ul>
  *
  * <p><strong>Security Notes:</strong></p>
@@ -178,7 +180,55 @@ public class AuthService {
         }
     }
 
-    // ── Private Helpers ───────────────────────────────────────────────────────
+    /**
+     * Changes the password for an authenticated user.
+     *
+     * <p><strong>QUAL-01:</strong> This logic was previously embedded in
+     * {@code AuthController}, which directly injected {@link UserRepository} and
+     * {@link PasswordEncoder}. Moving it here ensures all password-management logic
+     * lives in the service layer and is fully testable without HTTP context.</p>
+     *
+     * <p>Validation steps:</p>
+     * <ol>
+     *   <li>Looks up the user by ID; throws {@link ResourceNotFoundException} if not found.</li>
+     *   <li>Verifies the supplied {@code currentPassword} against the stored BCrypt hash.</li>
+     *   <li>Validates that {@code newPassword} is at least 8 characters.</li>
+     *   <li>Encodes and persists the new password.</li>
+     *   <li>Clears {@code mustChangePassword} and {@code firstLogin} flags.</li>
+     * </ol>
+     *
+     * @param userId          the ID of the authenticated user (from JWT principal).
+     * @param currentPassword the current raw plaintext password for verification.
+     * @param newPassword     the desired new raw plaintext password.
+     * @throws ResourceNotFoundException if the user is not found.
+     * @throws IllegalArgumentException  if the current password is wrong or the new
+     *                                   password fails length validation.
+     */
+    @Transactional
+    public void changePassword(final String userId, final String currentPassword, final String newPassword) {
+        log.info("Password change requested for user ID: {}", userId);
+
+        final User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            log.warn("Password change failed: current password mismatch for user ID: {}", userId);
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (newPassword == null || newPassword.length() < 8) {
+            throw new IllegalArgumentException("New password must be at least 8 characters");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        user.setFirstLogin(false);
+        userRepository.save(user);
+
+        log.info("Password changed successfully for user ID: {}", userId);
+    }
+
+    // ── Private Helpers ──────────────────────────────────────────────────────────
 
     /**
      * Builds a standardised {@link AuthResponse} from a user entity and the issued token pair.

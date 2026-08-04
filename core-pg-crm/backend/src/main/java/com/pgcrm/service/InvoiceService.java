@@ -115,7 +115,7 @@ public class InvoiceService {
      * <p><strong>Computation steps:</strong></p>
      * <ol>
      *   <li>Idempotency check — returns existing invoice if found.</li>
-     *   <li>Computes pro-rated rent via {@link #calculateProRatedRent}.</li>
+     *   <li>Computes flat-rate rent via {@link #calculateFlatRateRent}.</li>
      *   <li>Sums the guest's EB bill share for the period from {@link EbBillGuest} rows.</li>
      *   <li>Computes food total from daily logs via {@link #calculateFoodTotal} (unless food is included in rent).</li>
      *   <li>Computes laundry total from washing machine log counts via {@link #calculateLaundryTotal} (unless no washing machine).</li>
@@ -146,8 +146,8 @@ public class InvoiceService {
             final List<InvoiceLineItem> lineItems = new ArrayList<>();
             BigDecimal                  total     = BigDecimal.ZERO;
 
-            // ── 1. RENT (pro-rated if mid-month check-in) ─────────────────────────
-            final BigDecimal rent = calculateProRatedRent(guest, ym);
+            // ── 1. RENT (flat monthly rate — never pro-rated, see AGENTS.md business rules) ────
+            final BigDecimal rent = calculateFlatRateRent(guest, ym);
             lineItems.add(InvoiceLineItem.builder()
                     .type(InvoiceLineType.RENT)
                     .description("Room Rent - " + ym.getMonth().name() + " " + year)
@@ -262,7 +262,7 @@ public class InvoiceService {
         final String buildingId = resolveBuildingId(guest);
         final PricingService.EffectivePricing pricing = pricingService.getEffectivePricing(buildingId);
 
-        final BigDecimal rent = calculateProRatedRent(guest, ym);
+        final BigDecimal rent = calculateFlatRateRent(guest, ym);
 
         BigDecimal ebShare = BigDecimal.ZERO;
         if (guest.getBed() != null && guest.getBed().getRoom().getBlock() != null) {
@@ -330,17 +330,26 @@ public class InvoiceService {
     }
 
     /**
-     * Calculates the pro-rated rent for a guest for the given billing month.
+     * Calculates the flat monthly rent for a guest for the given billing month.
      *
-     * <p>If the guest checked in before the start of the billing month, the full rent is returned.
-     * If the guest checked in mid-month, the rent is pro-rated as:
-     * {@code baseRent × activeDays / totalDaysInMonth}.</p>
+     * <p><strong>BIZ-01 (Business Rule):</strong> Rent is always charged at the full flat monthly
+     * rate regardless of when the guest checked in during the month. There is intentionally
+     * no pro-rating for mid-month check-ins — this is an explicit business decision documented
+     * in {@code AGENTS.md}. The previous method name ({@code calculateProRatedRent}) was
+     * misleading; it has been renamed to prevent future regressions.</p>
+     *
+     * <p>The only special case is a guest whose check-in date is after the end of the billing
+     * month, in which case zero rent is returned (the guest was not active that month).</p>
+     *
+     * <p>For guests with {@link Guest#isBookEntireRoom()} set to {@code true}, the base rent
+     * is multiplied by the room's sharing capacity to charge for the whole room.</p>
      *
      * @param guest the {@link Guest} whose rent is being calculated.
      * @param ym    the billing {@link YearMonth}.
-     * @return the pro-rated or full rent amount, rounded to 2 decimal places.
+     * @return the full flat monthly rent, or {@link BigDecimal#ZERO} if the guest was not
+     *         active in this billing month.
      */
-    private BigDecimal calculateProRatedRent(final Guest guest, final YearMonth ym) {
+    private BigDecimal calculateFlatRateRent(final Guest guest, final YearMonth ym) {
         BigDecimal baseRent = guest.getMonthlyRent();
         if (guest.isBookEntireRoom() && guest.getRoom() != null) {
             baseRent = baseRent.multiply(BigDecimal.valueOf(guest.getRoom().getSharingType()));
