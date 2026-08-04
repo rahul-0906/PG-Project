@@ -220,6 +220,19 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <!-- Maven Surefire Plugin: Java 23 requires add-opens for
+                 Mockito byte-buddy inline mocking of JDK/JPA interfaces -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                    </argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
