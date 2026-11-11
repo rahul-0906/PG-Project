@@ -1,72 +1,69 @@
 version: '3.8'
 
 services:
-  controlplane-db:
-    image: postgres:15-alpine
-    container_name: controlplane-db
+  pgcore-db:
+    image: postgres:18-alpine
+    container_name: pgcore-db
     environment:
-      POSTGRES_DB: controlplane_db
+      POSTGRES_DB: pgcrmdb
       POSTGRES_USER: ${DB_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-pgcrm123}
-    # Port 5433 is mapped on the host instead of 5432 to avoid conflicts with a local PostgreSQL service running on the host.
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
-      - controlplane_db_data:/var/lib/postgresql/data
+      - pgcore_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d controlplane_db"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pgcrmdb"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - pgcrm-network
 
-  controlplane-backend:
+  pgcore-backend:
     build:
-      context: ./master-control-plane/backend
+      context: ./core-pg-crm/backend
       dockerfile: Dockerfile
-    container_name: controlplane-backend
+    container_name: pgcore-backend
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://controlplane-db:5432/controlplane_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://pgcore-db:5432/pgcrmdb
       SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-pgcrm123}
-      DB_WIPE_ON_STARTUP: ${DB_WIPE_ON_STARTUP:-true}
       JWT_SECRET: ${JWT_SECRET}
-      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      MAIL_ENABLED: ${MAIL_ENABLED:-false}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
-      RAZORPAY_ENABLED: ${RAZORPAY_ENABLED:-false}
       RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID}
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET}
-      TWILIO_ENABLED: ${TWILIO_ENABLED:-true}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-      TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM}
+      META_WHATSAPP_PHONE_NUMBER_ID: ${META_WHATSAPP_PHONE_NUMBER_ID}
+      META_WHATSAPP_ACCESS_TOKEN: ${META_WHATSAPP_ACCESS_TOKEN}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:5173}
+      PG_NAME: ${PG_NAME:-PG CRM}
+      PG_PRIMARY_COLOR: ${PG_PRIMARY_COLOR:-#2563eb}
     ports:
-      - "8090:8090"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - "8080:8080"
     depends_on:
-      controlplane-db:
+      pgcore-db:
         condition: service_healthy
     networks:
       - pgcrm-network
 
-  controlplane-frontend:
+  pgcore-frontend:
     build:
-      context: ./master-control-plane/frontend
+      context: ./core-pg-crm/frontend
       dockerfile: Dockerfile
-    container_name: controlplane-frontend
+    container_name: pgcore-frontend
     ports:
-      - "5176:80"
+      - "5173:80"
     depends_on:
-      - controlplane-backend
+      - pgcore-backend
     networks:
       - pgcrm-network
 
 volumes:
-  controlplane_db_data:
+  pgcore_db_data:
 
 networks:
   pgcrm-network:

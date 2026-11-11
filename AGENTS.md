@@ -1,24 +1,24 @@
 # AGENTS.md — AI Agent Guidelines & Architecture Guide
 
-Welcome, AI Agent! This document defines the operational rules, system architecture, core domain constraints, tech stack specifications, and development workflows for working on the **PG CRM Ecosystem** workspace.
+Welcome, AI Agent! This document defines the operational rules, system architecture, core domain constraints, tech stack specifications, and development workflows for working on the **PG CRM** workspace.
 
 ---
 
 ## 1. Executive Summary & Architecture Overview
 
-The **PG CRM Ecosystem** is a decoupled B2B SaaS Enterprise Monorepo designed for Paying Guest (PG) and hostel management. It separates tenant-facing property operations from centralized administrative billing and automated tenant provisioning.
+**PG CRM** is a single-tenant property management application for Paying Guest (PG) and hostel operators. It manages all daily property operations, guest lifecycle, billing, electricity sub-meter calculations, meal tracking, and maintenance ticketing.
 
-### Dual-Module Monorepo Architecture
+### Module: `[PG-CORE]` (Single-Tenant Property Management)
 
-1. **`[PG-CORE]` (Single-Tenant Property Management)**
-   - **Path**: `file:///e:/PG-Project/core-pg-crm/`
-   - **Scope**: Manages daily PG operations including guest onboarding, check-ins, daily arrears billing, electricity (EB) sub-meter split calculations, visual meal calendars, and maintenance ticketing.
-   - **Tenancy Model**: Physical database isolation. Each client runs an independent containerized stack pointing to a dedicated PostgreSQL database. Cross-tenant data leaks are physically impossible.
+- **Path**: `file:///e:/PG-Project/core-pg-crm/`
+- **Scope**: Guest onboarding, check-ins, daily arrears billing, electricity (EB) sub-meter split calculations, visual meal calendars, and maintenance ticketing.
+- **Tenancy Model**: Physical database isolation. Each PG client runs an independent containerized stack with its own PostgreSQL database. Cross-tenant data leaks are physically impossible.
 
-2. **`[CONTROL-PLANE]` (Central B2B SaaS Billing & Provisioning)**
-   - **Path**: `file:///e:/PG-Project/master-control-plane/`
-   - **Scope**: B2B client onboarding, Razorpay payment processing (Setup Fees & AMCs), automated tenant stack provisioning, subscription renewal monitoring, and tenant suspensions.
-   - **Security**: HMAC-SHA256 signature verification on Razorpay webhooks to guarantee cryptographically validated tenant provisioning.
+### Spatial Hierarchy
+
+```
+Building → Floor → Block → Room → Bed
+```
 
 ---
 
@@ -28,82 +28,128 @@ The **PG CRM Ecosystem** is a decoupled B2B SaaS Enterprise Monorepo designed fo
 | :--- | :--- | :--- |
 | **Java JDK** | OpenJDK | Java 23 |
 | **Backend Framework** | Spring Boot | 3.2.5 |
-| **Build Tool** | Apache Maven | Embedded / Local (3.9.16) |
-| **Database** | PostgreSQL | PostgreSQL 18 (Local dev default) |
-| **Database Migrations** | Flyway | Executed automatically on Spring Boot bootup |
+| **Build Tool** | Apache Maven | Local (3.9.16 at `apache-maven-3.9.16/`) |
+| **Database** | PostgreSQL | 18 |
+| **Database Migrations** | Flyway | Auto-executed on Spring Boot startup |
 | **Frontend Framework** | React | 18.x |
 | **Build System** | Vite | Latest |
 | **Styling** | Tailwind CSS | Latest |
-| **Runtime Environment** | Node.js / npm | Node v24+ |
+| **Runtime** | Node.js / npm | v24+ |
 
-### Port & Routing Registry
+### Port Registry
 
-| Component | Target Location | Default Port | Local URL |
+| Component | Path | Port | Local URL |
 | :--- | :--- | :--- | :--- |
-| **`[PG-CORE] Backend`** | `core-pg-crm/backend` | **8080** | `http://localhost:8080` |
-| **`[PG-CORE] Frontend`** | `core-pg-crm/frontend` | **5173** | `http://localhost:5173` |
-| **`[CONTROL-PLANE] Backend`** | `master-control-plane/backend` | **8090** | `http://localhost:8090` |
-| **`[CONTROL-PLANE] Frontend`** | `master-control-plane/frontend` | **5176** | `http://localhost:5176` |
-
-*Dynamically provisioned single-tenant instances use ports `8081`, `8082`, etc., proxied via Nginx.*
+| **Backend** | `core-pg-crm/backend` | **8080** | `http://localhost:8080` |
+| **Frontend** | `core-pg-crm/frontend` | **5173** | `http://localhost:5173` |
 
 ---
 
-## 3. Strict Agent Operational Rules & Guidelines
+## 3. Strict Agent Operational Rules
 
-When operating within this workspace, AI agents **MUST** follow these rules without exception:
+When operating in this workspace, AI agents **MUST** follow these rules without exception:
 
 ### 🛡️ File Placement & Sandbox Integrity
-- **Always write project documentation, design plans, SOPs, and checklists directly to the project locations** (e.g., project root `/`, `/docs`, or relevant subdirectories within the active project workspace) instead of creating them exclusively in hidden system configuration directories or temporary directories (`C:\Users\Admin\.gemini\antigravity\brain\...`).
-- Maintain all architectural resources and operational artifacts inside the project structure to ensure Git tracking and team visibility.
+- **Always write project documentation, design plans, SOPs, and checklists directly to the project locations** (`E:\PG-Project\docs\`, project root, or relevant subdirectories).
+- **NEVER** write project files to `C:\Users\Admin\.gemini\antigravity\brain\...` or any hidden system directory. These are for internal agent scratch only.
+- Maintain all artifacts inside the project for Git tracking and team visibility.
 
-### 📐 Business Domain Rules & Calculation Logic
-- **Fixed/Flat-Rate Rent Billing Model**: Strictly enforce flat monthly rent. Do NOT apply pro-rated daily calculations. Active status during a billing month bills the full monthly rate.
-- **Electricity (EB) Calculations**: Respect the configured split mode:
-  1. *Equal Split*: Total bill divided equally among active occupants.
-  2. *Per-Bed Flat Rate*: Standard fixed charge per bed.
-  3. *Sub-Meter Usage*: Computed via `(currentReading - previousReading) * ratePerUnit`.
-- **Data Compliance & Anonymization**: Preserve financial integrity when anonymizing guest records. Scrub PII (name, phone) for checkouts >365 days while retaining transactional audit logs.
+### 🗄️ Flyway Migration Immutability
+- **NEVER modify** any existing SQL file under `src/main/resources/db/migration/`.
+- Always **create a new file**: examine the highest existing version and increment it (e.g., `V18__description.sql`).
+- Naming convention: `V{version}__{snake_case_description}.sql`
 
-### 💻 Code Modifications & Migrations
-- **Flyway Migrations**: Never modify existing, applied SQL migration scripts in `src/main/resources/db/migration`. Always create a new versioned migration file (e.g., `V1_x__description.sql`).
-- **Spring Profile**: Ensure local dev execution explicitly sets `SPRING_PROFILES_ACTIVE=dev`.
+### 💰 Flat-Rate Billing Model (Business-Critical)
+- **NEVER apply pro-rated or daily rent calculations.**
+- If a guest is active for any portion of a billing month, they are billed the **full monthly rate**.
+- Formula: `Base Rent Charge = guest.getMonthlyRent()`
+- For Whole Room Bookings: `Adjusted Rent = guest.getMonthlyRent() × room.getSharingType()`
+- See `docs/architecture/CALCULATIONS_ENGINE.md` for the complete specification.
+
+### ⚡ Electricity Bill Split Logic
+Bills are split using the building-configured `EbSplitMethod`:
+1. **`EQUAL_SPLIT`**: `perGuestShare = totalBillAmount / activeGuestCount`
+2. **`PER_BED`**: `perGuestShare = fixedRatePerBed × guestBedCount`
+3. **`METER_BASED`**: `perGuestShare = (currentReading − previousReading) × ratePerUnit`
+4. **`MANAGER_MANUAL`**: Manager enters each guest's amount individually.
+
+Always read from `BuildingConfig.getEbSplitMethod()`. Never hardcode a different calculation.
+
+### 🔐 Security & RBAC
+Spring Security enforces these URL-to-role mappings:
+
+| URL Pattern | Required Roles |
+| :--- | :--- |
+| `/api/auth/**` | Public (except `/api/auth/change-password`) |
+| `/api/super-admin/**` | `SUPER_ADMIN` only |
+| `/api/owner/**` | `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/manager/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/guest/**` | `GUEST`, `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/reports/**` | `PG_OWNER`, `PG_MANAGER`, `SUPER_ADMIN` |
+| `/api/inventory/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/payments/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/webhooks/**` | Public (Razorpay webhook) |
+| `/api/config/public` | Public (frontend branding) |
+
+**NEVER add a wildcard `permitAll()` on `/**`**. Any new endpoint must follow the table above.
+
+### 🔒 Security Anti-Patterns (Never Do These)
+- **SEC-01**: Never hardcode JWT secrets, API keys, or passwords in code or YAML defaults.
+- **SEC-02**: Never use CORS `allowedOriginPatterns("*")` with `allowCredentials(true)`.
+- **SEC-03**: Never add a `/**` `permitAll()` wildcard to SecurityConfig.
+- **SEC-04**: Never log raw passwords, tokens, or personal data.
+- **SEC-05**: Never disable Razorpay HMAC signature verification.
+
+### 💾 Soft Deletes (Never Hard Delete Guests or Invoices)
+- `Guest` and `Invoice` entities use soft-delete (`is_deleted = true`).
+- **NEVER call `repository.deleteById()`** on Guest or Invoice records.
+- Use the service-layer checkout/deletion methods.
+
+### 🔒 Owner Permission Guard
+- Data modifications for `PG_OWNER` accounts are protected by `users.allow_super_admin_access`.
+- Always check this flag before proceeding. Do not remove this guard.
+
+### 📅 Data Retention & PII Anonymization
+- Guests checked out for **>365 days** are automatically anonymized by `DataRetentionScheduler.java`.
+- Anonymization scrubs: `fullName` → random token, `phone` → random token.
+- **Financial records, audit logs, and invoices are PRESERVED — never delete them.**
+- Scheduler runs daily at 3:00 AM (`0 0 3 * * ?`).
+
+### 🏗️ DDL & Schema Changes
+- `spring.jpa.hibernate.ddl-auto` is set to **`validate`** — Hibernate will NOT auto-create/alter tables.
+- ALL schema changes go through **Flyway migration files only**.
+- Never change `ddl-auto` to `create`, `create-drop`, or `update` in non-test profiles.
 
 ---
 
 ## 4. Development & Build Commands
 
-### Backend (Spring Boot 3.2.5 - Java 23)
+### Backend (Spring Boot — Java 23 + Maven)
 ```powershell
-# PG-CORE Backend (Port 8080)
-cd core-pg-crm/backend
-$env:SPRING_PROFILES_ACTIVE="dev"; ../../apache-maven-3.9.16/bin/mvn spring-boot:run
-
-# CONTROL-PLANE Backend (Port 8090)
-cd master-control-plane/backend
-$env:SPRING_PROFILES_ACTIVE="dev"; ../../apache-maven-3.9.16/bin/mvn spring-boot:run
+cd E:\PG-Project\core-pg-crm\backend
+$env:SPRING_PROFILES_ACTIVE="dev"; ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run
 ```
 
 ### Frontend (React 18 + Vite)
 ```powershell
-# PG-CORE Frontend (Port 5173)
-cd core-pg-crm/frontend
+cd E:\PG-Project\core-pg-crm\frontend
 npm install
 npm run dev
+```
 
-# CONTROL-PLANE Frontend (Port 5176)
-cd master-control-plane/frontend
-npm install
-npm run dev
+### Database Initialization
+```sql
+CREATE DATABASE pgcrmdb;
 ```
 
 ---
 
 ## 5. Documentation Directory Map
 
-For deeper architectural context, consult the documentation index:
-- 📖 [README.md](file:///e:/PG-Project/README.md) - System overview and quickstart guide.
-- 🏗️ [docs/architecture/ARCHITECTURE.md](file:///e:/PG-Project/docs/architecture/ARCHITECTURE.md) - Core system architecture and lifecycle.
-- 🧮 [docs/architecture/CALCULATIONS_ENGINE.md](file:///e:/PG-Project/docs/architecture/CALCULATIONS_ENGINE.md) - Mathematical calculation models.
-- 📂 [docs/architecture/FILE_ARCHITECTURE.md](file:///e:/PG-Project/docs/architecture/FILE_ARCHITECTURE.md) - Directory layout and file reference.
-- ⚙️ [docs/architecture/sop.md](file:///e:/PG-Project/docs/architecture/sop.md) - Unified DevOps SOP & troubleshooting.
+- 📖 [README.md](file:///e:/PG-Project/README.md) — System overview and quickstart guide
+- 🏗️ [docs/architecture/ARCHITECTURE.md](file:///e:/PG-Project/docs/architecture/ARCHITECTURE.md) — Core system architecture and lifecycle
+- 🧮 [docs/architecture/CALCULATIONS_ENGINE.md](file:///e:/PG-Project/docs/architecture/CALCULATIONS_ENGINE.md) — Mathematical calculation models
+- 📂 [docs/architecture/FILE_ARCHITECTURE.md](file:///e:/PG-Project/docs/architecture/FILE_ARCHITECTURE.md) — Directory layout and file reference
+- ⚙️ [docs/architecture/sop.md](file:///e:/PG-Project/docs/architecture/sop.md) — Unified DevOps SOP & troubleshooting
+- 🌐 [docs/API_REFERENCE.md](file:///e:/PG-Project/docs/API_REFERENCE.md) — Complete REST endpoint documentation
+- 🔒 [docs/SECURITY.md](file:///e:/PG-Project/docs/SECURITY.md) — Security policies and threat model
