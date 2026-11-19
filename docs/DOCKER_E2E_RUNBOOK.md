@@ -1,103 +1,144 @@
-# Docker E2E Runbook: Local SaaS Provisioning Pipeline
+# Docker E2E Runbook: PG-Core Local Stack
 
-This runbook guides you through verifying the complete multi-tenant SaaS provisioning pipeline locally using Docker. By utilizing a multi-stage containerized setup, the provisioning system compiles code internally and accesses the host's Docker socket to spawn isolated PG Core instances on demand.
+This runbook guides you through running the full PG-Core stack locally using Docker Compose, including database, backend, and frontend containers.
 
 ---
 
-## 1. Pre-Flight Checks (The Clean Slate)
+## 1. Pre-Flight Checks
 
-To prevent port allocation conflicts, ensure that all host-level services and legacy processes are fully terminated:
+Before starting the Docker stack, ensure:
 
-* **Stop Host PostgreSQL Instances:** If you have a local PostgreSQL database running on your host machine, stop it to free up **Port 5432**.
+- **Docker Desktop is running** on your system.
+- **No process is using ports 5432, 8080, or 5173** on your host. Check with:
   ```powershell
-  # Windows Example (Run as Administrator)
-  Stop-Service -Name postgresql*
+  netstat -ano | findstr ":5432 :8080 :5173"
   ```
-* **Kill Legacy Servers:** Close any running instances of local servers started by bare-metal `.bat` scripts (e.g., Spring Boot or Vite Node.js servers running on ports `8090`, `5176`, or `8081`).
-* **Verify Docker Desktop:** Ensure that **Docker Desktop is active and running** on your system.
+- **Stop any bare-metal dev servers** (Spring Boot or Vite) that may be running on those ports.
 
 ---
 
-## 2. Local DNS Configuration (One-Time Setup)
+## 2. Environment Setup (One-Time)
 
-In our multi-tenant SaaS architecture, the Spring Boot Control Plane dynamic orchestrator provisions isolated PG Core containers mapped to subdomains under a master domain structure. Since standard public DNS servers cannot route local requests to dynamically generated containers running on your host, you must configure a local DNS mapping via your system's `hosts` file. This intercepts browser requests and forces resolution to the localhost interface.
+Copy and fill in the environment file:
 
-> [!CAUTION]
-> **Safety Warning:** The system `hosts` file is critical for all local networking. Ensure you only append the requested lines. Editing or deleting existing entries can disrupt system network resolution, active VPN connections, or local development environments.
-
-### **Configuration Steps:**
-
-1. **Launch a text editor with administrative privileges:** Search for **Notepad** (or your preferred editor) in your system search bar, right-click the application icon, and select **Run as Administrator**.
-2. **Open the system hosts file:** In the editor, browse to and open the Windows `hosts` configuration file:
-   ```text
-   C:\Windows\System32\drivers\etc\hosts
-   ```
-3. **Append the local DNS mappings:** Navigate to the bottom of the file and paste the following block. This includes our main E2E testing domain along with several placeholders to accommodate future multi-tenant testing scenarios:
-   ```text
-   # B2B SaaS local multi-tenant routing
-   127.0.0.1       test.pgcrm.com
-   127.0.0.1       stanza.pgcrm.com
-   127.0.0.1       dev-tenant.pgcrm.com
-   ```
-4. **Save and close the file:** Save the changes (`Ctrl + S`) and close your editor.
-
-### **Verification Step:**
-Validate that your operating system resolves the mapped domains correctly by executing a network test in your terminal:
 ```powershell
-ping test.pgcrm.com
-```
-**Expected Outcome:** The command should initiate requests resolving to `127.0.0.1` (or `::1`). If it displays the correct IP loopback address, DNS resolution has taken effect immediately. If the domain fails to resolve, flush your system DNS resolver cache and re-verify your modifications:
-```powershell
-ipconfig /flushdns
+# From project root
+copy .env.example .env
+notepad .env
 ```
 
----
+Minimum required values:
 
-## 3. Ignition (Launching the Cluster)
+```dotenv
+DB_PASSWORD=your_secure_password
+JWT_SECRET=your_256bit_secret_here
+```
 
-With the environment clean and DNS mapped, initialize the container cluster:
-
-1. Open a terminal at the monorepo root directory: `E:\Antigravity Project\PG Project`.
-2. Run the build and start command:
-   ```bash
-   docker compose up --build -d
-   ```
-   > [!NOTE]
-   > The multi-stage build configured in the [backend Dockerfile](file:///E:/Antigravity%20Project/PG%20Project/master-control-plane/backend/Dockerfile) and [frontend Dockerfile](file:///E:/Antigravity%20Project/PG%20Project/master-control-plane/frontend/Dockerfile) compiles the source code completely inside the build containers. **Zero pre-flight Maven or npm commands are required on your host machine.**
-
-3. Validate that the services are online using:
-   ```bash
-   docker compose ps
-   ```
+> [!IMPORTANT]
+> Never set `DB_WIPE_ON_STARTUP=true` when using the `prod` profile. The `application-prod.yml` enforces `flyway.clean-disabled: true` as an additional safeguard.
 
 ---
 
-## 4. The E2E Execution Steps
+## 3. Build and Launch the Stack
 
-Once the containers are running, perform the following verification flow:
+```powershell
+# From project root
+docker compose up --build -d
+```
 
-### **Step 1: Verify the Command Center**
-Navigate to the Admin Dashboard at [http://localhost:5176/dashboard](http://localhost:5176/dashboard) to confirm the admin control panel is responsive and successfully querying the backend API.
+> [!NOTE]
+> The multi-stage Dockerfiles compile the Spring Boot backend and React frontend fully inside build containers — no local Maven or npm runs required.
 
-### **Step 2: Run the Onboarding Wizard**
-Open the Tenant Onboarding Wizard at [http://localhost:5176/](http://localhost:5176/). 
-* Complete the multi-step onboarding wizard.
-* Set the workspace subdomain to `test`.
+Verify all services are healthy:
 
-### **Step 3: Monitor Provisioning Status**
-Return to the Admin Dashboard at [http://localhost:5176/dashboard](http://localhost:5176/dashboard). You should see:
-1. A new tenant record for the subdomain `test` initialized in the `PROVISIONING` state.
-2. The async orchestrator executes the backend provisioning scripts via the mounted Docker socket (`/var/run/docker.sock`).
-3. The dashboard state will poll and transition to `LIVE` once the container launches and registers.
+```powershell
+docker compose ps
+```
 
-### **Step 4: Access the Tenant Application**
-Open a new browser tab and navigate to [http://test.pgcrm.com:8081](http://test.pgcrm.com:8081).
-* Verify that the isolated PG Core application is fully loaded and functional.
-* This verifies that the reverse proxy, database migration scripts, and dynamic container creation executed correctly.
+Expected output:
+
+```
+NAME                STATUS          PORTS
+pgcore-db           Up (healthy)    0.0.0.0:5432->5432/tcp
+pgcore-backend      Up              0.0.0.0:8080->8080/tcp
+pgcore-frontend     Up              0.0.0.0:5173->80/tcp
+```
 
 ---
 
-## 5. Legacy Fallback Note
+## 4. Verification Steps
 
-> [!TIP]
-> The original `.bat` startup scripts in the monorepo remain fully intact and operational. If you lack a Docker Desktop environment or need to attach debugger utilities directly, you can still fall back to bare-metal local execution.
+### Step 1: Check the Backend API
+
+```powershell
+curl http://localhost:8080/api/config/public
+```
+
+Expected: JSON with `pgName`, `primaryColor`, `shortTitle`.
+
+### Step 2: Check the Frontend
+
+Open [http://localhost:5173](http://localhost:5173) in your browser. You should see the PG CRM login page.
+
+### Step 3: Login and Verify
+
+Use the SUPER_ADMIN credentials seeded by `DatabaseSeeder.java`. On first login you'll be prompted to change your password.
+
+---
+
+## 5. Useful Docker Commands
+
+```powershell
+# View logs (follow)
+docker compose logs -f pgcore-backend
+docker compose logs -f pgcore-frontend
+
+# Restart a single service
+docker compose restart pgcore-backend
+
+# Stop the stack
+docker compose down
+
+# Stop and wipe volumes (CAUTION: deletes all PostgreSQL data)
+docker compose down -v
+
+# Open a shell inside the backend container
+docker exec -it pgcore-backend /bin/bash
+
+# Connect to the database directly
+docker exec -it pgcore-db psql -U postgres -d pgcrmdb
+```
+
+---
+
+## 6. Running Tests Inside Docker
+
+The backend test suite uses an in-memory H2 database (configured in `application-test.yml`). To run tests inside a build container:
+
+```powershell
+# From project root
+docker run --rm -v ${PWD}/core-pg-crm/backend:/app -w /app \
+  eclipse-temurin:23-jdk \
+  /app/../../apache-maven-3.9.16/bin/mvn test
+```
+
+Or simply run tests locally (no DB required since they use H2):
+
+```powershell
+cd core-pg-crm/backend
+"C:\Program Files\apache-maven-3.9.16\bin\mvn" test
+```
+
+---
+
+## 7. Backup & Restore
+
+See [OPERATIONS.md](OPERATIONS.md) for backup scripts and restore procedures.
+
+The key endpoint for uptime monitoring is:
+
+```
+GET http://localhost:8080/api/config/public
+```
+
+This endpoint is public (no auth required) and returns `200 OK` when the backend is healthy.

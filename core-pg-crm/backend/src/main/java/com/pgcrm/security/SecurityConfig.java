@@ -1,6 +1,7 @@
 package com.pgcrm.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +20,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -31,6 +33,14 @@ public class SecurityConfig {
 
     @Autowired
     private CustomUserDetailsService userDetailsService;
+
+    /**
+     * Allowed CORS origins — injected from {@code APP_CORS_ALLOWED_ORIGINS} env var or
+     * {@code app.cors.allowed-origins} in application.yml.
+     * Never defaults to wildcard {@code *} with credentials enabled (SEC-02).
+     */
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String corsAllowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -50,7 +60,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook
                 .requestMatchers("/api/system/config").permitAll()    // Public branding endpoint
-                .requestMatchers("/api/config/public").permitAll()    // New public config endpoint
+                .requestMatchers("/api/config/public").permitAll()    // Public config endpoint
                 .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
                 .requestMatchers("/api/owner/**").hasAnyRole("PG_OWNER", "SUPER_ADMIN")
                 .requestMatchers("/api/manager/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
@@ -58,7 +68,6 @@ public class SecurityConfig {
                 .requestMatchers("/api/reports/**").hasAnyRole("PG_OWNER", "PG_MANAGER", "SUPER_ADMIN")
                 .requestMatchers("/api/inventory/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
                 .requestMatchers("/api/payments/**").hasAnyRole("PG_MANAGER", "PG_OWNER", "SUPER_ADMIN")
-                .requestMatchers("/**").permitAll() // React static files
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -70,7 +79,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        // Parse comma-separated origins from config — never use wildcard with credentials (SEC-02)
+        List<String> origins = Arrays.stream(corsAllowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -97,3 +111,4 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 }
+

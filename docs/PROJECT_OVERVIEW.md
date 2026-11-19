@@ -1,17 +1,38 @@
-# PG CRM Ecosystem - Project Overview
+# PG CRM — Project Overview
 
-## What is this project about?
-The PG CRM Ecosystem is a comprehensive, decoupled B2B SaaS Enterprise Monorepo designed specifically for Paying Guest (PG) and hostel management. The ecosystem is built on a Hybrid Multi-Instance Single-Tenant Database Isolation model, providing a robust architecture that physically separates customer-facing property operations from centralized administrative billing and infrastructure management.
+## What is this project?
 
-The system is composed of two primary modules:
-1. **`[PG-CORE]` (Single-Tenant Property Management)**: A white-labeled property management software deployed uniquely for each PG brand/hostel branch. It manages daily operations including guest check-ins, automated daily arrears billing, electricity sub-meter calculations, visual meal calendars, and maintenance ticketing.
-2. **`[CONTROL-PLANE]` (Central B2B SaaS Billing & Provisioning)**: The centralized command center for the software provider. It handles B2B client onboarding, automated instance deployment, subscription renewals, Razorpay payment processing, and license suspensions.
+PG CRM is a **single-tenant property management system** for Paying Guest (PG) and hostel operators. Each PG business gets its own dedicated, isolated deployment with its own PostgreSQL database — there is no shared schema or multi-tenant routing.
 
-## What problem does this solve?
-Managing a PG or hostel operation traditionally involves fragmented tools, manual billing, and privacy concerns when scaling to multiple branches or attempting to offer the software as a SaaS product. This project solves these challenges by offering:
+The system is a single module: **`[PG-CORE]`**, a full-stack Spring Boot + React application that handles all daily PG operations.
 
-1. **Absolute Data Privacy & Security**: By utilizing physical database isolation (each client gets an independent containerized stack and dedicated PostgreSQL database), cross-tenant data leaks are impossible. Customers maintain full autonomy over their data and backups.
-2. **Automated Provisioning & Onboarding**: The onboarding process is zero-touch. Upon successful payment verification via Razorpay webhooks (secured with HMAC-SHA256), a script automatically provisions a new isolated database and Docker stack, assigning it a custom port and reverse proxy configuration.
-3. **Simplified Complex Billing**: It automates complex physical calculations such as Electricity (EB) Bill Sub-Meter Splits (Equal Split, Per-Bed flat rate, or Sub-Meter usage differences) and enforces strict flat-rate monthly rent policies.
-4. **Data Compliance**: Features an automated Data Compliance Scheduler that performs daily PII Anonymization sweeps, scrubbing names and phone numbers of guests checked out for over 365 days while maintaining transactional and financial integrity.
-5. **Operational Efficiency**: Features like the 1-Click Excel Bulk Import and Interactive Visual Building Builder Wizard allow for rapid migration and setup of physical property layouts (blocks, sharing capacities, AC/Non-AC status).
+---
+
+## What problem does it solve?
+
+Managing a PG or hostel operation traditionally involves fragmented tools, manual billing, and complicated calculations. PG CRM solves this with:
+
+1. **Absolute Data Privacy**: Each client deployment is physically isolated — a dedicated PostgreSQL database and application instance per property.
+2. **Automated Flat-Rate Billing**: Strict flat-rate monthly rent (no daily pro-rating). Active guests during any part of a billing month are billed the full monthly rate. Invoices are auto-generated on the 1st of each month.
+3. **Electricity Sub-Meter Split**: Automated EB bill calculations — Equal Split, Per-Bed flat rate, Sub-Meter usage (`currentReading - previousReading`), or Manager Manual entry.
+4. **Data Compliance**: Automated daily PII anonymization sweep at 3:00 AM, scrubbing guest names and phone numbers for checkouts over 365 days old, while preserving all financial and audit records.
+5. **Operational Efficiency**: 1-Click Excel Bulk Import and an Interactive Visual Building Builder Wizard for rapid property setup.
+6. **Online Payments**: Razorpay integration with HMAC-SHA256 webhook verification for secure rent collection.
+7. **Multi-Channel Notifications**: WhatsApp (Meta Cloud API), email (SMTP), and in-app notifications for invoices, payment reminders, and welcome messages.
+
+---
+
+## Key Modules & Features
+
+| Feature | Description |
+| :--- | :--- |
+| Guest Check-In/Out | Full check-in with bed allocation, deposit, meal preferences |
+| Monthly Invoicing | Auto-generated arrears billing on the 1st of each month |
+| EB Bill Split | Equal, Per-Bed, Meter-Based, or Manual entry |
+| Meal Calendar | Daily opt-in/out with configurable lockout times |
+| Excel Bulk Import | Batch onboarding of rooms, beds, and guests from spreadsheets |
+| Visual Building Wizard | Step-by-step floor, block, room, and bed configuration |
+| Razorpay Payments | Online rent collection with HMAC webhook verification |
+| Maintenance Tickets | Guest-reported issues tracked to resolution |
+| Audit Trail | Full audit log of all business operations |
+| PII Anonymization | Scheduled daily compliance sweep (GDPR-ready) |

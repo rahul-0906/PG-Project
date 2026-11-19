@@ -7,7 +7,6 @@ Please refer to [AGENTS.md](file:///e:/PG-Project/AGENTS.md) for the complete AI
 ## Quick Reference
 
 - **`[PG-CORE]`**: Single-tenant PG Management (`file:///e:/PG-Project/core-pg-crm/`)
-- **`[CONTROL-PLANE]`**: SaaS Billing & Auto-Provisioning (`file:///e:/PG-Project/master-control-plane/`)
 - **Main Docs**: [docs/architecture/](file:///e:/PG-Project/docs/architecture/)
 - **Rules & Constraints**:
   - Always write docs and artifacts within workspace boundaries (`e:\PG-Project`).

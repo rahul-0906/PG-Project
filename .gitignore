@@ -70,3 +70,8 @@ tenants/
 
 # ── Mockup designs ────────────────────────────────────────
 PG UI.png
+
+# PostgreSQL backup dumps
+backups/*.dump
+backups/*.sql
+

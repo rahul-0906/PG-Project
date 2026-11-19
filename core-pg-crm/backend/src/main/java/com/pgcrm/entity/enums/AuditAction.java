@@ -39,6 +39,9 @@ public enum AuditAction {
     /** A payment overdue reminder has been dispatched to a guest. */
     PAYMENT_REMINDER_SENT,
 
+    /** An invoice has been transitioned to OVERDUE status by the nightly scheduler. */
+    INVOICE_OVERDUE,
+
     /** An electricity bill has been recorded by a manager for a block. */
     EB_BILL_RECORDED,
 

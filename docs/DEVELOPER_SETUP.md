@@ -32,11 +32,10 @@ cd PG-Project
 
 ### 2.2 Database Initialization
 
-Open a PostgreSQL shell (`psql`) and create the two required databases:
+Open a PostgreSQL shell (`psql`) and create the application database:
 
 ```sql
-CREATE DATABASE pgcrmdb;          -- PG-CORE operational database
-CREATE DATABASE controlplane_db;  -- CONTROL-PLANE administrative database
+CREATE DATABASE pgcrmdb;
 ```
 
 Default connection settings (local dev):
@@ -93,23 +92,6 @@ npm run dev
 ```
 
 Frontend will be available at: **http://localhost:5173**
-
-### 3.2 CONTROL-PLANE (`[CONTROL-PLANE]` — Port 8090 + 5176)
-
-```powershell
-# Terminal 3: Start Backend
-cd E:\PG-Project\master-control-plane\backend
-$env:SPRING_PROFILES_ACTIVE="dev"; ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run
-```
-
-```powershell
-# Terminal 4: Start Frontend
-cd E:\PG-Project\master-control-plane\frontend
-npm install
-npm run dev
-```
-
-Control Plane Frontend: **http://localhost:5176**
 
 ---
 
@@ -208,21 +190,20 @@ For convenience, double-click these scripts in the project root:
 
 | Script | Function |
 | :--- | :--- |
-| `start_core.bat` | Starts both PG-CORE backend (8080) and frontend (5173) |
-| `start_control.bat` | Starts both CONTROL-PLANE backend (8090) and frontend (5176) |
+| `scripts/dev/start_core.bat` | Starts both PG-CORE backend (8080) and frontend (5173) |
 
 ---
 
-## 9. Docker Compose (Development Database Only)
+## 9. Docker Compose (Full Stack)
 
-The `docker-compose.yml` in the project root spins up the Control Plane database and backend for isolated testing:
+The `docker-compose.yml` in the project root spins up the full PG-Core stack (database + backend + frontend) for containerised testing:
 
 ```powershell
-# From project root — start Control Plane stack
+# From project root — start full stack
 docker compose up -d
 
 # View logs
-docker compose logs -f controlplane-backend
+docker compose logs -f pgcore-backend
 
 # Stop all services
 docker compose down
@@ -234,12 +215,9 @@ docker compose down -v
 Services in docker-compose:
 | Service | Container | Port |
 | :--- | :--- | :--- |
-| Control Plane DB | `controlplane-db` | `5433:5432` |
-| Control Plane Backend | `controlplane-backend` | `8090:8090` |
-| Control Plane Frontend | `controlplane-frontend` | `5176:80` |
-
-> [!NOTE]
-> Control Plane DB is mapped to port `5433` on the host (not `5432`) to avoid conflicts with a local PostgreSQL instance.
+| PG-Core DB | `pgcore-db` | `5432:5432` |
+| PG-Core Backend | `pgcore-backend` | `8080:8080` |
+| PG-Core Frontend | `pgcore-frontend` | `5173:80` |
 
 ---
 
@@ -291,4 +269,4 @@ npm test
 ### VS Code (Frontend)
 
 1. Install extensions: `ESLint`, `Tailwind CSS IntelliSense`, `Prettier`.
-2. Open `core-pg-crm/frontend` or `master-control-plane/frontend` as workspace root.
+2. Open `core-pg-crm/frontend` as workspace root.

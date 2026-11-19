@@ -1,9 +1,8 @@
 # PG CRM — Complete REST API Reference
-### Authoritative Endpoint Documentation for `[PG-CORE]` and `[CONTROL-PLANE]`
+### Authoritative Endpoint Documentation for `[PG-CORE]`
 
 > [!NOTE]
 > All PG-CORE endpoints are served from `http://localhost:8080` in development.
-> All CONTROL-PLANE endpoints are served from `http://localhost:8090` in development.
 > All requests that require authentication must include the header: `Authorization: Bearer <accessToken>`
 
 ---
@@ -304,75 +303,6 @@ Bulk import guests from Excel/CSV file.
 - **Content-Type**: `multipart/form-data`
 - **Field**: `file` (Excel or CSV)
 - **Response**: `ImportSummaryDTO` with success/failure counts.
-
----
-
-## Part 2: CONTROL-PLANE REST API (Port 8090)
-
-### 1. Public Checkout (`/api/public/checkout`)
-
-#### `POST /api/public/checkout/initiate-order`
-Initiate a new client onboarding order (Razorpay Setup Fee).
-- **Access**: Public
-- **Request Body**:
-  ```json
-  {
-    "pgBrandName": "Stanza PG",
-    "domainName": "stanza",
-    "ownerName": "Ramesh Iyer",
-    "ownerEmail": "ramesh@stanza.in",
-    "ownerPhone": "9876543210"
-  }
-  ```
-- **Response**: Razorpay order details + `registrationId`.
-
-#### `POST /api/public/checkout/webhook/reconcile`
-Razorpay payment webhook for setup fee reconciliation. Triggers automated tenant provisioning.
-- **Access**: Public
-- **Headers**: `X-Razorpay-Signature: <hmac-sha256-hex>`
-- **Body**: Raw Razorpay webhook JSON payload.
-
----
-
-### 2. Tenant Onboarding (`/api/onboarding`)
-
-#### `POST /api/onboarding/signup`
-Legacy client registration endpoint.
-
-#### `GET /api/onboarding/check-domain`
-Check if a subdomain is available before checkout.
-- **Query Params**: `?domain=stanza`
-
----
-
-### 3. Admin Dashboard (`/api/admin`)
-> **Access**: Platform Admin (internal use)
-
-#### `GET /api/admin/dashboard`
-Returns total clients, active tenants, suspended tenants, monthly revenue.
-
-#### `GET /api/admin/tenants`
-List all tenant instances with their provisioning status and subscription info.
-
-#### `PUT /api/admin/tenants/{tenantId}/suspend`
-Manually suspend a tenant instance.
-
-#### `PUT /api/admin/tenants/{tenantId}/activate`
-Re-activate a suspended tenant instance.
-
----
-
-### 4. Billing (`/api/billing`)
-> **Access**: Clients (authenticated via Control Plane credentials)
-
-#### `POST /api/billing/renew-amc`
-Initiate AMC renewal Razorpay order.
-- **Request Body**: `{ "clientId": "uuid" }`
-- **Response**: Razorpay order for ₹35,000 (AMC fee).
-
-#### `POST /api/billing/verify-amc`
-Verify AMC renewal payment and extend subscription by 1 year.
-- **Request Body**: `{ "clientId": "uuid", "razorpayOrderId": "...", "razorpayPaymentId": "...", "razorpaySignature": "..." }`
 
 ---
 

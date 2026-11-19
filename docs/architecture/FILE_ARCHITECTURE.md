@@ -5,22 +5,47 @@ This document acts as a granular registry of the entire codebase, detail by deta
 
 ## Monorepo Directory Layout
 
-The repository is structured to accurately map the files visible in our remote repository:
-
 ```
-   ├── core-pg-crm/
-   ├── docs/
-   ├── master-control-plane/
-   ├── scripts/
-   ├── .env.example
-   ├── .gitignore
-   ├── MEMORY.md
-   ├── README.md
-   ├── control_plane_architecture.md
-   ├── docker-compose.yml
-   ├── sop.md
-   ├── start_control.bat
-   └── start_core.bat
+.
+├── core-pg-crm/                    # PG-CORE Single-Tenant Module
+│   ├── backend/                    # Spring Boot 3.2.5 Java 23 Backend (Port 8080)
+│   │   ├── src/main/java/com/pgcrm/   # Controllers, Services, Repositories, Entities
+│   │   └── src/main/resources/
+│   │       ├── application.yml
+│   │       ├── application-dev.yml
+│   │       ├── application-prod.yml
+│   │       └── db/migration/       # Flyway SQL migrations (V1–V18+)
+│   └── frontend/                   # React 18 / Vite / Tailwind Frontend (Port 5173)
+├── docs/                           # Architectural and Reference Documentation
+│   ├── architecture/
+│   │   ├── ARCHITECTURE.md
+│   │   ├── CALCULATIONS_ENGINE.md
+│   │   ├── FILE_ARCHITECTURE.md    # This file
+│   │   ├── WORKFLOWS.md
+│   │   └── sop.md
+│   ├── API_REFERENCE.md
+│   ├── CODING_STANDARDS.md
+│   ├── DATA_MODEL.md
+│   ├── DEVELOPER_SETUP.md
+│   ├── DOCKER_E2E_RUNBOOK.md
+│   ├── OPERATIONS.md
+│   └── SECURITY.md
+├── scripts/
+│   ├── dev/
+│   │   └── start_core.bat          # Windows launcher for PG-CORE services
+│   └── ops/
+│       ├── backup_pgcrmdb.bat      # Windows backup script
+│       ├── backup_pgcrmdb.sh       # Linux backup script
+│       ├── restore_pgcrmdb.bat     # Windows restore script
+│       ├── restore_pgcrmdb.sh      # Linux restore script
+│       ├── healthcheck.bat         # Windows health check
+│       ├── healthcheck.sh          # Linux health check
+│       └── backup.sh               # Legacy backup script
+├── infrastructure/                 # Infrastructure configuration
+├── .env.example                    # Template Environment File
+├── docker-compose.yml              # Docker Compose (pgcore-db, pgcore-backend, pgcore-frontend)
+├── AGENTS.md                       # AI Agent Operational Manual
+└── README.md
 ```
 
 ---
@@ -34,7 +59,7 @@ The application enforces a strict four-tier role hierarchy that separates end-us
 | **Tier 1** | **Guest** | `GUEST` | Resident Portal. Access is limited to their own check-in details, meal calendars, maintenance requests, and payment logs. |
 | **Tier 2** | **Manager / Branch Admin** | `PG_MANAGER` | Property Administration. Operates assigned buildings, registers checked-in guests, logs meals and add-ons, generates monthly invoices, and resolves tickets. |
 | **Tier 3** | **Owner / Super Admin** | `PG_OWNER` | Global Administration. Manages building setup, registers Manager / Branch Admin accounts, allocates building permissions, and views revenue reports. |
-| **Tier 4** | **Super Super Admin (Software Provider)** | *(System Level)* | Infrastructure Operations. Configures host variables, deploys docker-compose services, updates whitelabel config parameters, and manages SSL certificates. |
+| **Tier 4** | **Software Provider** | `SUPER_ADMIN` | Full system access. Provisions PG Owner accounts, manages RBAC, views audit forensics, and applies financial overrides with owner permission guard. |
 
 ---
 
@@ -388,65 +413,11 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-## 5. Master Control Plane Registry (`master-control-plane/`)
+## 5. Root-Level Files Registry
 
-The master control plane is a separate B2B SaaS application managed by the platform provider to register tenants, check payments, and automate VM instance setups.
+The root-level directory contains critical launch scripts, compliance documentation, and general guidelines:
 
-### 5.1 Backend Service (`master-control-plane/backend`)
-
-The backend codebase is written in Java 23, built on Spring Boot 3.2.5, and resides in the `com.pgcrm.controlplane` package hierarchy.
-
-#### Scheduler Package (`com.pgcrm.controlplane.scheduler`)
-* **`AmcReminderScheduler.java`**: Runs daily at 2:00 AM. Scans for subscriptions expiring in exactly 30, 7, and 1 days to dispatch email alerts, and transitions expired contracts to `EXPIRED` status and their associated tenant instances to `SUSPENDED`.
-
-#### Controller Package (`com.pgcrm.controlplane.controller`)
-* **`PublicCheckoutController.java`**: Handles registration order initiation and webhook payment capture reconciliation for new setups.
-* **`BillingController.java`**: Handles subscription status checks, AMC renewal order initiation, and webhook signature verification for renewals.
-* **`AdminDashboardController.java`**: Serves registration analytics, tenant list statuses, and manual instance controls to administrators.
-
-#### Entity Package (`com.pgcrm.controlplane.entity`)
-* **`Client.java`**: Models B2B client contact details, brand names, and active configurations.
-* **`TenantInstance.java`**: Maps isolated tenant subdomains, allocated host port bindings, VPS target IP coordinates, and statuses (`PROVISIONING`, `ACTIVE`, `SUSPENDED`, `DELETED`).
-* **`Subscription.java`**: Tracks setup fee payments, start/expiry dates, and subscription license states (`ACTIVE`, `EXPIRED`, etc.).
-
-#### Repository Package (`com.pgcrm.controlplane.repository`)
-* **`ClientRepository.java`**, `TenantInstanceRepository.java`, `SubscriptionRepository.java`: Database access abstraction layer for central tables.
-
-#### Service Package (`com.pgcrm.controlplane.service`)
-* **`ProvisioningService.java`**: The core automation provisioning engine. Spawns an asynchronous task (`@Async`) that reserves a unique port, updates tenant status to `PROVISIONING`, executes the `scripts/provision_tenant.sh` script using Java `ProcessBuilder`, streams logs to control plane consoles, waits with a timeout of 5 minutes, and sets status to `ACTIVE` upon exit code `0`.
-* **`CheckoutServiceImpl.java`**: Handles creation of setup transactions and verifies Razorpay webhook HMAC signatures.
-* **`BillingServiceImpl.java`**: Manages AMC renewal checkout orders and updates expiration timelines (+1 Year) upon verified payment.
-* **`EmailService.java`**: Integrates SMTP templates to deliver invoice notifications, AMC renewal warnings, and account suspension alerts.
-
-#### Database Migrations (`src/main/resources/db/migration`)
-* **`V12__create_users_table.sql`**: Flyway schema migration to initialize user database tables before onboarding.
-* **`V13__init_tenant_onboarding.sql`**: Flyway schema migration establishing `tenant_profiles` and `tenant_subscriptions` tables.
-* **`V14__add_whatsapp_credentials.sql`**: Flyway schema migration adding Razorpay/WhatsApp credential columns to profiles.
-* **`V15__add_custom_tld.sql`**: Flyway schema migration altering `tenant_profiles` to add the `custom_tld` column.
-
----
-
-### 5.2 Frontend Admin & Portal Registries (`master-control-plane/frontend`)
-
-The frontend application uses React 18, Vite, and Tailwind CSS to serve both platform administrators and client billing portals.
-
-#### Page Components (`src/pages`)
-* **`LandingPage.jsx`**: The public marketing page. Displays value propositions (database isolation moats, billing automation), interactive pricing cards for the Hybrid Asset model (₹15,000 one-time setup + ₹35,000 AMC), and calls-to-action routing to onboarding.
-* **`BillingDashboard.jsx`**: Self-service billing portal for client PG owners. Visualizes their subscription license status, expiry dates, transaction history, and handles AMC payments.
-* **`Dashboard.jsx`**: The fleet management command center with 2.5s real-time status polling. Enables platform administrators to monitor tenant profiles and trigger override actions (suspend and activate).
-* **`TenantOnboardingWizard.jsx`**: Multi-step client onboarding form wizard. Features client workspace details setup (including optional custom TLD configurations), communications credential setup, and contract plan selection.
-
-#### UI Components (`src/components`)
-* **`AmcStatusCard.jsx`**: Component mounted inside the billing dashboard. Displays license state badges (Green/Yellow/Red) and a primary call-to-action ("Renew Subscription") which integrates the Razorpay checkout overlay.
-
----
-
-## 6. Root-Level Files Registry
-
-The root-level directory contains critical launch scripts, SaaS architecture configurations, compliance documentations, and general guidelines:
-
-* **`start_core.bat`**: The local development startup launcher for PG-CORE (hostel operations).
-* **`start_control.bat`**: The local development startup launcher for CONTROL-PLANE (SaaS billing).
-* **`control_plane_architecture.md`**: The B2B SaaS architecture design document.
-* **`MEMORY.md`**: The Antigravity context and file creation rules.
-* **`sop.md`**: The unified client onboarding standard operating procedure.
+* **`scripts/dev/start_core.bat`**: The local development startup launcher for PG-CORE (hostel operations).
+* **`docker-compose.yml`**: Docker Compose configuration for the full PG-Core stack (database, backend, frontend).
+* **`AGENTS.md`**: The AI Agent operational manual with mandatory rules and architecture guide.
+* **`README.md`**: System overview and quickstart guide.

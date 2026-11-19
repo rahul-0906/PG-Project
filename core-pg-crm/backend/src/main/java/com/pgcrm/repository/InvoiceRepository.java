@@ -236,4 +236,31 @@ public interface InvoiceRepository extends JpaRepository<Invoice, String> {
               AND i.dueDate <= :cutoff
             """)
     List<Invoice> findUnpaidInvoicesDueBy(@Param("cutoff") LocalDate cutoff);
+
+    // ── Overdue Invoice Scheduler ──────────────────────────────────────────────
+
+    /**
+     * Returns all invoices that are eligible to be transitioned to
+     * {@link InvoiceStatus#OVERDUE} as of the given reference date.
+     *
+     * <p><strong>Eligibility criteria:</strong></p>
+     * <ul>
+     *   <li>Status is {@code GENERATED} or {@code PENDING_CASH_VERIFICATION} —
+     *       already {@code PAID} or {@code OVERDUE} invoices are excluded.</li>
+     *   <li>{@code dueDate} is non-null and strictly before {@code today}.</li>
+     * </ul>
+     *
+     * <p>Consumed exclusively by {@code OverdueInvoiceScheduler}.</p>
+     *
+     * @param today the reference date (the scheduler passes {@link java.time.LocalDate#now()}).
+     * @return a {@link List} of {@link Invoice} records that should be marked overdue;
+     *         empty list if none exist.
+     */
+    @Query("""
+            SELECT i FROM Invoice i
+            WHERE i.status IN ('GENERATED', 'PENDING_CASH_VERIFICATION')
+              AND i.dueDate IS NOT NULL
+              AND i.dueDate < :today
+            """)
+    List<Invoice> findOverdueEligibleInvoices(@Param("today") LocalDate today);
 }

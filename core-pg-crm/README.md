@@ -1,58 +1,93 @@
 # PG CRM Core Application
 
-The **PG CRM Core Application** is the multi-tenant SaaS property management engine. It is the application system used by property owners, managers, and tenants to manage rooms, collect rent, handle issues, and configure tenant portals.
+The **PG CRM Core Application** is a **single-tenant** property management system for Paying Guest (PG) and hostel operators. Each PG business gets its own dedicated, isolated deployment of this application pointing to its own PostgreSQL database.
 
 ---
 
 ## 1. System Overview
 
-The core application is a multitenant deployment designed to scale to thousands of users. It uses dynamic connection routing to partition database requests per tenant schema, ensuring high-performance isolation.
+This application manages the full daily lifecycle of a PG property:
+
+- **Guest Operations**: Check-in, bed allocation (single/shared/whole-room), checkout, KYC tracking
+- **Automated Billing**: Monthly flat-rate invoicing, electricity sub-meter splits, add-on charges
+- **Meal Management**: Daily food preference tracking with configurable lockout times
+- **Payments**: Razorpay online collection + manual cash/UPI recording
+- **Notifications**: In-app, email (SMTP), and WhatsApp (Meta Cloud API) alerts
+- **Reporting**: Occupancy rates, revenue trends, and arrears tracking
+- **Maintenance**: Ticket logging and resolution by managers
+
+### Role Hierarchy
+
+| Role | Display Name | Scope |
+| :--- | :--- | :--- |
+| `GUEST` | PG Resident | Own portal: invoices, meal calendar, maintenance requests |
+| `PG_MANAGER` | Branch Manager | Guest operations, EB bills, daily logs, invoice generation |
+| `PG_OWNER` | Property Owner | Building setup, manager accounts, revenue reports |
+| `SUPER_ADMIN` | Software Provider | Full system access, user RBAC, audit forensics |
 
 ---
 
-## 2. Local Development & Schema Clean Strategy
+## 2. Local Development
 
-During active development, it is often necessary to start with a fresh database setup. The application uses a custom Spring Bean `FlywayMigrationStrategy` wrapper that triggers depending on environment configurations.
+### Database Setup
 
-### Database Wipe on Startup:
-- **Configuration Parameter:** `DB_WIPE_ON_STARTUP` (Boolean env flag)
-- **Strategy Execution:**
-  - If set to `true`, Spring boot invokes a Flyway clean execution on start, dropping all existing tables, views, and schemas inside the target schema before applying Flyway migration scripts.
-  - If set to `false` (default for staging/production), the cleanup phase is bypassed, and migrations are applied incrementally.
+```sql
+CREATE DATABASE pgcrmdb;
+```
 
-> [!CAUTION]  
-> **Danger of Data Loss:**
-> Never activate `DB_WIPE_ON_STARTUP=true` in production configurations, as it drops all user data.
+### Backend (Port 8080)
+
+```powershell
+cd core-pg-crm/backend
+$env:SPRING_PROFILES_ACTIVE="dev"; ..\..\apache-maven-3.9.16\bin\mvn spring-boot:run
+```
+
+### Frontend (Port 5173)
+
+```powershell
+cd core-pg-crm/frontend
+npm install
+npm run dev
+```
 
 ---
 
 ## 3. Data Seeding Architecture
 
-To ensure consistent application states, data seeding is split into two specialized components:
+### A. `DatabaseSeeder.java` — System Bootstrap
+- Runs in **all profiles** (dev, test, prod)
+- Creates the root `SUPER_ADMIN` account if none exists
+- Safe: "insert only if missing" logic — never overwrites existing records
 
-### A. System Seeds (`DatabaseSeeder.java`)
-- **Responsibility:** Inserts system-critical data that the core framework requires to function.
-- **Rules:** Evaluates "Insert Only If Missing" checks. For example, it confirms if the default System Super Admin account exists in the user registry. If not, it creates it; if yes, it does not overwrite the record.
-- **Scope:** Runs in all environments (development, testing, staging, and production).
-
-### B. Mock Demo Seeds (`DataSeeder.java`)
-- **Responsibility:** Populates sample records to help simulate actual operations for testing and development.
-- **Content:** Seeds mock tenants, sample room allocations, fake transaction histories, and default page layouts.
-- **Scope:** Runs only in active `dev` or `test` profiles. Bypassed in production.
+### B. `DataSeeder.java` — Demo Data
+- Runs only in `dev` and `test` profiles
+- Seeds mock buildings, guests, invoices, and meal history
+- Completely bypassed in `prod`
 
 ---
 
-## 4. Multi-Tenancy Routing & Security
+## 4. Database Wipe (Dev Only)
 
-The core system handles multi-tenancy dynamically through connection routing and JWT-based authentication.
+> [!CAUTION]
+> **NEVER activate `DB_WIPE_ON_STARTUP=true` in production. It drops all tables and all data.**
 
-### Subdomain Routing
-1. The client sends a request to a tenant-specific address (e.g. `https://greenwood.pgcrm.com/api/...`).
-2. A custom Spring Servlet filter extracts the subdomain prefix (`greenwood`).
-3. This prefix is mapped to the target database tenant context (`tenant_greenwood_db`) using an abstract database routing configuration.
-4. Connections are resolved dynamically on a per-thread basis using a thread-local context registry.
+The `FlywayConfig.java` bean is annotated `@Profile("dev | test")` — it cannot load in production.
+A separate `FlywayProdConfig.java` is used in `prod` and only ever calls `flyway.migrate()`.
 
-### JWT Security Context
-- All API requests carry a Bearer JWT Token in the request headers.
-- The filter chain validates the signature and parses claims to extract the user profile ID and role level (Super Admin, Manager, Tenant).
-- Security attributes are saved into Spring's `SecurityContextHolder`, allowing controllers to fetch user identity securely.
+| Profile | Wipe Allowed | Config class |
+| :--- | :--- | :--- |
+| `dev` | ✅ When `DB_WIPE_ON_STARTUP=true` | `FlywayConfig.java` |
+| `test` | ✅ When `DB_WIPE_ON_STARTUP=true` | `FlywayConfig.java` |
+| `prod` | ❌ Never | `FlywayProdConfig.java` |
+
+Also enforced at the YAML level: `application-prod.yml` sets `spring.flyway.clean-disabled: true`.
+
+---
+
+## 5. Flyway Migrations
+
+Migrations live in `src/main/resources/db/migration/` and are run automatically on startup.
+
+**Rules:**
+- **NEVER modify** an existing migration file — it will cause a checksum failure
+- Always create a new file with the next version: `V{N+1}__description.sql`

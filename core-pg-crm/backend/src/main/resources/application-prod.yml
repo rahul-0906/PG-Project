@@ -19,6 +19,10 @@ spring:
       ddl-auto: validate   # Validate the schema; do not make schema changes in production
     show-sql: false
 
+  flyway:
+    enabled: true
+    clean-disabled: true  # CRITICAL: Never allow flyway.clean() in production — it drops all data
+
 # ─── Production Logging ───────────────────────────────────────────────────────
 logging:
   level:

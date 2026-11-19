@@ -300,45 +300,7 @@ A guest can occupy multiple beds (Whole Room Booking scenario).
 
 ---
 
-## 4. CONTROL-PLANE Schema
-
-### 4.1 `clients`
-
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `UUID` | PK |
-| `pg_brand_name` | `VARCHAR(255)` | Client's PG brand name |
-| `domain_name` | `VARCHAR(100)` | Subdomain (e.g., `stanza`) |
-| `owner_name` | `VARCHAR(255)` | Client owner's name |
-| `owner_email` | `VARCHAR(255)` | UNIQUE email |
-| `owner_phone` | `VARCHAR(20)` | Contact phone |
-| `created_at` | `TIMESTAMP` | Record creation |
-
-### 4.2 `tenant_instances`
-
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `UUID` | PK |
-| `status` | `VARCHAR(30)` | Enum: `PROVISIONING`, `ACTIVE`, `SUSPENDED`, `DELETED` |
-| `instance_url` | `VARCHAR(500)` | Full URL of tenant's portal |
-| `assigned_port` | `INTEGER` | Docker host port for backend container |
-| `provisioned_at` | `TIMESTAMP` | Deployment timestamp |
-| `client_id` | `UUID` | FK → clients.id |
-
-### 4.3 `subscriptions`
-
-| Column | Type | Description |
-| :--- | :--- | :--- |
-| `id` | `UUID` | PK |
-| `license_state` | `VARCHAR(20)` | Enum: `ACTIVE`, `EXPIRED` |
-| `start_date` | `DATE` | Subscription start |
-| `expiry_date` | `DATE` | Subscription end |
-| `amc_amount` | `NUMERIC(10,2)` | Annual maintenance fee amount |
-| `tenant_instance_id` | `UUID` | FK → tenant_instances.id |
-
----
-
-## 5. Enum Reference
+## 4. Enum Reference
 
 ### PG-CORE Enums
 
@@ -374,19 +336,9 @@ LOW, MEDIUM, HIGH
 RENT, FOOD, EB_BILL, LAUNDRY, ADDON, OPENING_ARREARS
 ```
 
-### CONTROL-PLANE Enums
-
-```java
-// TenantStatus
-PROVISIONING, ACTIVE, SUSPENDED, DELETED
-
-// LicenseState
-ACTIVE, EXPIRED
-```
-
 ---
 
-## 6. Soft Delete Pattern
+## 5. Soft Delete Pattern
 
 Guest and Invoice entities use Hibernate's `@SQLDelete` and `@SQLRestriction` for soft deletes:
 

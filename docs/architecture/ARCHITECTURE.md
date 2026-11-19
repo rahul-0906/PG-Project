@@ -1,180 +1,167 @@
-# Monorepo SaaS Architecture & Tenant Lifecycle
-### Systems Architecture Reference for PG CRM B2B SaaS
+# PG CRM System Architecture
 
-This document defines the architectural relationship between the B2B SaaS **`[CONTROL-PLANE]`** command center and the white-labeled, single-tenant **`[PG-CORE]`** instances, detailing the end-to-end client onboarding workflow, billing integrations, and subscription enforcement engines.
+This document defines the system architecture for the **PG CRM** single-tenant Paying Guest & Hostel Management Platform.
 
 ---
 
-## 1. Tenancy Model: Shared Control Plane vs. Isolated Single-Tenant
+## 1. System Overview
 
-The PG CRM ecosystem employs a **Hybrid Multi-Instance Single-Tenant Database Isolation** model. Instead of storing multiple clients' records in a shared database schema with a tenant discriminator column, the architecture physically separates data layers.
+PG CRM is a **single-tenant** property management application. Each PG client (hostel operator) runs an independent, fully isolated stack comprising its own Spring Boot backend and PostgreSQL database. There is no shared schema between clients — physical database isolation makes cross-client data leaks impossible.
+
+### Spatial Hierarchy
+
+```
+Building → Floor → Block → Room → Bed
+```
+
+Each property is modelled as a hierarchical tree. A `Building` contains `Floor`s, each `Floor` contains `Block`s or `Room`s directly, each `Room` contains `Bed`s. Bed occupancy states are `VACANT`, `OCCUPIED`, and `UNDER_NOTICE`.
+
+### Deployment Model
+
+One PG client = one isolated containerised stack:
+- One Spring Boot backend (port `8080`)
+- One React/Vite frontend (port `5173`)
+- One dedicated PostgreSQL database (`pgcrmdb`)
+
+---
+
+## 2. Role & Access Model
+
+The application enforces a strict Role-Based Access Control (RBAC) hierarchy with four roles:
+
+| Role | Platform Tier | Access Scope & Responsibilities |
+| :--- | :--- | :--- |
+| `GUEST` | Tier 1 — Resident | Self-service portal: view check-in details, meal calendars, invoices, payment history, and submit maintenance requests. |
+| `PG_MANAGER` | Tier 2 — Branch Admin | Property operations: guest check-in/checkout, daily meal logs, electricity bill splits, invoice generation, maintenance ticket resolution. |
+| `PG_OWNER` | Tier 3 — Global Admin | Enterprise management: building/room/bed setup, manager account management, pricing configuration, revenue reports. |
+| `SUPER_ADMIN` | Tier 4 — System Admin | Infrastructure operations: system-level configuration, whitelabel settings, production deployment management. |
+
+RBAC is enforced at the Spring Security layer. See [AGENTS.md](file:///e:/PG-Project/AGENTS.md) for the full URL-to-role mapping table.
+
+---
+
+## 3. Tech Stack
 
 ```mermaid
-graph TD
-    subgraph SaaS Control Plane [Centralized Command Center]
-        AdminUI[Control Plane Admin Frontend] -->|Rest APIs: 8090| CPBackend[Control Plane Backend]
-        CPBackend --> CPDB[(controlplane_db PostgreSQL)]
-        CPBackend -->|Async ProcessBuilder| Provisioner[provision_tenant.sh]
+flowchart TD
+    subgraph Frontend["Frontend — React 18 / Vite (Port 5173)"]
+        UI["Tailwind UI Components"]
+        Contexts["Auth & Config Contexts"]
+        RzpSDK["Razorpay Checkout SDK"]
     end
 
-    subgraph Host VM [Virtual Private Server Host]
-        Provisioner -->|Deploy Port 8081| TenantA[client-a.pgcrm.com]
-        Provisioner -->|Deploy Port 8082| TenantB[client-b.pgcrm.com]
-
-        TenantA --> DB_A[(pgcrm_client_a PostgreSQL)]
-        TenantB --> DB_B[(pgcrm_client_b PostgreSQL)]
+    subgraph Backend["Backend — Spring Boot 3.2.5 / Java 23 (Port 8080)"]
+        JWTFilter["JWT Auth Filter"]
+        Controllers["REST Controllers"]
+        Services["Business Logic & Billing Services"]
+        Schedulers["Cron Schedulers"]
+        Repos["Spring Data JPA Repositories"]
+        Flyway["Flyway Migrations"]
     end
 
-    UserA[Guest / Manager - Brand A] -->|HTTPS| TenantA
-    UserB[Guest / Manager - Brand B] -->|HTTPS| TenantB
-    PlatformAdmin[Software Provider Admin] -->|HTTPS| AdminUI
-```
-
-### 1.1 Central Control Plane
-* **Purpose**: Operates as a centralized SaaS ledger. It acts as the "brain" for registration, billing collection, metrics tracking, and instance orchestration.
-* **Component Directory**: `/master-control-plane/`
-* **Port Mapping**: Backend runs on `8090`, Admin Frontend runs on `5176`.
-* **State Management**: Persists client accounts, tenant instances metadata, master payments records, and automated deployment tickets in `controlplane_db`.
-
-### 1.2 Isolated Tenant Instances
-* **Purpose**: Serves as the operational portal for individual PG brands. Each customer (e.g. PG Owner) is completely siloed.
-* **Component Directory**: `/core-pg-crm/`
-* **Instance Structure**: Each client runs a containerized Spring Boot backend (mapped to an isolated Postgres container database) and a static React SPA served on a unique port.
-* **Benefits**:
-  * **Data Privacy**: No cross-tenant query contamination.
-  * **Backup Autonomy**: Customers can back up or export their exact PostgreSQL tables without database-wide service interruption.
-  * **Customization**: Individual configs (color tokens, WhatsApp templates) can be adjusted without risking system-wide side-effects.
-
----
-
-## 2. End-to-End Onboarding & Provisioning Lifecycle
-
-New client acquisition is fully automated from the public checkout form through payment verification to local Docker deployment.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Owner as B2B PG Owner
-    participant Landing as LandingPage.jsx (/)
-    participant SignupForm as Signup Form (/signup)
-    participant Backend as Control Plane Backend
-    participant Razorpay as Razorpay API Gateway
-    participant Script as provision_tenant.sh
-    participant TenantStack as Tenant Docker Stack
-
-    Owner->>Landing: Visits portal landing page
-    Owner->>Landing: Clicks "Start Your Onboarding" / "Purchase & Provision"
-    Landing->>SignupForm: Routes to /signup
-    Owner->>SignupForm: Fills onboarding details (domain, owner name, email, brand)
-    SignupForm->>Backend: POST /api/public/checkout/initiate-order
-    Note over Backend: Validates subdomain availability & creates Client/TenantInstance stubs
-    Backend->>Razorpay: Creates Razorpay Order (₹15,000 Setup Fee)
-    Razorpay-->>Backend: Returns Order ID
-    Backend-->>SignupForm: Returns registration ID & Razorpay Order details
-    SignupForm->>Owner: Renders Razorpay Checkout modal
-    Owner->>Razorpay: Authorizes Payment (UPI/Card/NetBanking)
-    Razorpay-->>Owner: Payment Authorized
-    Razorpay->>Backend: Webhook Callback POST /api/public/checkout/webhook/reconcile
-    Note over Backend: 1. Verifies HMAC-SHA256 signature<br/>2. Transition transaction to SUCCESS<br/>3. Sets TenantInstance status to PROVISIONING
-    Backend->>Backend: Trigger Async provisionNewTenant()
-    rect rgb(30, 41, 59)
-        Note over Backend: Invokes ProcessBuilder to run provision_tenant.sh
-        Backend->>Script: Execute bash src/main/resources/scripts/provision_tenant.sh [tenantId] [dbPrefix] [adminEmail] [routerIp] [rzpKey] [rzpSecret] [waToken] [waKey] [customTld]
-        Script->>Script: 1. Sanitizes database name (e.g. pgcrm_subdomain)<br/>2. Creates isolated DB via psql
-        Script->>Script: 3. Creates directories under /opt/pgcrm/[domain]/deploy<br/>4. Generates unique JWT secret key
-        Script->>Script: 5. Outputs custom .env configuration file<br/>6. Copies docker-compose.prod.yml template
-        Script->>TenantStack: Runs docker compose up -d
-        Script-->>Backend: Returns Exit Code 0 (Success)
+    subgraph Infra["Infrastructure"]
+        DB[("PostgreSQL 18\npgcrmdb")]
+        SMTP["SMTP Mail Server"]
+        WhatsApp["Meta WhatsApp Cloud API"]
+        Razorpay["Razorpay Payment Gateway"]
     end
-    Backend->>Backend: 1. Update TenantInstance status to ACTIVE<br/>2. Initialize 1-year Subscription (AMC)
-    Backend-->>Owner: Sends onboarding email with temporary password credentials
+
+    UI --> Contexts
+    Contexts -->|"Axios + JWT headers"| JWTFilter
+    RzpSDK -->|"Payment verification"| Controllers
+    JWTFilter --> Controllers
+    Controllers --> Services
+    Services --> Schedulers
+    Services --> Repos
+    Repos --> DB
+    Flyway --> DB
+    Services --> SMTP
+    Services --> WhatsApp
+    Services --> Razorpay
 ```
 
-### 2.1 Webhook Reconciliation & Signature Verification
-* Handled in `CheckoutServiceImpl.java`.
-* Incoming webhook payload from Razorpay is cryptographically verified against the configured webhook secret:
-  $$\text{Expected Signature} = \text{HMAC-SHA256}(\text{payload}, \text{secret})$$
-* If signatures match, the payment is logged, and the provisioning queue is triggered.
+**Backend stack**: Java 23, Spring Boot 3.2.5, Spring Security, Spring Data JPA, Hibernate, Flyway, OpenPDF, Thymeleaf, Lombok.
 
-### 2.2 Provisioning Orchestration
-* `ProvisioningService.java` executes the provisioning pipeline by calling Nginx reverse proxy configurations and setting up directories.
-* It spins up a shell process calling `src/main/resources/scripts/provision_tenant.sh` with parameter bindings:
-  ```bash
-  bash src/main/resources/scripts/provision_tenant.sh <tenant_id> <db_prefix> <admin_email> <router_ip> <rzp_key> <rzp_secret> <wa_token> <wa_key> <custom_tld>
-  ```
-* **Fallback Safety Mechanism**: To prevent shell script argument alignment shifts due to blank parameters, any empty or null integration parameters (such as `customTld`, `rzpKey`, `rzpSecret`, `waToken`, or `waKey`) are automatically converted to `"NONE"` by `ProvisioningService.java` prior to execution.
-* Output stream is piped directly into Spring Boot log framework prefixed with `[PROVISIONING SCRIPT]`.
+**Frontend stack**: React 18, Vite, Tailwind CSS, Axios, Razorpay SDK.
 
 ---
 
-## 3. Annual Maintenance Contract (AMC) & Subscription Engine
+## 4. Key Business Logic
 
-Subscriptions are billed using the **Hybrid Asset Model**: a one-time setup fee followed by an annual contract.
+### 4.1 Flat-Rate Billing Model
 
-### 3.1 Automated Reminder Scheduler
-A daily cron job in the Control Plane checks for upcoming expirations to prompt timely renewals.
-* **Class**: `AmcReminderScheduler.java`
-* **Execution Interval**: Daily at 2:00 AM (`0 0 2 * * ?`)
-* **Milestone Logic**:
-  * Scans for subscriptions expiring in **exactly 30 days, 7 days, and 1 day** using `SubscriptionRepository.findActiveExpiringOn()`.
-  * Calls `EmailService.sendAmcRenewalReminderEmail` to warn the tenant owner of the upcoming expiration.
+PG CRM uses a **flat-rate monthly billing** model — no daily proration for active guests:
 
-### 3.2 Suspension Enforcement
-* If a subscription's expiration date passes today without payment, the scheduler fetches it using `findActiveExpiredBefore(LocalDate.now())`.
-* The system transitions:
-  * `Subscription.licenseState` $\rightarrow$ `LicenseState.EXPIRED`
-  * `TenantInstance.status` $\rightarrow$ `TenantStatus.SUSPENDED`
-* Triggers `EmailService.sendServiceSuspensionEmail` to alert the client that their portal access is suspended.
+- **Standard Bed**: `Charge = guest.getMonthlyRent()`
+- **Whole Room Booking**: `Charge = guest.getMonthlyRent() × room.getSharingType()`
 
-### 3.3 Renewal API Workflow
-Clients can renew their subscription directly from the Client Billing Dashboard:
-1. Client logs into the Control Plane Billing Portal and requests renewal.
-2. React frontend hits `POST /api/billing/renew-amc`.
-3. Control Plane Backend creates a new Razorpay Order for ₹35,000 and registers the transaction.
-4. Upon successful payment verification on `/api/billing/verify-amc`, the subscription is updated:
-   $$\text{New Expiry Date} = \text{Current Expiry Date} + 1 \text{ Year}$$
-   `Subscription.licenseState` is reset to `LicenseState.ACTIVE`, and `TenantInstance.status` is reset to `TenantStatus.ACTIVE`.
+If a guest is active for any part of a billing month, they are billed the full monthly rate. This is enforced by `MonthlyBillingScheduler`.
+
+### 4.2 Electricity Bill (EB) Split Methods
+
+The EB split method is configured per building via `BuildingConfig.getEbSplitMethod()`:
+
+| Method | Formula |
+| :--- | :--- |
+| `EQUAL_SPLIT` | `perGuestShare = totalBillAmount / activeGuestCount` |
+| `PER_BED` | `perGuestShare = fixedRatePerBed × guestBedCount` |
+| `METER_BASED` | `perGuestShare = (currentReading − previousReading) × ratePerUnit` |
+| `MANAGER_MANUAL` | Manager enters each guest's amount individually via the UI |
+
+### 4.3 PII Anonymization Scheduler
+
+Guests who have been checked out for more than **365 days** are automatically anonymized by `DataRetentionScheduler`:
+
+- `fullName` → replaced with a random token
+- `phone` → replaced with a random token
+- **Financial records, invoices, and audit logs are preserved — never deleted**
+
+Scheduler runs daily at **3:00 AM** (`0 0 3 * * ?`).
 
 ---
 
-## 4. Advanced Ingress & Propagation Architecture
+## 5. Security Architecture
 
-### 4.1 Custom Domain Reverse Proxy Flow
-Custom domains allow tenants to access their isolated core application directly through their own top-level domain (TLD), while the control plane manages traffic.
+### 5.1 JWT Authentication Flow
 
-```mermaid
-graph TD
-    UserSub["User: stanza.pgcrm.com"] -->|Resolve URL| Nginx["Nginx Reverse Proxy"]
-    UserCustom["User: stanza.in"] -->|Resolve URL| Nginx
-    
-    Nginx -->|Match Subdomain Header| RouteSub["Route to Port 8081 / Container A"]
-    Nginx -->|Match Custom TLD Host Header| RouteCustom["Route to Port 8081 / Container A"]
-    
-    RouteSub --> ContainerA["Tenant A Isolated PG Core Container"]
-    RouteCustom --> ContainerA
-```
+1. Client POSTs credentials to `/api/auth/login`.
+2. Backend verifies BCrypt password hash and issues:
+   - **Access Token** (15-minute expiry, HMAC-SHA256 signed)
+   - **Refresh Token** (7-day expiry)
+3. Client stores tokens in `sessionStorage`.
+4. On API calls, the `JwtAuthenticationFilter` validates the Bearer token and extracts role claims.
+5. On `401` responses, `AuthContext.jsx` silently POSTs the refresh token to `/api/auth/refresh` and replays the original request.
 
-### 4.2 Credentials Propagation Pipeline
-This flow illustrates how onboarding integration keys and custom domains are securely passed from the UI down to the isolated container's environment variables.
+### 5.2 RBAC URL Patterns
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Owner as PG Owner / Admin
-    participant UI as Onboarding Wizard UI (React)
-    participant API as Onboarding API Controller
-    participant DB as controlplane_db (PostgreSQL)
-    participant Service as ProvisioningService (Java)
-    participant Script as provision_tenant.sh (Bash)
-    participant Env as .env Configuration File
+| URL Pattern | Required Role |
+| :--- | :--- |
+| `/api/auth/**` | Public (except `/api/auth/change-password`) |
+| `/api/super-admin/**` | `SUPER_ADMIN` |
+| `/api/owner/**` | `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/manager/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/guest/**` | `GUEST`, `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/reports/**` | `PG_OWNER`, `PG_MANAGER`, `SUPER_ADMIN` |
+| `/api/inventory/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/payments/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
+| `/api/webhooks/**` | Public (Razorpay webhook) |
+| `/api/config/public` | Public (frontend branding) |
 
-    Owner->>UI: Fills credentials & customTld details
-    UI->>API: POST /api/onboarding/signup (JSON Payload)
-    API->>DB: Save TenantProfile Entity
-    Note over Service: Async Provisioning Pipeline Triggered
-    Service->>DB: Query TenantProfile (Extract keys & customTld)
-    Service->>Service: Inject "NONE" fallbacks for empty parameters
-    Service->>Script: Run ProcessBuilder (Pass 9 arguments)
-    Script->>Env: Append variables (echo KEY=VALUE >> .env)
-    Note over Env: Isolated container reads .env at startup
-```
+### 5.3 Razorpay Webhook HMAC-SHA256 Verification
+
+All incoming Razorpay webhook payloads are cryptographically verified before processing:
+
+$$\text{Expected Signature} = \text{HMAC-SHA256}(\text{rawPayload},\ \text{RAZORPAY\_WEBHOOK\_SECRET})$$
+
+If the computed signature does not match the `x-razorpay-signature` header, a `SignatureVerificationException` is thrown (HTTP 400) and the request is rejected.
+
+---
+
+## 6. Scheduler Jobs
+
+| Scheduler Class | Cron Expression | Trigger Time | Purpose |
+| :--- | :--- | :--- | :--- |
+| `MonthlyBillingScheduler` | `0 0 0 1 * *` | 1st of every month, midnight | Generates arrears rent invoices for all active guests |
+| `PaymentReminderScheduler` | `0 0 9 * * *` | Daily at 9:00 AM | Notifies guests and managers of pending unpaid invoices |
+| `DataRetentionScheduler` | `0 0 3 * * ?` | Daily at 3:00 AM | Anonymizes PII for guests checked out >365 days |
+| `OverdueInvoiceScheduler` | Daily | Daily | Marks invoices past their due date as overdue |

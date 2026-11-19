@@ -620,76 +620,26 @@ export default defineConfig({
 
 ### 6.4 Local Development & Testing
 
-For local development and testing, the Monorepo environment is split to allow independent executions. Both the Core Application `[PG-CORE]` and the SaaS Command Center `[CONTROL-PLANE]` require isolated PostgreSQL databases to be configured and run on your local environment.
+### 6.4 Local Development & Testing
+
+For local development and testing, the PG CRM Core Application requires a local PostgreSQL database.
 
 #### 1. Software Prerequisites
-Before initiating local startup, verify the following are installed:
-* **JDK 23**: Configured on the system PATH.
-* **Node.js (v24+) & npm**: For compilation of frontends.
-* **PostgreSQL (v18+)**: Running locally on port `5432` with username `postgres`.
+Before initiating local startup, verify:
+* **JDK 23**: Configured on system PATH.
+* **Node.js (v24+) & npm**: For frontend compilation.
+* **PostgreSQL (v18+)**: Running locally on port `5432`.
 
-#### 2. Manual Database Initialization via psql
-Connect to your local PostgreSQL instance as the superuser (`postgres`) and execute the SQL commands to create the isolated databases. 
-
-Using the terminal `psql` command line tool:
-```bash
-# Connect to default postgres database
+#### 2. Database Initialization
+`ash
 psql -U postgres -h localhost
-
-# Execute database creation queries:
 postgres=# CREATE DATABASE pgcrmdb;
-postgres=# CREATE DATABASE controlplane_db;
 postgres=# \q
-```
+`...
 
-*Note: Verify that the credentials in `application.properties` (specifically username and password) match your local PostgreSQL configuration. By default, the control plane backend expects `username=postgres` and `password=admin`.*
+### 6.5 Production Deployment
 
-#### 3. Configuration Setup (.env files)
-Ensure the root `.env` or application-specific configuration profiles are set:
-* In `core-pg-crm/backend/`, verify connection strings in properties/env.
-* In `master-control-plane/backend/`, properties point to `jdbc:postgresql://localhost:5432/controlplane_db`.
-
-#### 4. Executing Services via Isolated Launchers
-To simplify local operations, two dedicated Windows Batch launchers are located in the project root.
-
-##### Option A: Running the PG CRM Core (`[PG-CORE]`)
-To work on property management features (guests, beds, invoices, electric meter splits), run `start_core.bat`:
-1. Double-click the `start_core.bat` file.
-2. The script:
-   - Configures the database credentials.
-   - Launches a new command prompt running the Core Backend (Spring Boot on Port `8080`).
-   - Launches another command prompt running the Core Frontend (Vite on Port `5173`).
-3. Services will be available at:
-   - **Core Frontend (User Portal)**: `http://localhost:5173`
-   - **Core Backend REST API**: `http://localhost:8080`
-
-##### Option B: Running the B2B SaaS Control Plane (`[CONTROL-PLANE]`)
-To work on B2B subscription portals, signup forms, Razorpay checkout, or automation webhooks, run `start_control.bat`:
-1. Double-click the `start_control.bat` file.
-2. The script:
-   - Sets the active Spring Profile to `dev`.
-   - Launches a new command prompt running the Control Plane Backend (Spring Boot on Port `8090`).
-   - Launches a second command prompt running the Control Plane Frontend (Vite on Port `5176`).
-3. Services will be available at:
-   - **Billing Admin Frontend**: `http://localhost:5176`
-   - **Billing Backend REST API**: `http://localhost:8090`
-
-### 6.5 Production Control Plane Host Preparation
-
-When deploying the centralized SaaS `[CONTROL-PLANE]` on a host Ubuntu VPS, the backend uses Java `ProcessBuilder` to trigger the tenant provisioning bash script. For the automation pipeline to run successfully, the script must have execution permissions on the host system.
-
-Before launching the Control Plane Spring Boot backend, the DevOps engineer must configure the execution permission on the script:
-
-```bash
-# Navigate to the repository root directory on the VPS
-cd /opt/pgcrm-monorepo/
-
-# Grant execution permissions to the tenant provisioning automation script
-chmod +x scripts/provision_tenant.sh
-```
-
-> [!IMPORTANT]
-> Failure to grant execution permissions to the script will cause the asynchronous `ProvisioningService` to throw an `IOException: Permission denied` during Razorpay webhook checkout reconciliations, resulting in failed tenant provisioning tickets.
+When deploying PG CRM on a production Ubuntu VPS using Docker, follow the production SOP in Section 7 of this document. Secrets must be passed via environment variables in `.env` — never as script arguments or hardcoded in YAML.
 
 ---
 
