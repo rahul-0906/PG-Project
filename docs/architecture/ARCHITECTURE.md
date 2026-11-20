@@ -171,3 +171,40 @@ If the computed signature does not match the `x-razorpay-signature` header, a `S
 | `PaymentReminderScheduler` | `0 0 9 * * *` | Daily at 9:00 AM | Notifies guests and managers of pending unpaid invoices |
 | `DataRetentionScheduler` | `0 0 3 * * ?` | Daily at 3:00 AM | Anonymizes PII for guests checked out >365 days |
 | `OverdueInvoiceScheduler` | Daily | Daily | Marks invoices past their due date as overdue |
+
+---
+
+## 7. Per-Tenant Settings & Cryptographic Architecture (Phase 2)
+
+Per-client operational settings, branding parameters, and third-party API credentials are fully decoupled from environment variables and persisted in each tenant's dedicated PostgreSQL schema (`t_<slug>.tenant_settings`).
+
+### 7.1 Cryptographic Storage Specification (AES-256-GCM)
+
+All sensitive third-party credentials and webhook secrets are encrypted at rest using AES-GCM before database writes, and decrypted in-memory on demand:
+
+| Parameter | Value / Implementation |
+| :--- | :--- |
+| **Algorithm** | `AES/GCM/NoPadding` |
+| **Key Size** | 256 bits (32 bytes) |
+| **Initialization Vector (IV)** | 96 bits (12 bytes), cryptographically random per encryption |
+| **Authentication Tag** | 128 bits |
+| **Wire / Storage Format** | `v1:<Base64( IV [12 bytes] \|\| Ciphertext + Tag )>` |
+| **Master Key Source** | Environment variable `APP_ENCRYPTION_KEY` (never stored in DB or git) |
+
+### 7.2 Decoupled Tenant Configuration Entities
+
+| Field | Category | Security Model | Consumer Services |
+| :--- | :--- | :--- | :--- |
+| `branding_name` | Branding & UI | Plaintext | `PublicConfigController`, `SystemConfigController`, `InvoicePdfService`, `EmailService` |
+| `branding_short_name` | Branding & UI | Plaintext | `PublicConfigController`, `SystemConfigController` |
+| `branding_primary_color` | Branding & UI | Plaintext | `PublicConfigController`, `SystemConfigController` |
+| `branding_logo_url` | Branding & UI | Plaintext | `PublicConfigController` |
+| `razorpay_key_id` | Gateway | Plaintext identifier | `PaymentService`, frontend SDK |
+| `razorpay_key_secret` | Gateway Secret | **AES-256-GCM Encrypted** | `PaymentService` (signature verification & order creation) |
+| `razorpay_webhook_secret`| Webhook Secret | **AES-256-GCM Encrypted** | `PaymentController` (incoming webhook HMAC verification) |
+| `whatsapp_phone_number_id`| Messaging | Plaintext identifier | `MetaWhatsAppConfig`, `WhatsAppService` |
+| `whatsapp_access_token` | Messaging Secret | **AES-256-GCM Encrypted** | `MetaWhatsAppConfig`, `WhatsAppService` |
+| `whatsapp_verify_token` | Messaging Secret | **AES-256-GCM Encrypted** | `MetaWhatsAppConfig`, webhook verification |
+| `notification_email_enabled`| Feature Flag | Boolean | `EmailService` |
+| `notification_whatsapp_enabled`| Feature Flag| Boolean | `WhatsAppService` |
+

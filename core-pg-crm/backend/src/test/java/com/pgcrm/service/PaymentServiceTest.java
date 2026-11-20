@@ -2,6 +2,7 @@ package com.pgcrm.service;
 
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.Invoice;
+import com.pgcrm.entity.TenantSettings;
 import com.pgcrm.entity.enums.InvoiceStatus;
 import com.pgcrm.repository.InvoiceRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -30,14 +30,17 @@ public class PaymentServiceTest {
     @Mock
     private InvoiceRepository invoiceRepository;
 
+    @Mock
+    private TenantSettingsService tenantSettingsService;
+
     @InjectMocks
     private PaymentService paymentService;
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(paymentService, "globalKeyId", "rzp_test_placeholder");
-        ReflectionTestUtils.setField(paymentService, "globalKeySecret", "placeholder_secret");
-        ReflectionTestUtils.setField(paymentService, "razorpayEnabled", false);
+        lenient().when(tenantSettingsService.getSettings()).thenReturn(
+                TenantSettings.builder().build()
+        );
     }
 
     @Test
@@ -89,8 +92,12 @@ public class PaymentServiceTest {
 
     @Test
     void testVerifyAndCapture_WithRealSignatureVerification_Success() throws Exception {
-        ReflectionTestUtils.setField(paymentService, "globalKeySecret", "my_secret_key");
-        ReflectionTestUtils.setField(paymentService, "razorpayEnabled", true);
+        when(tenantSettingsService.getSettings()).thenReturn(
+                TenantSettings.builder()
+                        .razorpayKeyId("rzp_test_123")
+                        .razorpayKeySecret("my_secret_key")
+                        .build()
+        );
 
         String invoiceId = "inv1";
         Invoice invoice = Invoice.builder()
@@ -119,8 +126,12 @@ public class PaymentServiceTest {
 
     @Test
     void testVerifyAndCapture_WithRealSignatureVerification_Failure() {
-        ReflectionTestUtils.setField(paymentService, "globalKeySecret", "my_secret_key");
-        ReflectionTestUtils.setField(paymentService, "razorpayEnabled", true);
+        when(tenantSettingsService.getSettings()).thenReturn(
+                TenantSettings.builder()
+                        .razorpayKeyId("rzp_test_123")
+                        .razorpayKeySecret("my_secret_key")
+                        .build()
+        );
 
         String invoiceId = "inv1";
         Invoice invoice = Invoice.builder()

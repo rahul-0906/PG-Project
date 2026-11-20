@@ -1,23 +1,38 @@
 package com.pgcrm.config;
 
-import lombok.Getter;
-import org.springframework.beans.factory.annotation.Value;
+import com.pgcrm.entity.TenantSettings;
+import com.pgcrm.service.TenantSettingsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Meta WhatsApp Cloud API configuration provider.
+ *
+ * <p>Resolves credentials dynamically per-tenant from {@link TenantSettingsService},
+ * replacing global environment variables.</p>
+ */
 @Configuration
-@Getter
+@RequiredArgsConstructor
 public class MetaWhatsAppConfig {
 
-    @Value("${meta.whatsapp.phone-number-id:}")
-    private String phoneNumberId;
+    private final TenantSettingsService tenantSettingsService;
 
-    @Value("${meta.whatsapp.access-token:}")
-    private String accessToken;
+    public String getPhoneNumberId() {
+        return tenantSettingsService.getSettings().getWhatsappPhoneNumberId();
+    }
 
-    @Value("${meta.whatsapp.verify-token:}")
-    private String verifyToken;
+    public String getAccessToken() {
+        return tenantSettingsService.getSettings().getWhatsappAccessToken();
+    }
+
+    public String getVerifyToken() {
+        return tenantSettingsService.getSettings().getWhatsappVerifyToken();
+    }
 
     public boolean isEnabled() {
-        return accessToken != null && !accessToken.isBlank() && phoneNumberId != null && !phoneNumberId.isBlank();
+        TenantSettings s = tenantSettingsService.getSettings();
+        return s.isNotificationWhatsappEnabled()
+                && s.getWhatsappAccessToken() != null && !s.getWhatsappAccessToken().isBlank()
+                && s.getWhatsappPhoneNumberId() != null && !s.getWhatsappPhoneNumberId().isBlank();
     }
 }

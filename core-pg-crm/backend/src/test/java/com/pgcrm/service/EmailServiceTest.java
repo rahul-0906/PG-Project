@@ -1,6 +1,7 @@
 package com.pgcrm.service;
 
 import com.pgcrm.entity.Guest;
+import com.pgcrm.entity.TenantSettings;
 import jakarta.mail.internet.MimeMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ public class EmailServiceTest {
     private JavaMailSender mailSender;
     @Mock
     private TemplateEngine templateEngine;
+    @Mock
+    private TenantSettingsService tenantSettingsService;
 
     @InjectMocks
     private EmailService emailService;
@@ -37,6 +40,13 @@ public class EmailServiceTest {
 
         ReflectionTestUtils.setField(emailService, "fromAddress", "noreply@pgcrm.com");
         ReflectionTestUtils.setField(emailService, "fromName", "PG CRM");
+
+        lenient().when(tenantSettingsService.getSettings()).thenReturn(
+                TenantSettings.builder()
+                        .brandingName("PG CRM")
+                        .notificationEmailEnabled(true)
+                        .build()
+        );
     }
 
     @Test
@@ -69,5 +79,23 @@ public class EmailServiceTest {
         verify(mailSender, times(1)).createMimeMessage();
         verify(templateEngine, times(1)).process(eq("welcome-email"), any(Context.class));
         verify(mailSender, times(1)).send(mimeMessage);
+    }
+
+    @Test
+    void testSendGuestWelcomeEmail_TenantNotificationDisabled() {
+        // Arrange
+        ReflectionTestUtils.setField(emailService, "mailEnabled", true);
+        when(tenantSettingsService.getSettings()).thenReturn(
+                TenantSettings.builder()
+                        .notificationEmailEnabled(false)
+                        .build()
+        );
+
+        // Act
+        emailService.sendGuestWelcomeEmail(guest, "temp-pass");
+
+        // Assert
+        verifyNoInteractions(mailSender);
+        verifyNoInteractions(templateEngine);
     }
 }

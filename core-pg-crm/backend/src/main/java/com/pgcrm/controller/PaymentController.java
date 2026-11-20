@@ -40,13 +40,15 @@ public class PaymentController {
     }
 
     /**
-     * Razorpay webhook endpoint (public — secured by signature check inside service).
+     * Razorpay webhook endpoint (public — secured by HMAC signature check against tenant secret).
      * Razorpay calls this when payment succeeds/fails asynchronously.
      */
     @PostMapping("/api/webhooks/razorpay")
     public ResponseEntity<Void> razorpayWebhook(@RequestBody String payload,
-                                                  @RequestHeader("X-Razorpay-Signature") String signature) {
-        // Webhook handling — log and acknowledge
+                                                @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature) {
+        if (signature == null || !paymentService.verifyWebhookSignature(payload, signature)) {
+            throw new com.pgcrm.exception.SignatureVerificationException("Invalid or missing Razorpay webhook signature");
+        }
         return ResponseEntity.ok().build();
     }
 

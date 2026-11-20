@@ -2,17 +2,16 @@ package com.pgcrm.service;
 
 import com.pgcrm.config.SystemConfigProperties;
 import com.pgcrm.entity.Invoice;
+import com.pgcrm.entity.TenantSettings;
 import com.pgcrm.entity.enums.InvoiceStatus;
 import com.pgcrm.exception.ResourceNotFoundException;
 import com.pgcrm.exception.SignatureVerificationException;
 import com.pgcrm.repository.InvoiceRepository;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
-import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,31 +24,11 @@ import java.util.HexFormat;
 import java.util.Map;
 
 /**
- * Service responsible for all Razorpay payment integration workflows — order creation,
+ * Service managing all payment workflows: Razorpay order creation,
  * webhook signature verification, payment capture, and manual offline payment recording.
  *
- * <p><strong>Razorpay Order Flow:</strong></p>
- * <ol>
- *   <li>The guest clicks "Pay Now" on their invoice.</li>
- *   <li>The frontend calls {@link #createOrder(String)}, which creates a Razorpay Order
- *       and returns the order details (order ID, amount, key) for the Razorpay JS SDK.</li>
- *   <li>The guest completes payment in the Razorpay checkout modal.</li>
- *   <li>The frontend submits the payment proof ({@code orderId}, {@code paymentId},
- *       {@code signature}) to {@link #verifyAndCapture(String, String, String, String)}.</li>
- *   <li>The service verifies the HMAC-SHA256 signature and marks the invoice as PAID.</li>
- * </ol>
- *
- * <p><strong>Dev/Mock Mode:</strong> When {@code razorpay.enabled=false} (the default) or
- * the configured key contains {@code "placeholder"}, both {@link #createOrder} and
- * {@link #verifyAndCapture} short-circuit to mock responses. This allows end-to-end testing
- * of the payment UI without a live Razorpay account.</p>
- *
- * <p><strong>Manual Payment:</strong> Managers can record offline payments (cash, UPI, bank
- * transfer) via {@link #recordManualPayment(String, BigDecimal, String)}, bypassing the
- * Razorpay flow entirely.</p>
- *
- * @see InvoiceRepository
- * @see SignatureVerificationException
+ * <p>Razorpay credentials and webhook secret are resolved dynamically per-tenant
+ * via {@link TenantSettingsService}, decoupling from global environment variables.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -58,40 +37,33 @@ public class PaymentService {
 
     private final InvoiceRepository      invoiceRepository;
     private final SystemConfigProperties systemConfig;
-
-    /** The Razorpay key ID used to authenticate API calls and returned to the frontend SDK. */
-    @Value("${razorpay.key-id:rzp_test_placeholder}")
-    private String globalKeyId;
-
-    /** The Razorpay key secret used exclusively server-side for HMAC signature verification. */
-    @Value("${razorpay.key-secret:placeholder_secret}")
-    private String globalKeySecret;
+    private final TenantSettingsService  tenantSettingsService;
 
     /**
-     * Whether the Razorpay integration is active. When {@code false}, all payment operations
-     * use mock responses safe for development and CI environments.
+     * Resolves whether Razorpay is active for the current tenant.
      */
-    @Value("${razorpay.enabled:false}")
-    private boolean razorpayEnabled;
+    public boolean isRazorpayEnabled() {
+        TenantSettings settings = tenantSettingsService.getSettings();
+        String keyId = settings.getRazorpayKeyId();
+        String keySecret = settings.getRazorpayKeySecret();
+        return keyId != null && !keyId.isBlank() && !keyId.contains("placeholder")
+                && keySecret != null && !keySecret.isBlank() && !keySecret.contains("placeholder");
+    }
 
     /**
      * Creates a Razorpay order for the given invoice and returns the order details
      * required by the Razorpay JS SDK to render the checkout modal.
      *
-     * <p>If Razorpay is disabled or the configured key contains {@code "placeholder"},
+     * <p>If Razorpay is disabled or placeholder keys are configured,
      * a synthetic mock order map is returned with a deterministic {@code order_mock_*} ID,
      * enabling the frontend checkout flow to proceed in development without a live API call.</p>
-     *
-     * <p>On successful order creation, the Razorpay order ID is persisted to the invoice
-     * record to enable correlation during the {@link #verifyAndCapture} webhook callback.</p>
      *
      * @param invoiceId the UUID of the {@link Invoice} to create a Razorpay order for.
      * @return a {@link Map} containing: {@code orderId}, {@code amount} (in paise),
      *         {@code currency}, {@code keyId}, {@code invoiceId}, {@code guestName},
-     *         {@code guestEmail}, and optionally {@code mock=true} in dev mode.
+     *         {@code guestEmail}, and {@code mock} flag.
      * @throws ResourceNotFoundException if no invoice exists for the given {@code invoiceId}.
-     * @throws RuntimeException          if the invoice is already paid, or if the Razorpay
-     *                                   API call fails.
+     * @throws RuntimeException          if the invoice is already paid or Razorpay API returns an error.
      */
     @Transactional
     public Map<String, Object> createOrder(final String invoiceId) {
@@ -108,67 +80,62 @@ public class PaymentService {
                 throw new RuntimeException("Invoice is already paid");
             }
 
+            final TenantSettings settings = tenantSettingsService.getSettings();
+            final String keyId = settings.getRazorpayKeyId();
+            final String keySecret = settings.getRazorpayKeySecret();
+            final boolean enabled = isRazorpayEnabled();
+
             // In dev/mock mode, return a synthetic order without calling the Razorpay API.
-            if (!razorpayEnabled || globalKeyId.contains("placeholder")) {
-                log.info("💳 [RAZORPAY DISABLED] Mock order for invoice {} — amount ₹{}", invoiceId, invoice.getTotalAmount());
+            if (!enabled) {
+                log.info("💳 [RAZORPAY DISABLED/MOCK] Mock order for invoice {} — amount ₹{}", invoiceId, invoice.getTotalAmount());
                 return Map.of(
                         "orderId",    "order_mock_" + invoiceId,
                         "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
                         "currency",   "INR",
-                        "keyId",      "rzp_test_demo",
+                        "keyId",      keyId != null && !keyId.isBlank() ? keyId : "rzp_test_demo",
                         "invoiceId",  invoiceId,
-                        "guestName",  invoice.getGuest().getFullName(),
-                        "guestEmail", invoice.getGuest().getEmail(),
+                        "guestName",  invoice.getGuest() != null ? invoice.getGuest().getFullName() : "Guest",
+                        "guestEmail", invoice.getGuest() != null ? invoice.getGuest().getEmail() : "guest@pgcrm.com",
                         "mock",       true
                 );
             }
 
             try {
-                final RazorpayClient client = new RazorpayClient(globalKeyId, globalKeySecret);
+                final RazorpayClient client = new RazorpayClient(keyId, keySecret);
                 final JSONObject opts = new JSONObject();
-                // Amount must be in paise (smallest currency unit).
                 opts.put("amount",   invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue());
                 opts.put("currency", "INR");
-                opts.put("receipt", "pgcrm_inv_" + invoiceId.substring(0, 8));
-                opts.put("notes",    new JSONObject(Map.of("invoiceId", invoiceId, "guestId", invoice.getGuest().getId())));
+                opts.put("receipt",  "rcpt_" + invoiceId.substring(0, Math.min(8, invoiceId.length())));
 
-                final Order  order          = client.orders.create(opts);
-                final String razorpayOrderId = order.get("id");
+                final Order order = client.orders.create(opts);
+                final String orderId = order.get("id");
 
-                // Persist the Razorpay order ID for correlation during payment verification.
-                invoice.setRazorpayOrderId(razorpayOrderId);
+                invoice.setRazorpayOrderId(orderId);
                 invoiceRepository.save(invoice);
 
-                log.info("Successfully created Razorpay order ID: {} for invoice ID: {}", razorpayOrderId, invoiceId);
+                log.info("Successfully created Razorpay order: {} for invoice: {}", orderId, invoiceId);
 
                 return Map.of(
-                        "orderId",    razorpayOrderId,
+                        "orderId",    orderId,
                         "amount",     invoice.getTotalAmount().multiply(BigDecimal.valueOf(100)).intValue(),
                         "currency",   "INR",
-                        "keyId",      globalKeyId,
+                        "keyId",      keyId,
                         "invoiceId",  invoiceId,
-                        "guestName",  invoice.getGuest().getFullName(),
-                        "guestEmail", invoice.getGuest().getEmail()
+                        "guestName",  invoice.getGuest() != null ? invoice.getGuest().getFullName() : "Guest",
+                        "guestEmail", invoice.getGuest() != null ? invoice.getGuest().getEmail() : "guest@pgcrm.com"
                 );
-            } catch (RazorpayException e) {
-                log.error("Razorpay SDK order creation failed for invoice ID: {}", invoiceId, e);
-                throw new RuntimeException("Razorpay order creation failed: " + e.getMessage());
+            } catch (Exception e) {
+                log.error("Failed to create Razorpay order for invoice {}: {}", invoiceId, e.getMessage(), e);
+                throw new RuntimeException("Failed to initiate payment: " + e.getMessage());
             }
         } catch (Exception e) {
-            log.error("Error creating order for invoice ID: {}", invoiceId, e);
+            log.error("Error creating payment order for invoice ID: {}", invoiceId, e);
             throw e;
         }
     }
 
     /**
-     * Verifies the Razorpay payment signature and marks the invoice as paid on success.
-     *
-     * <p>The signature is verified using HMAC-SHA256 over the concatenation
-     * {@code "<orderId>|<paymentId>"} with the Razorpay key secret as the signing key.
-     * This follows the Razorpay server-side verification specification.</p>
-     *
-     * <p>In dev/mock mode (Razorpay disabled or placeholder key), the signature check
-     * is skipped and the invoice is marked as PAID directly.</p>
+     * Verifies the Razorpay checkout signature and captures payment for the invoice.
      *
      * @param invoiceId        the UUID of the {@link Invoice} being paid.
      * @param razorpayOrderId  the Razorpay order ID returned by {@link #createOrder}.
@@ -190,11 +157,15 @@ public class PaymentService {
                         return new ResourceNotFoundException("Invoice not found: " + invoiceId);
                     });
 
-            if (!razorpayEnabled || globalKeySecret.contains("placeholder")) {
-                log.info("💳 [RAZORPAY DISABLED] Marking invoice {} as PAID (mock)", invoiceId);
+            final TenantSettings settings = tenantSettingsService.getSettings();
+            final String keySecret = settings.getRazorpayKeySecret();
+            final boolean enabled = isRazorpayEnabled();
+
+            if (!enabled) {
+                log.info("💳 [RAZORPAY DISABLED/MOCK] Marking invoice {} as PAID (mock)", invoiceId);
             } else {
                 try {
-                    verifySignature(razorpayOrderId, razorpayPaymentId, signature, globalKeySecret);
+                    verifySignature(razorpayOrderId, razorpayPaymentId, signature, keySecret);
                 } catch (SignatureVerificationException e) {
                     log.warn("Razorpay signature verification failed for invoice ID: {}, order ID: {}, payment ID: {}",
                             invoiceId, razorpayOrderId, razorpayPaymentId);
@@ -216,18 +187,31 @@ public class PaymentService {
     }
 
     /**
+     * Verifies an incoming Razorpay webhook signature against the tenant's webhook secret.
+     */
+    public boolean verifyWebhookSignature(String payload, String signatureHeader) {
+        final TenantSettings settings = tenantSettingsService.getSettings();
+        final String webhookSecret = settings.getRazorpayWebhookSecret();
+
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.warn("Razorpay webhook rejected: No webhook secret configured for active tenant.");
+            return false;
+        }
+
+        try {
+            final Mac sha256Hmac = Mac.getInstance("HmacSHA256");
+            sha256Hmac.init(new SecretKeySpec(webhookSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            final byte[] hash = sha256Hmac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            final String expected = HexFormat.of().formatHex(hash);
+            return expected.equalsIgnoreCase(signatureHeader);
+        } catch (Exception e) {
+            log.error("Failed to compute webhook HMAC signature: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Records an offline (manual) payment made by the manager for a given invoice.
-     *
-     * <p>Supported payment methods: {@code CASH}, {@code UPI}, {@code BANK_TRANSFER}.
-     * The invoice status is set to {@link InvoiceStatus#PAID} and the payment timestamp
-     * is recorded. No Razorpay API call is made.</p>
-     *
-     * @param invoiceId the UUID of the {@link Invoice} being settled.
-     * @param amount    the amount paid (used for logging; not currently stored on the invoice).
-     * @param method    the offline payment method string (e.g., {@code "CASH"}, {@code "UPI"}).
-     * @return the updated {@link Invoice} with {@code status=PAID}.
-     * @throws ResourceNotFoundException if no invoice exists for the given {@code invoiceId}.
-     * @throws RuntimeException          if the invoice is already paid.
      */
     @Transactional
     public Invoice recordManualPayment(final String invoiceId, final BigDecimal amount, final String method) {
@@ -255,39 +239,30 @@ public class PaymentService {
         }
     }
 
-    // ── Private Helpers ───────────────────────────────────────────────────────
-
-    /**
-     * Computes and verifies the Razorpay HMAC-SHA256 payment signature.
-     *
-     * <p>The expected signature is computed as:</p>
-     * <pre>HMAC-SHA256(key=keySecret, message="{orderId}|{paymentId}")</pre>
-     *
-     * <p>The computed hex digest is compared against the signature submitted by the client.
-     * A mismatch indicates a tampered or replayed payment callback and throws
-     * {@link SignatureVerificationException}.</p>
-     *
-     * @param orderId   the Razorpay order ID.
-     * @param paymentId the Razorpay payment ID.
-     * @param signature the client-submitted hex-encoded HMAC-SHA256 signature.
-     * @param secret    the Razorpay key secret used as the HMAC signing key.
-     * @throws SignatureVerificationException if the computed signature does not match, or
-     *                                        if the cryptographic algorithm is unavailable.
-     */
     private void verifySignature(final String orderId, final String paymentId,
                                  final String signature, final String secret) {
+        if (signature == null || signature.isBlank()) {
+            throw new SignatureVerificationException("Razorpay signature is missing.");
+        }
+        if (secret == null || secret.isBlank()) {
+            throw new SignatureVerificationException("Razorpay key secret is not configured.");
+        }
         try {
-            final String   payload  = orderId + "|" + paymentId;
-            final Mac      mac      = Mac.getInstance("HmacSHA256");
-            mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
-            final String computed = HexFormat.of().formatHex(mac.doFinal(payload.getBytes(StandardCharsets.UTF_8)));
-            if (!computed.equals(signature)) {
+            final String data = orderId + "|" + paymentId;
+            final Mac sha256Hmac = Mac.getInstance("HmacSHA256");
+            sha256Hmac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            final byte[] hash = sha256Hmac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            final String expected = HexFormat.of().formatHex(hash);
+
+            if (!expected.equalsIgnoreCase(signature)) {
+                log.warn("Signature mismatch for orderId: {}, paymentId: {}", orderId, paymentId);
                 throw new SignatureVerificationException("Signature verification failed");
             }
         } catch (SignatureVerificationException e) {
             throw e;
         } catch (Exception e) {
-            throw new SignatureVerificationException("Signature verification error: " + e.getMessage());
+            log.error("HMAC-SHA256 verification error: {}", e.getMessage(), e);
+            throw new SignatureVerificationException("Signature calculation failed: " + e.getMessage());
         }
     }
 }
