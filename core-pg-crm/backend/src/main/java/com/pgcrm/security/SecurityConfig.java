@@ -32,6 +32,9 @@ public class SecurityConfig {
     private JwtAuthenticationFilter jwtAuthFilter;
 
     @Autowired
+    private PlatformAdminAuthFilter platformAdminAuthFilter;
+
+    @Autowired
     private CustomUserDetailsService userDetailsService;
 
     /**
@@ -56,6 +59,7 @@ public class SecurityConfig {
                 })
             )
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/platform/api/**").hasRole("PLATFORM_ADMIN")
                 .requestMatchers("/api/auth/change-password").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook
@@ -71,6 +75,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(platformAdminAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

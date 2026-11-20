@@ -249,4 +249,66 @@ Caches are strictly partitioned by tenant slug to eliminate cross-tenant data le
 
 `TenantFileStorageService` enforces directory segregation under `data/storage/{tenantSlug}/` with strict path traversal validation preventing any directory escape attempts.
 
+---
+
+## 9. Tenant Lifecycle & Provisioning Engine (Phase 4)
+
+Tenants are provisioned, suspended, activated, and soft-deleted via the dedicated Platform Admin API (`/platform/api/tenants`), protected by `PlatformAdminAuthFilter` and enabled only in shared deployment mode.
+
+### 9.1 Tenant Provisioning Pipeline & Rollback Guarantee
+
+When creating a new tenant via `POST /platform/api/tenants`, `TenantProvisioningService` executes an atomic pipeline:
+
+```
+[1. Validate Slug/Schema] 
+       │
+       ▼
+[2. Insert platform.tenants (status: PROVISIONING)]
+       │
+       ▼
+[3. Execute DDL: CREATE SCHEMA t_<slug>]
+       │
+       ▼
+[4. Run Tenant Flyway Migrations (V1..V19)]
+       │
+       ▼
+[5. Insert t_<slug>.tenant_settings defaults]
+       │
+       ▼
+[6. Create PG_OWNER user in t_<slug>.users]
+       │
+       ▼
+[7. Map hosts in platform.tenant_domains]
+       │
+       ▼
+[8. Update platform.tenants status to ACTIVE & evict cache]
+```
+
+**Automated Rollback Guarantee**: If any failure occurs during steps 3 through 7 (e.g. DDL conflict, migration syntax error, or disk failure):
+1. `DROP SCHEMA IF EXISTS t_<slug> CASCADE` is executed immediately.
+2. Any domain records in `platform.tenant_domains` are deleted.
+3. The registry record in `platform.tenants` is removed.
+4. Cache entries in `TenantRegistryService` are evicted.
+5. A descriptive `IllegalStateException` is thrown detailing the exact failure.
+
+### 9.2 Lifecycle Status Transitions
+
+| State | Allowed Next States | HTTP Behavior | Notes |
+| :--- | :--- | :--- | :--- |
+| `PROVISIONING` | `ACTIVE`, *[Deleted on rollback]* | 403 Forbidden | Transient state during schema creation and migration. |
+| `ACTIVE` | `SUSPENDED`, `DELETED` | 200 OK | Normal tenant operations. |
+| `SUSPENDED` | `ACTIVE`, `DELETED` | 403 Forbidden | Blocked at `TenantResolutionFilter`. Data preserved. |
+| `DELETED` | None | 403 / 404 | Soft delete only. Schema is **never** dropped automatically. |
+
+### 9.3 Platform Admin API Specification (`/platform/api/tenants`)
+
+| Method | Endpoint | Action | Role Required |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/platform/api/tenants` | Provisions new tenant schema & owner | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
+| `GET` | `/platform/api/tenants` | Lists all registered tenants | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
+| `POST` | `/platform/api/tenants/{slug}/suspend` | Suspends tenant access (HTTP 403) | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
+| `POST` | `/platform/api/tenants/{slug}/activate` | Restores tenant active status | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
+| `DELETE`| `/platform/api/tenants/{slug}` | Marks tenant as `DELETED` | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
+
+
 

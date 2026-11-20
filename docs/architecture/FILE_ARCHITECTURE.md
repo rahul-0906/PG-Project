@@ -100,6 +100,9 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 * **`crypto/AesGcmEncryptionHelper.java`**: Provides AES-256-GCM encryption with 96-bit random IVs and authentication tags for per-tenant secrets (`v1:` format). Uses master key from `APP_ENCRYPTION_KEY`.
 * **`entity/TenantSettings.java`**: JPA entity mapped to `t_<slug>.tenant_settings` containing per-tenant branding, feature toggles, and encrypted credentials.
 * **`service/TenantSettingsService.java`**: Manages CRUD for tenant settings with transparent AES-GCM encryption on save and decryption on read.
+* **`TenantProvisioningService.java`**: End-to-end tenant provisioning engine (schema creation, Flyway execution, default settings, owner account) with automated rollback on failure.
+* **`PlatformAdminAuthFilter.java`**: Authenticates platform administration endpoints (`/platform/api/**`) using `X-Platform-Key` header with `ROLE_PLATFORM_ADMIN`.
+* **`controller/PlatformAdminController.java`**: Exposes REST endpoints for tenant creation, suspension, activation, listing, and soft-deletion.
 
 #### `TwilioConfig.java`
 * **Structural Purpose**: Twilio integration settings mapping.
