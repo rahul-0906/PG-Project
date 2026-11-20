@@ -3,6 +3,7 @@ package com.pgcrm.scheduler;
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.Invoice;
 import com.pgcrm.entity.enums.AuditAction;
+import com.pgcrm.multitenancy.TenantJobRunner;
 import com.pgcrm.repository.InvoiceRepository;
 import com.pgcrm.service.AuditService;
 import com.pgcrm.service.EmailService;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +19,7 @@ import java.util.List;
 
 /**
  * Runs daily at 9 AM.
+ * Iterates through all active tenants in isolation.
  * Finds all unpaid invoices where due date is within 5 days and no reminder has been sent.
  * Sends email + WhatsApp reminder and stamps reminderSentAt.
  */
@@ -31,14 +32,27 @@ public class PaymentReminderScheduler {
     private final EmailService emailService;
     private final NotificationService notificationService;
     private final AuditService auditService;
+    private final TenantJobRunner tenantJobRunner;
 
     @Scheduled(cron = "0 0 9 * * *")  // Every day at 9:00 AM
-    @Transactional
     public void sendPaymentReminders() {
-        // Find invoices due within 5 days (already overdue or due soon)
         LocalDate cutoff = LocalDate.now().plusDays(5);
-        List<Invoice> dueInvoices = invoiceRepository.findUnpaidInvoicesDueBy(cutoff);
 
+        log.info("=== Payment Reminder Cron START — Cutoff: {} ===", cutoff);
+
+        tenantJobRunner.runForActiveTenants("PaymentReminders", tenant -> {
+            processTenantPaymentReminders(cutoff);
+        });
+
+        log.info("=== Payment Reminder Cron COMPLETE ===");
+    }
+
+    /**
+     * Processes payment reminders for unpaid invoices in the currently set tenant.
+     * Idempotent: invoices with reminderSentAt already populated are ignored by the query.
+     */
+    public void processTenantPaymentReminders(LocalDate cutoff) {
+        List<Invoice> dueInvoices = invoiceRepository.findUnpaidInvoicesDueBy(cutoff);
         log.info("💳 Payment reminder check — {} invoices eligible", dueInvoices.size());
 
         for (Invoice invoice : dueInvoices) {
@@ -49,7 +63,7 @@ public class PaymentReminderScheduler {
                 // Send email reminder
                 emailService.sendPaymentReminderEmail(guest, invoice);
 
-                // Send WhatsApp reminder via NotificationService (handles Twilio internally)
+                // Send WhatsApp reminder via NotificationService
                 String msg = String.format(
                     "⚠️ Payment Reminder: Dear %s, your invoice of ₹%s for %d/%d is due on %s. " +
                     "Please pay to avoid any issues. Login: http://localhost:5173",

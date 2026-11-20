@@ -49,7 +49,7 @@ public class PgOwnerController {
     }
 
     /** Creates a new building with floors, blocks, rooms, and beds in one transaction. */
-    @CacheEvict(value = "buildings", allEntries = true)
+    @CacheEvict(value = "buildings", key = "T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'")
     @PostMapping("/buildings")
     public ResponseEntity<?> createBuilding(@RequestBody BuildingSetupService.BuildingSetupRequest req) {
         try {
@@ -69,7 +69,7 @@ public class PgOwnerController {
         }
     }
 
-    @CacheEvict(value = "buildings", allEntries = true)
+    @CacheEvict(value = "buildings", key = "T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'")
     @PutMapping("/buildings/{buildingId}")
     public ResponseEntity<?> updateBuilding(@PathVariable String buildingId, @RequestBody BuildingSetupService.BuildingEditRequest req) {
         try {
@@ -80,7 +80,7 @@ public class PgOwnerController {
         }
     }
 
-    @CacheEvict(value = "buildings", allEntries = true)
+    @CacheEvict(value = "buildings", key = "T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'")
     @DeleteMapping("/buildings/{buildingId}")
     @org.springframework.transaction.annotation.Transactional
     public ResponseEntity<?> deleteBuilding(@PathVariable String buildingId) {

@@ -2,6 +2,7 @@ package com.pgcrm.scheduler;
 
 import com.pgcrm.entity.Guest;
 import com.pgcrm.entity.Invoice;
+import com.pgcrm.multitenancy.TenantJobRunner;
 import com.pgcrm.repository.GuestRepository;
 import com.pgcrm.service.InvoiceService;
 import com.pgcrm.service.PricingService;
@@ -9,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +22,7 @@ public class MonthlyBillingScheduler {
     private final GuestRepository guestRepository;
     private final InvoiceService invoiceService;
     private final PricingService pricingService;
+    private final TenantJobRunner tenantJobRunner;
 
     /**
      * Runs at midnight on the 1st of every month.
@@ -29,7 +30,6 @@ public class MonthlyBillingScheduler {
      * Payment due on the configured paymentDueDayOfMonth (default: 10th).
      */
     @Scheduled(cron = "0 0 0 1 * *")
-    @Transactional
     public void generateMonthlyInvoices() {
         LocalDate now = LocalDate.now();
         // Bill for previous month
@@ -37,8 +37,20 @@ public class MonthlyBillingScheduler {
         int month = lastMonth.getMonthValue();
         int year = lastMonth.getYear();
 
-        log.info("=== Monthly Billing Cron START — Generating invoices for {}/{} ===", month, year);
+        log.info("=== Monthly Billing Cron START — Target Period: {}/{} ===", month, year);
 
+        tenantJobRunner.runForActiveTenants("MonthlyBilling", tenant -> {
+            processTenantMonthlyInvoices(month, year);
+        });
+
+        log.info("=== Monthly Billing Cron COMPLETE ===");
+    }
+
+    /**
+     * Processes monthly invoice generation for all active guests in the currently set tenant.
+     * Idempotent: existing invoices for (guest, month, year) are skipped without error.
+     */
+    public void processTenantMonthlyInvoices(int month, int year) {
         List<Guest> allActiveGuests = guestRepository.findByActiveTrue();
         int success = 0, failed = 0;
 
@@ -64,6 +76,6 @@ public class MonthlyBillingScheduler {
             }
         }
 
-        log.info("=== Monthly Billing Cron DONE — Success: {}, Failed: {} ===", success, failed);
+        log.info("Tenant billing batch summary — Success: {}, Failed: {}", success, failed);
     }
 }

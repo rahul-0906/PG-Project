@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -83,6 +84,41 @@ public class TenantRegistryService {
         }
         String cleanSlug = slug.trim().toLowerCase();
         return slugCache.get(cleanSlug, this::lookupTenantBySlug);
+    }
+
+    /**
+     * Retrieves all tenants with status 'ACTIVE' from platform.tenants.
+     * In dedicated mode, returns only the dedicated tenant if ACTIVE.
+     *
+     * @return list of active TenantInfo objects
+     */
+    public List<TenantContext.TenantInfo> getAllActiveTenants() {
+        if (deploymentProperties.isDedicated()) {
+            return findTenantBySlug(deploymentProperties.getDedicatedTenant())
+                    .filter(t -> "ACTIVE".equalsIgnoreCase(t.status()))
+                    .map(List::of)
+                    .orElse(List.of());
+        }
+
+        final String sql = """
+                SELECT id, slug, schema_name, display_name, status
+                FROM platform.tenants
+                WHERE status = 'ACTIVE'
+                ORDER BY slug ASC
+                """;
+
+        try {
+            return jdbcTemplate.query(sql, (rs, rowNum) -> new TenantContext.TenantInfo(
+                    rs.getString("id"),
+                    rs.getString("slug"),
+                    rs.getString("schema_name"),
+                    rs.getString("display_name"),
+                    rs.getString("status")
+            ));
+        } catch (Exception e) {
+            log.error("Failed to query active tenants from platform.tenants: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     /**

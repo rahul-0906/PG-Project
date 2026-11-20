@@ -94,6 +94,9 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 * **`HibernateMultiTenancyCustomizer.java`**: Registers multi-tenant providers with Hibernate 6 session factory.
 * **`MultiTenantFlywayConfig.java`**: Dual-phase Flyway runner: migrates `platform` schema, registers/verifies dedicated tenant, and migrates each active tenant schema independently.
 * **`TenantAwareTaskDecorator.java`**: Propagates `TenantContext` and SLF4J `MDC` to `@Async` task threads.
+* **`TenantJobRunner.java`**: Orchestrates background scheduled tasks across all active tenants in complete isolation with per-tenant error boundaries.
+* **`TenantFileStorageService.java`**: Resolves per-tenant isolated storage directory paths (`data/storage/{tenantSlug}/`) with path traversal guards.
+* **`config/AsyncConfig.java`**: Configures `ThreadPoolTaskExecutor` decorated with `TenantAwareTaskDecorator` for `@Async` tenant propagation.
 * **`crypto/AesGcmEncryptionHelper.java`**: Provides AES-256-GCM encryption with 96-bit random IVs and authentication tags for per-tenant secrets (`v1:` format). Uses master key from `APP_ENCRYPTION_KEY`.
 * **`entity/TenantSettings.java`**: JPA entity mapped to `t_<slug>.tenant_settings` containing per-tenant branding, feature toggles, and encrypted credentials.
 * **`service/TenantSettingsService.java`**: Manages CRUD for tenant settings with transparent AES-GCM encryption on save and decryption on read.

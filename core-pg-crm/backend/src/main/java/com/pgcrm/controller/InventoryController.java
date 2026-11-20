@@ -26,13 +26,13 @@ public class InventoryController {
 
     // ── Buildings ─────────────────────────────────────────────────
 
-    @Cacheable(value = "buildings")
+    @Cacheable(value = "buildings", key = "T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'")
     @GetMapping("/buildings")
     public ResponseEntity<List<Building>> getBuildings() {
         return ResponseEntity.ok(buildingRepository.findAll());
     }
 
-    @CacheEvict(value = "buildings", allEntries = true)
+    @CacheEvict(value = "buildings", key = "T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'")
     @PostMapping("/buildings")
     public ResponseEntity<Building> addBuilding(@RequestBody Map<String, String> body) {
         Building b = Building.builder()

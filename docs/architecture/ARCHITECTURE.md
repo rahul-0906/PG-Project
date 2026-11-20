@@ -208,3 +208,45 @@ All sensitive third-party credentials and webhook secrets are encrypted at rest 
 | `notification_email_enabled`| Feature Flag | Boolean | `EmailService` |
 | `notification_whatsapp_enabled`| Feature Flag| Boolean | `WhatsAppService` |
 
+---
+
+## 8. Multi-Tenant Jobs, Async, Caching & Security Isolation (Phase 3)
+
+### 8.1 Isolated Multi-Tenant Schedulers (`TenantJobRunner`)
+
+All 4 application schedulers iterate through all `ACTIVE` tenants via `TenantJobRunner`:
+1. **Context Management**: For each active tenant, `TenantContext` and SLF4J `MDC("tenant")` are set, and strictly cleared in a `finally` block.
+2. **Error Isolation**: Each tenant's task executes inside an independent `try/catch`. An exception during tenant A's processing never aborts or delays tenant B.
+3. **Idempotency**: All jobs are idempotent per tenant. Re-running a scheduler on the same day/month will not double-bill, send duplicate reminders, or duplicate overdue state changes.
+
+| Scheduler | Frequency | Target / Action | Multi-Tenant Behaviour |
+| :--- | :--- | :--- | :--- |
+| `MonthlyBillingScheduler` | `0 0 0 1 * *` | Generates rent invoices for all active guests | Loops active tenants; skips guests with existing invoices for period. |
+| `PaymentReminderScheduler` | `0 0 9 * * *` | Sends email/WhatsApp reminders for due invoices | Loops active tenants; skips invoices where `reminderSentAt` is already stamped. |
+| `OverdueInvoiceScheduler` | `0 0 0 * * *` | Transitions past-due unpaid invoices to `OVERDUE` | Loops active tenants; queries only non-overdue eligible records. |
+| `DataRetentionScheduler` | `0 0 3 * * ?` | Anonymizes PII for guests checked out >365 days | Loops active tenants; updates only records where `anonymized = false`. |
+
+### 8.2 Asynchronous Execution (`@Async`) & Task Decoration
+
+`AsyncConfig` configures a `ThreadPoolTaskExecutor` decorated with `TenantAwareTaskDecorator`. Any task dispatched via `@Async` automatically copies the originating thread's `TenantContext` and `MDC` map into the worker thread, ensuring downstream DB queries use `SET search_path TO t_<slug>, public`, and cleans up all ThreadLocal state upon completion.
+
+### 8.3 In-Memory OTP Store Isolation
+
+`EmailVerificationService` keys pending verification entries as `tenantSlug:userId`. Users sharing identical IDs across different tenant databases cannot collide, overwrite, or validate each other's verification codes.
+
+### 8.4 Cache Key Partitioning
+
+Caches are strictly partitioned by tenant slug to eliminate cross-tenant data leaks:
+- `systemConfig`: Keyed by `T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'`
+- `buildings`: Keyed and evicted by `T(com.pgcrm.multitenancy.TenantContext).getCurrentTenantSlug() ?: 'default'`
+
+### 8.5 Cross-Tenant Token Rejection
+
+- `JwtUtil`: All access and refresh tokens carry a mandatory `tenant` claim holding the issuing tenant slug.
+- `JwtAuthenticationFilter`: When a request arrives, the resolved tenant host is compared against the token's `tenant` claim. Any mismatch immediately aborts processing with **HTTP 401 Unauthorized** before reaching controllers.
+
+### 8.6 Per-Tenant Filesystem Isolation
+
+`TenantFileStorageService` enforces directory segregation under `data/storage/{tenantSlug}/` with strict path traversal validation preventing any directory escape attempts.
+
+

@@ -1,5 +1,7 @@
 package com.pgcrm.service;
 
+import com.pgcrm.multitenancy.TenantContext;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -16,6 +18,12 @@ public class EmailVerificationServiceTest {
     @BeforeEach
     void setUp() {
         emailVerificationService = new EmailVerificationService();
+        TenantContext.clear();
+    }
+
+    @AfterEach
+    void tearDown() {
+        TenantContext.clear();
     }
 
     @Test
@@ -89,5 +97,33 @@ public class EmailVerificationServiceTest {
 
         // Verify has evicted the code from cache, even verifying at normal time now should fail
         assertFalse(emailVerificationService.verifyCode(userId, newEmail, code));
+    }
+
+    @Test
+    void testTenantIsolation_SameUserIdAcrossDifferentTenants() {
+        String userId = "common_user_id";
+        String emailA = "tenant_a_user@example.com";
+        String emailB = "tenant_b_user@example.com";
+        String codeA = "111111";
+        String codeB = "222222";
+
+        // 1. Store in Tenant A
+        TenantContext.setTenant(new TenantContext.TenantInfo("t1", "tenant_a", "t_tenant_a", "Tenant A", "ACTIVE"));
+        emailVerificationService.storeCode(userId, emailA, codeA);
+
+        // 2. Store in Tenant B for same userId
+        TenantContext.setTenant(new TenantContext.TenantInfo("t2", "tenant_b", "t_tenant_b", "Tenant B", "ACTIVE"));
+        emailVerificationService.storeCode(userId, emailB, codeB);
+
+        // 3. Switch back to Tenant A
+        TenantContext.setTenant(new TenantContext.TenantInfo("t1", "tenant_a", "t_tenant_a", "Tenant A", "ACTIVE"));
+        // Tenant A must verify with codeA, codeB must fail
+        assertFalse(emailVerificationService.verifyCode(userId, emailA, codeB));
+        assertTrue(emailVerificationService.verifyCode(userId, emailA, codeA));
+
+        // 4. Switch to Tenant B
+        TenantContext.setTenant(new TenantContext.TenantInfo("t2", "tenant_b", "t_tenant_b", "Tenant B", "ACTIVE"));
+        // Tenant B must still have codeB intact
+        assertTrue(emailVerificationService.verifyCode(userId, emailB, codeB));
     }
 }

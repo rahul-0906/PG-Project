@@ -44,6 +44,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (jwtUtil.isTokenValid(token)) {
                     Claims claims = jwtUtil.extractAllClaims(token);
+                    String tokenTenant = claims.get("tenant", String.class);
+                    if (tokenTenant == null) {
+                        tokenTenant = claims.get("tenant_id", String.class);
+                    }
+
+                    String currentTenantSlug = com.pgcrm.multitenancy.TenantContext.getCurrentTenantSlug();
+                    // Enforce tenant match: reject cross-tenant tokens
+                    if (currentTenantSlug != null && tokenTenant != null && !currentTenantSlug.equalsIgnoreCase(tokenTenant)) {
+                        log.warn("🚨 Cross-tenant token mismatch! Token tenant: '{}' vs Request tenant: '{}' for path: {}",
+                                tokenTenant, currentTenantSlug, path);
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\": \"Unauthorized: Token tenant does not match request tenant host\"}");
+                        return;
+                    }
+
                     String userId = claims.getSubject();
                     String role = claims.get("role", String.class);
                     String branchId = claims.get("branch_id", String.class);
