@@ -310,5 +310,28 @@ When creating a new tenant via `POST /platform/api/tenants`, `TenantProvisioning
 | `POST` | `/platform/api/tenants/{slug}/activate` | Restores tenant active status | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
 | `DELETE`| `/platform/api/tenants/{slug}` | Marks tenant as `DELETED` | `ROLE_PLATFORM_ADMIN` (`X-Platform-Key`) |
 
+---
+
+## 10. Multi-Tenancy Verification & Isolation Test Suite (Phase 5)
+
+Phase 5 represents the hard gate required prior to moving real clients to shared mode. The test suite comprises 102 automated unit and integration tests covering all isolation vectors specified in Section 10 of the multi-tenancy architecture specification.
+
+### 10.1 Hard-Gate Isolation Matrix
+
+| Isolation Vector | Specification Requirement | Verification Test Class | Status |
+| :--- | :--- | :--- | :--- |
+| **Cross-Tenant Read/Write** | Requesting Tenant B's resource IDs as Tenant A returns 404/403 with no data leakage. | `CrossTenantIsolationIntegrationTest` | ✅ PASSED |
+| **Token Mismatch** | Valid Tenant A JWT sent to Tenant B host rejected with HTTP 401 Unauthorized. | `JwtCrossTenantAuthTest` | ✅ PASSED |
+| **Webhook Security** | Webhook signed with Tenant A secret sent to Tenant B host rejected with HTTP 400. | `WebhookTenantIsolationTest` | ✅ PASSED |
+| **Fail-Closed Resolution** | Unknown host returns 404; suspended tenant returns 403; public routes fail closed. | `TenantResolutionFilterTest` | ✅ PASSED |
+| **Multi-Tenant Schedulers** | Jobs process both tenants; failure in tenant A never stops tenant B; re-runs are idempotent. | `TwoTenantSchedulerTest` | ✅ PASSED |
+| **Async Context Propagation** | `TenantContext` & MDC propagated to `@Async` worker threads and cleared in `finally`. | `TenantAwareTaskDecoratorTest` | ✅ PASSED |
+| **Connection Reuse** | Connection sets `search_path` to `t_<slug>, public` and resets to `platform, public` on release. | `ConnectionReuseIsolationTest` | ✅ PASSED |
+| **Dedicated Mode** | Pins to `app.dedicated-tenant` regardless of host; disables platform admin API (404). | `DedicatedModeIsolationTest` | ✅ PASSED |
+| **OTP Cache Isolation** | In-memory verification codes keyed by `tenantSlug:userId` preventing cross-tenant collisions. | `EmailVerificationServiceTest` | ✅ PASSED |
+| **Filesystem Isolation** | Per-tenant directory paths (`data/storage/{tenantSlug}/`) with traversal protection. | `TenantFileStorageServiceTest` | ✅ PASSED |
+| **Provisioning Rollback** | Automated rollback drops schema (`DROP SCHEMA CASCADE`) and deletes registry records on failure. | `TenantProvisioningServiceTest` | ✅ PASSED |
+
+
 
 
