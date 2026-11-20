@@ -1,12 +1,17 @@
 # PG CRM System Architecture
 
-This document defines the system architecture for the **PG CRM** single-tenant Paying Guest & Hostel Management Platform.
+This document defines the system architecture for the **PG CRM** Paying Guest & Hostel Management Platform.
 
 ---
 
-## 1. System Overview
+## 1. System Overview & Dual-Mode Deployment
 
-PG CRM is a **single-tenant** property management application. Each PG client (hostel operator) runs an independent, fully isolated stack comprising its own Spring Boot backend and PostgreSQL database. There is no shared schema between clients — physical database isolation makes cross-client data leaks impossible.
+PG CRM is a dual-mode property management application designed to run from a single unified codebase in two distinct deployment topologies:
+
+1. **Shared Mode (`app.deployment-mode=shared`)**: A single application instance and a single PostgreSQL database serve multiple PG owners (tenants). Each tenant has its own isolated PostgreSQL schema (`t_<slug>`). Tenant data is physically separated by schema; there are **no `tenant_id` discriminator columns**. A lightweight `platform` schema holds only the tenant registry and domain mappings.
+2. **Dedicated Mode (`app.deployment-mode=dedicated`)**: The exact same Docker image runs for a single tenant on its own server/container and database, pinned via `app.dedicated-tenant=<slug>`. Host-based resolution is ignored, and the application operates exclusively within that tenant's schema.
+
+A tenant can migrate seamlessly from Shared to Dedicated by exporting their schema (`pg_dump --schema=t_<slug>`) and restoring it on a dedicated instance without code changes or forks.
 
 ### Spatial Hierarchy
 
@@ -16,12 +21,13 @@ Building → Floor → Block → Room → Bed
 
 Each property is modelled as a hierarchical tree. A `Building` contains `Floor`s, each `Floor` contains `Block`s or `Room`s directly, each `Room` contains `Bed`s. Bed occupancy states are `VACANT`, `OCCUPIED`, and `UNDER_NOTICE`.
 
-### Deployment Model
+### Architecture & Isolation Model
 
-One PG client = one isolated containerised stack:
-- One Spring Boot backend (port `8080`)
-- One React/Vite frontend (port `5173`)
-- One dedicated PostgreSQL database (`pgcrmdb`)
+- **Database Schemas**:
+  - `platform`: Holds `tenants` (registry) and `tenant_domains` (host mappings). Never contains tenant operational data.
+  - `t_<slug>`: Dedicated schema per tenant containing all business entity tables (`users`, `guests`, `buildings`, `invoices`, `tenant_settings`, etc.).
+- **Tenant Switching**: Done per connection from a single Hikari connection pool using PostgreSQL's `SET search_path TO t_<slug>, public`. On connection release, `search_path` is reset to `platform, public` to eliminate cross-tenant connection leaks.
+- **Tenant Resolution**: Handled by `TenantResolutionFilter` before Spring Security. Resolves tenant by request `Host` header (subdomain `sri-sai.<base-domain>` or custom domain) in shared mode, or returns `app.dedicated-tenant` in dedicated mode. Fails closed (404 for unknown host, 403 for suspended).
 
 ---
 

@@ -81,6 +81,20 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 * **Internal Logic & Dependencies**: Uses `@ConfigurationProperties(prefix = "pg.system")` to parse values from host YAML configs.
 * **Database/UI Interaction**: Injects branding attributes into the public configuration payload returned to the UI.
 
+---
+
+### 2.1b Multi-Tenancy Package (`com.pgcrm.multitenancy`)
+
+* **`TenantContext.java`**: Holds the current request's tenant identity (`slug`, `schemaName`, `status`, `id`) in a `ThreadLocal`. Strictly validates identifiers against `^[a-z][a-z0-9_]{2,40}$`.
+* **`DeploymentProperties.java`**: Configures deployment mode (`shared` vs `dedicated`), dedicated tenant slug, and base domain.
+* **`TenantRegistryService.java`**: Accesses `platform.tenants` and `platform.tenant_domains` with short-TTL Caffeine cache for sub-millisecond host lookups.
+* **`TenantResolutionFilter.java`**: Pre-security servlet filter resolving tenant from `Host` header (subdomain/custom domain) or dedicated config. Fails closed (404/403). Binds `TenantContext` and `MDC("tenant")`.
+* **`SchemaMultiTenantConnectionProvider.java`**: Controls schema switching per connection via `SET search_path TO t_<slug>, public`. Resets to `platform, public` on release in shared mode (or `t_default` in dedicated mode).
+* **`TenantIdentifierResolver.java`**: Hibernate `CurrentTenantIdentifierResolver` returning active tenant schema.
+* **`HibernateMultiTenancyCustomizer.java`**: Registers multi-tenant providers with Hibernate 6 session factory.
+* **`MultiTenantFlywayConfig.java`**: Dual-phase Flyway runner: migrates `platform` schema, registers/verifies dedicated tenant, and migrates each active tenant schema independently.
+* **`TenantAwareTaskDecorator.java`**: Propagates `TenantContext` and SLF4J `MDC` to `@Async` task threads.
+
 #### `TwilioConfig.java`
 * **Structural Purpose**: Twilio integration settings mapping.
 * **Why Created**: Allows SMS/WhatsApp notification delivery.

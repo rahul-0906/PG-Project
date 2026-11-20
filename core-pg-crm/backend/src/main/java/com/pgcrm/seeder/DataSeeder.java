@@ -55,6 +55,8 @@ public class DataSeeder implements CommandLineRunner {
     private final MaintenanceTicketRepository maintenanceTicketRepository;
     private final EbBillRepository ebBillRepository;
     private final AuditLogRepository auditLogRepository;
+    private final com.pgcrm.multitenancy.DeploymentProperties deploymentProperties;
+    private final com.pgcrm.multitenancy.TenantRegistryService tenantRegistryService;
 
     @org.springframework.beans.factory.annotation.Value("${app.seed-demo:false}")
     private boolean seedDemo;
@@ -62,24 +64,34 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        seedSuperAdmin();
-
-        if (!seedDemo) {
-            log.info("⚙️ app.seed-demo is FALSE. Bypassing all building layout and mock data. System will boot with ONLY the Super Admin account.");
-            return;
+        if (deploymentProperties.isDedicated()) {
+            tenantRegistryService.findTenantBySlug(deploymentProperties.getDedicatedTenant())
+                    .ifPresent(com.pgcrm.multitenancy.TenantContext::setTenant);
         }
+        try {
+            seedSuperAdmin();
 
-        seedDefaultBusiness();
-        
-        // Ensure all existing guests from previous seed runs have default preferences set to true
-        for (Guest g : guestRepository.findAll()) {
-            if (!g.isBreakfastPreference() && !g.isLunchPreference() && !g.isDinnerPreference()) {
-                g.setBreakfastPreference(true);
-                g.setLunchPreference(true);
-                g.setDinnerPreference(true);
-                g.setVegPreference(true);
-                guestRepository.save(g);
-                log.info("Updated default meal preferences to TRUE for guest: {}", g.getFullName());
+            if (!seedDemo) {
+                log.info("⚙️ app.seed-demo is FALSE. Bypassing all building layout and mock data. System will boot with ONLY the Super Admin account.");
+                return;
+            }
+
+            seedDefaultBusiness();
+            
+            // Ensure all existing guests from previous seed runs have default preferences set to true
+            for (Guest g : guestRepository.findAll()) {
+                if (!g.isBreakfastPreference() && !g.isLunchPreference() && !g.isDinnerPreference()) {
+                    g.setBreakfastPreference(true);
+                    g.setLunchPreference(true);
+                    g.setDinnerPreference(true);
+                    g.setVegPreference(true);
+                    guestRepository.save(g);
+                    log.info("Updated default meal preferences to TRUE for guest: {}", g.getFullName());
+                }
+            }
+        } finally {
+            if (deploymentProperties.isDedicated()) {
+                com.pgcrm.multitenancy.TenantContext.clear();
             }
         }
     }
