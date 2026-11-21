@@ -1,13 +1,26 @@
 # PG CRM
-### Single-Tenant Property Management System for Paying Guest (PG) & Hostel Operators
+### Dual-Deployment Property Management System for Paying Guest (PG) & Hostel Operators
 
-A full-stack B2B SaaS application for PG and hostel management, covering guest operations, automated billing, electricity sub-meter calculations, meal tracking, and maintenance ticketing.
+A full-stack enterprise B2B SaaS application for PG and hostel management, covering guest operations, automated arrears billing, electricity sub-meter calculations, visual meal tracking, maintenance ticketing, and automated multi-tenancy.
 
 ---
 
-## 1. System Architecture
+## 1. System Architecture & Dual Deployment Modes
 
-**`[PG-CORE]`** is a single-tenant property management application deployed uniquely per PG brand or hostel branch. It manages all daily operations and guest lifecycle.
+PG CRM is engineered as a **single unified codebase** that runs in two deployment modes without code duplication or forks:
+
+1. **Shared Multi-Tenant Mode (`app.deployment-mode=shared`)**:
+   - One application instance and one PostgreSQL database serve multiple PG owners.
+   - **Schema-per-tenant physical isolation**: Each tenant has an independent PostgreSQL schema (`t_<slug>`). No `tenant_id` discriminator columns in business tables.
+   - The `platform` schema stores the tenant registry (`tenants`, `tenant_domains`).
+   - Host-based tenant resolution (subdomain `<slug>.<base-domain>` or mapped custom domain) with fail-closed security (404 for unknown host, 403 for suspended).
+   - Single HikariCP connection pool with automatic `SET search_path TO t_<slug>, public` on checkout and reset to `platform, public` on release.
+
+2. **Dedicated Single-Tenant Mode (`app.deployment-mode=dedicated`)**:
+   - The same Docker image runs for a single tenant on its own server, database, and domain, pinned via `app.dedicated-tenant=<slug>`.
+   - Host header is ignored; startup fails fast if the designated tenant schema is missing or not active.
+
+A tenant can migrate seamlessly from shared mode to dedicated mode using schema export and import tooling (`scripts/migration/`).
 
 ### Role Architecture & Permission Model
 
@@ -78,11 +91,16 @@ A full-stack B2B SaaS application for PG and hostel management, covering guest o
 │   ├── DATA_MODEL.md
 │   ├── DEVELOPER_SETUP.md
 │   └── SECURITY.md
-├── scripts/                        # Operational Scripts
+├── scripts/                        # Operational & Migration Tooling
 │   ├── dev/
 │   │   └── start_core.bat          # Windows launcher for PG-CORE services
-│   └── ops/
-│       └── backup.sh               # Database backup script
+│   ├── ops/
+│   │   ├── backup-all-tenants.ps1  # Nightly per-schema backup with tested restore
+│   │   └── backup-all-tenants.sh   # POSIX bash nightly backup runner
+│   └── migration/
+│       ├── migrate-client-to-tenant.ps1 / .sh   # Single-tenant DB to shared t_<slug>
+│       ├── export-tenant-to-dedicated.ps1 / .sh # Shared t_<slug> to dedicated bundle
+│       └── verify-migration.ps1 / .sh           # 19-table row count & sample verifier
 ├── infrastructure/                 # Infrastructure configuration
 ├── .env.example                    # Template Environment File
 ├── docker-compose.yml              # Docker Compose for local development

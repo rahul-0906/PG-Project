@@ -60,6 +60,7 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/platform/api/**").hasRole("PLATFORM_ADMIN")
+                .requestMatchers("/api/health").permitAll()           // Public uptime and system health probe
                 .requestMatchers("/api/auth/change-password").authenticated()
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/webhooks/**").permitAll()       // Razorpay webhook

@@ -10,8 +10,11 @@
 
 ## Quick Rule Summary (Full details in AGENTS.md)
 - NEVER modify existing Flyway SQL migrations — create a new `V{N+1}__description.sql`
+- NEVER add a `tenant_id` column to business tables — use schema isolation (`t_<slug>`)
+- ALWAYS resolve tenant via request host (shared) or `app.dedicated-tenant` (dedicated)
+- NEVER hardcode per-tenant credentials — use `t_<slug>.tenant_settings` with AES-256-GCM
 - ALWAYS set `SPRING_PROFILES_ACTIVE=dev` for local backend runs
 - NEVER apply pro-rated rent — flat-rate model only
 - NEVER hard-delete Guest or Invoice records — use soft delete
-- NEVER add `permitAll()` wildcard in SecurityConfig
+- NEVER add `permitAll()` wildcard in SecurityConfig (except `/api/health` and public endpoints)
 - NEVER write documentation to `.gemini` hidden directories

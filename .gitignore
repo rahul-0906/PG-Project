@@ -72,9 +72,9 @@ tenants/
 PG UI.png
 
 # PostgreSQL backup dumps & migration artifacts
-backups/*.dump
-backups/*.sql
+backups/
 *.dump
+*.sha256
 scripts/migration/exports/
 scripts/migration/reports/
 

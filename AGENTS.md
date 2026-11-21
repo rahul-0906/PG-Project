@@ -6,13 +6,15 @@ Welcome, AI Agent! This document defines the operational rules, system architect
 
 ## 1. Executive Summary & Architecture Overview
 
-**PG CRM** is a single-tenant property management application for Paying Guest (PG) and hostel operators. It manages all daily property operations, guest lifecycle, billing, electricity sub-meter calculations, meal tracking, and maintenance ticketing.
+**PG CRM** is a single-codebase, dual-deployment property management application for Paying Guest (PG) and hostel operators. It manages all daily property operations, guest lifecycle, billing, electricity sub-meter calculations, meal tracking, and maintenance ticketing.
 
-### Module: `[PG-CORE]` (Single-Tenant Property Management)
+### Dual Deployment Modes
 
-- **Path**: `file:///e:/PG-Project/core-pg-crm/`
-- **Scope**: Guest onboarding, check-ins, daily arrears billing, electricity (EB) sub-meter split calculations, visual meal calendars, and maintenance ticketing.
-- **Tenancy Model**: Physical database isolation. Each PG client runs an independent containerized stack with its own PostgreSQL database. Cross-tenant data leaks are physically impossible.
+The codebase runs in two deployment modes configured via `application.yml` / environment variables:
+1. **Shared Mode (`app.deployment-mode=shared`)**: One app instance and one PostgreSQL database serve many PG owners (tenants). Each tenant has its own isolated PostgreSQL schema (`t_<slug>`). Physical schema isolation only—**no `tenant_id` discriminator columns**. The `platform` schema holds the tenant registry (`tenants`, `tenant_domains`). Requests are resolved by host (subdomain `<slug>.<base-domain>` or custom domain) and fail closed (404 unknown host, 403 suspended).
+2. **Dedicated Mode (`app.deployment-mode=dedicated`)**: The same Docker image runs for a single tenant on its own server and database, pinned via `app.dedicated-tenant=<slug>`. Ignores request host. Startup fails if tenant is missing or not `ACTIVE`.
+
+A tenant can migrate between shared and dedicated via schema export (`pg_dump --schema=t_<slug>`) and restore tools (`scripts/migration/`).
 
 ### Spatial Hierarchy
 
@@ -49,6 +51,14 @@ Building → Floor → Block → Room → Bed
 
 When operating in this workspace, AI agents **MUST** follow these rules without exception:
 
+### 🏢 Multi-Tenancy Architecture Constraints (Spec Guaranteed)
+- **Schema-per-tenant isolation**: All business tables reside in `t_<slug>` schemas. **NEVER add a `tenant_id` column** to business tables.
+- **Fail-closed resolution**: In shared mode, unknown hosts return HTTP 404; suspended tenants return HTTP 403.
+- **Connection pool safety**: When releasing a pooled Hikari connection, `search_path` must always be reset to `platform, public` to prevent tenant leakage.
+- **Zero per-client environment variables**: All tenant branding and secrets (Razorpay, WhatsApp) reside in `t_<slug>.tenant_settings` encrypted with AES-256-GCM (`v1:` format).
+- **Background jobs & Schedulers**: Must iterate all active tenants, executing each in an isolated try/catch with `TenantContext` set and cleared in `finally`.
+- **Nightly backups & Restore drills**: Nightly backups must run per-schema (`scripts/ops/backup-all-tenants.ps1`/`.sh`), compute SHA-256 hashes, and pass an automated tested restore drill.
+
 ### 🛡️ File Placement & Sandbox Integrity
 - **Always write project documentation, design plans, SOPs, and checklists directly to the project locations** (`E:\PG-Project\docs\`, project root, or relevant subdirectories).
 - **NEVER** write project files to `C:\Users\Admin\.gemini\antigravity\brain\...` or any hidden system directory. These are for internal agent scratch only.
@@ -81,6 +91,7 @@ Spring Security enforces these URL-to-role mappings:
 | URL Pattern | Required Roles |
 | :--- | :--- |
 | `/api/auth/**` | Public (except `/api/auth/change-password`) |
+| `/api/health` | Public (Uptime & connection pool probe) |
 | `/api/super-admin/**` | `SUPER_ADMIN` only |
 | `/api/owner/**` | `PG_OWNER`, `SUPER_ADMIN` |
 | `/api/manager/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
@@ -88,8 +99,9 @@ Spring Security enforces these URL-to-role mappings:
 | `/api/reports/**` | `PG_OWNER`, `PG_MANAGER`, `SUPER_ADMIN` |
 | `/api/inventory/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
 | `/api/payments/**` | `PG_MANAGER`, `PG_OWNER`, `SUPER_ADMIN` |
-| `/api/webhooks/**` | Public (Razorpay webhook) |
-| `/api/config/public` | Public (frontend branding) |
+| `/api/webhooks/**` | Public (Razorpay webhook with per-tenant signature verification) |
+| `/api/config/public` | Public (frontend branding per resolved tenant) |
+| `/platform/api/**` | Platform admin only (`X-Platform-Key` header, shared mode only) |
 
 **NEVER add a wildcard `permitAll()` on `/**`**. Any new endpoint must follow the table above.
 

@@ -351,6 +351,33 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
+---
+
+### 2.10 Multi-Tenancy Package (`com.pgcrm.multitenancy`)
+
+* **`TenantContext.java`**: ThreadLocal storage for the active tenant (`slug`, `schemaName`, `status`). Enforces regex validation (`^[a-z][a-z0-9_]{2,40}$`) on all setters.
+* **`DeploymentProperties.java`**: Binds `app.deployment-mode` (`SHARED` | `DEDICATED`), `app.dedicated-tenant`, and `app.base-domain`.
+* **`filter/TenantResolutionFilter.java`**: Resolves tenant from request hostname (subdomain or mapped domain in `platform.tenant_domains`) in shared mode, or binds dedicated tenant. Fail closed with 404 (unknown host) or 403 (suspended). Clears context in `finally`.
+* **`provider/TenantConnectionProvider.java`**: `MultiTenantConnectionProvider` executing `SET search_path TO t_<slug>, public` on connection checkout, and resetting to `platform, public` on connection release.
+* **`provider/TenantIdentifierResolver.java`**: `CurrentTenantIdentifierResolver` returning active tenant schema or `platform`.
+* **`config/HibernateMultiTenancyConfig.java`**: Registers multi-tenant connection provider and identifier resolver with Hibernate 6.
+* **`config/TenantAsyncConfig.java`**: Configures `TaskDecorator` to copy `TenantContext` and SLF4J MDC to `@Async` task threads, clearing in `finally`.
+* **`flyway/TenantFlywayRunner.java`**: Startup lifecycle runner that applies `db/migration/platform` once, then applies `db/migration/tenant` across all active tenant schemas. Log-and-continue failure model.
+* **`crypto/AesGcmEncryptionHelper.java`**: AES-256-GCM encryption engine (`v1:` format) protecting per-tenant secrets using master key from `APP_ENCRYPTION_KEY`.
+* **`service/TenantProvisioningService.java`**: Automated tenant lifecycle manager: validation, `PROVISIONING` status, schema creation, Flyway execution, encrypted settings, owner creation, and `ACTIVE` transition with fail-closed rollback.
+* **`service/TenantMigrationVerifier.java`**: Migration verification engine comparing row counts across 19 business tables and financial invoice samples between source DB and target `t_<slug>`.
+* **`ratelimit/TenantRateLimitingFilter.java`**: Per-tenant token-bucket rate limiter (`@Order(HIGHEST_PRECEDENCE + 10)`), returning HTTP 429 Too Many Requests and `Retry-After: 30` when tenant capacity is exceeded.
+* **`alerts/ErrorAlertService.java`**: Dispatches critical system and job alerts formatted with tenant slug in MDC and dispatches to configured webhook endpoints.
+
+---
+
+### 2.11 Platform Administration & Health Controllers (`com.pgcrm.controller`)
+
+* **`HealthCheckController.java`**: Exposes `GET /api/health` returning system uptime, database latency, HikariCP connection pool statistics (`activeConnections`, `idleConnections`, `threadsAwaitingConnection`), deployment mode, and active tenant count.
+* **`PlatformAdminController.java`**: Exposes `/platform/api/tenants/**` platform lifecycle management (create, suspend, activate, list, migration verification). Protected by `X-Platform-Key` header and restricted to shared deployment mode.
+
+---
+
 ### 2.9 Scheduler Package (`com.pgcrm.scheduler`)
 
 * **`MonthlyBillingScheduler.java`**: Runs at midnight on the 1st of the month (`0 0 0 1 * *`) to generate arrears invoices.
@@ -442,6 +469,7 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 The root-level and scripts directory contains critical launch scripts, compliance documentation, and migration utilities:
 
+* **`scripts/ops/backup-all-tenants.ps1` / `.sh`**: Production hardening nightly per-schema backup runner that backs up `platform` and all active `t_<slug>` schemas, computes SHA-256 checksums, performs an automated temporary restore drill (`restore_drill_<uuid>`), syncs to S3/rsync, and enforces 30-day retention pruning.
 * **`scripts/migration/migrate-client-to-tenant.ps1` / `.sh`**: Full-lifecycle migration script migrating a single-tenant database into an isolated `t_<slug>` schema with automated DDL migration, data streaming with foreign key disable, sequence synchronization, and 100% data integrity verification.
 * **`scripts/migration/export-tenant-to-dedicated.ps1` / `.sh`**: Exports a shared tenant schema (`t_<slug>`) into a verified compressed dump and generates dedicated deployment bundle (`docker-compose.dedicated.yml`, `restore-dedicated.ps1`/`.sh`).
 * **`scripts/migration/verify-migration.ps1` / `.sh`**: Standalone read-only data integrity verifier comparing source DB tables/samples against target `t_<slug>`.

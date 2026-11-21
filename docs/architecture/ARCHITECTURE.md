@@ -415,6 +415,112 @@ In accordance with Section 1 of the multi-tenancy specification:
   ```
   Returns `MigrationVerificationResult` detailing table count matches, sample comparisons, and overall pass/fail status.
 
+---
+
+## 12. Production Hardening, Disaster Recovery & Monitoring (Phase 7)
+
+To ensure high availability, enterprise resiliency, and data durability in production shared and dedicated environments, the platform implements Phase 7 production hardening.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                            PRODUCTION HARDENING ARCHITECTURE                 │
+├────────────────────────────────┬─────────────────────────────────────────────┤
+│ 1. HikariCP Pool Review        │ 25 max connections, 60s leak detection,     │
+│                                │ auto reset search_path to platform, public  │
+├────────────────────────────────┼─────────────────────────────────────────────┤
+│ 2. Per-Tenant Rate Limiting    │ Token-Bucket algorithm, 180 req/min default,│
+│                                │ HTTP 429 + Retry-After + X-RateLimit headers│
+├────────────────────────────────┼─────────────────────────────────────────────┤
+│ 3. System Health Monitoring    │ GET /api/health with Hikari pool stats,     │
+│                                │ DB latency, active tenant count & uptime    │
+├────────────────────────────────┼─────────────────────────────────────────────┤
+│ 4. Error & Uptime Alerting     │ Tenant-tagged MDC logging & webhook alerts  │
+│                                │ ([CRITICAL_ALERT] [Tenant: <slug>] ...)     │
+├────────────────────────────────┼─────────────────────────────────────────────┤
+│ 5. Per-Schema Nightly Backups  │ Per-schema pg_dump with SHA-256 checksums,  │
+│    & Tested Restore Drills     │ automated temporary restore verification,   │
+│                                │ off-server sync (S3/rsync) & 30-day pruning │
+└────────────────────────────────┴─────────────────────────────────────────────┘
+```
+
+### 12.1 Connection Pool Architecture & Review (HikariCP)
+Under multi-tenancy, all tenants share a unified Hikari connection pool in shared mode. Pool parameters have been rigorously calibrated:
+
+| Parameter | Value | Rationale |
+| :--- | :--- | :--- |
+| `maximum-pool-size` | **25** | Sized for production concurrency while respecting Postgres connection limits |
+| `minimum-idle` | **5** | Maintains warm connections for instantaneous response |
+| `idle-timeout` | **300000ms** (5 min) | Frees unused connections during low-traffic windows |
+| `max-lifetime` | **1800000ms** (30 min) | Refreshes connections to prevent stale socket states |
+| `connection-timeout` | **20000ms** (20s) | Fail-fast threshold if pool becomes saturated |
+| `leak-detection-threshold` | **60000ms** (60s) | Pinpoints slow queries or unreleased connections in application logs |
+| `validation-timeout` | **5000ms** (5s) | Heartbeat check before handing connection to thread |
+
+**Connection Release Guarantee**: `MultiTenantConnectionProvider.releaseAnyConnection()` immediately issues `SET search_path TO platform, public;` when returning a connection to the pool, ensuring no pooled connection ever retains a tenant schema reference.
+
+### 12.2 Per-Tenant Token-Bucket Rate Limiting
+Traffic spikes from one tenant must never degrade service for others.
+- **Filter**: `TenantRateLimitingFilter.java` (`@Order(Ordered.HIGHEST_PRECEDENCE + 10)`), positioned immediately after `TenantResolutionFilter`.
+- **Isolation**: Each tenant slug maintains an independent in-memory `TokenBucket`.
+- **Breach Handling**: When requests exceed capacity, the filter immediately short-circuits with **HTTP 429 Too Many Requests**, headers `Retry-After: 30`, `X-RateLimit-Limit`, and `X-RateLimit-Remaining: 0`.
+- **Exemptions**: Static assets (`/assets/**`, `.js`, `.css`, `.png`) and health checks (`/api/health`) bypass rate limiting.
+
+### 12.3 System Health & Connection Pool Monitoring
+- **Endpoint**: `GET /api/health` (publicly accessible without authentication for load balancers and external monitors like Pingdom, Datadog, or UptimeRobot).
+- **Diagnostics Returned**:
+  ```json
+  {
+    "status": "UP",
+    "deploymentMode": "shared",
+    "uptimeSeconds": 86400,
+    "activeTenants": 12,
+    "database": {
+      "status": "UP",
+      "responseTimeMs": 3
+    },
+    "connectionPool": {
+      "poolName": "HikariPool-1",
+      "maximumPoolSize": 25,
+      "minimumIdle": 5,
+      "activeConnections": 4,
+      "idleConnections": 6,
+      "totalConnections": 10,
+      "threadsAwaitingConnection": 0
+    }
+  }
+  ```
+- Returns **HTTP 503 Service Unavailable** if the database is unreachable.
+
+### 12.4 Tenant-Contextualized Error & Uptime Alerting
+- **Service**: `ErrorAlertService.java`
+- Formats critical alerts with the active tenant slug extracted from `TenantContext`:
+  ```
+  [CRITICAL_ALERT] [Tenant: green_leaves_pg] [Component: SCHEDULER] Monthly billing failed | Details: DB Timeout
+  ```
+- Dispatches JSON payloads to external webhooks (`app.alerts.webhook-url`) if configured.
+- **Fail-Safe Guarantee**: Alert dispatch exceptions are logged and swallowed; alert failures will never interrupt business transactions or background jobs.
+
+### 12.5 Nightly Per-Schema Backups & Tested Restore Drills
+Nightly automated backups run per-schema rather than a monolithic database dump, enabling point-in-time single-tenant recovery.
+
+#### Automation Scripts:
+- **PowerShell**: [`scripts/ops/backup-all-tenants.ps1`](file:///e:/PG-Project/scripts/ops/backup-all-tenants.ps1)
+- **POSIX Shell**: [`scripts/ops/backup-all-tenants.sh`](file:///e:/PG-Project/scripts/ops/backup-all-tenants.sh)
+
+#### Workflow:
+1. **Dynamic Schema Discovery**: Queries `platform.tenants WHERE status = 'ACTIVE'` to discover all live tenant schemas, plus `platform`.
+2. **Schema-Isolated Dump**: Invokes `pg_dump --schema="<schema>" -F c -b -f "<file>.dump"`.
+3. **SHA-256 Checksums**: Generates `.sha256` checksum files alongside each archive for tamper detection.
+4. **Automated Tested Restore Drill (Spec Hard Requirement)**:
+   - Selects a candidate tenant backup dump.
+   - Creates a temporary verification schema `restore_drill_<uuid>`.
+   - Restores the archive using `pg_restore`.
+   - Queries `information_schema.tables` to verify recovered table integrity (`COUNT(*) > 0`).
+   - Drops the drill schema (`DROP SCHEMA ... CASCADE`).
+   - If restoration fails, the script immediately raises an alert and exits with non-zero status.
+5. **Off-Server Storage Synchronization**: Syncs completed archives to Amazon S3 (`aws s3 sync`) or a remote server (`rsync -avz`).
+6. **Retention Policy**: Automatically purges local backup directories older than 30 days.
+
 
 
 

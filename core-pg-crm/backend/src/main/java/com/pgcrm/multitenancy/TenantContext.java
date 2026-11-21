@@ -44,6 +44,14 @@ public final class TenantContext {
         CURRENT_TENANT.set(tenant);
     }
 
+    public static void setCurrentTenant(String slug, String schemaName) {
+        if (slug == null || schemaName == null) {
+            clear();
+        } else {
+            setTenant(new TenantInfo(slug, slug, schemaName, slug, "ACTIVE"));
+        }
+    }
+
     public static TenantInfo getCurrentTenant() {
         return CURRENT_TENANT.get();
     }
