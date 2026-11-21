@@ -1,8 +1,10 @@
 package com.pgcrm.controller;
 
+import com.pgcrm.multitenancy.TenantMigrationVerifier;
 import com.pgcrm.multitenancy.TenantProvisioningService;
 import com.pgcrm.multitenancy.dto.CreateTenantRequest;
 import com.pgcrm.multitenancy.dto.CreateTenantResult;
+import com.pgcrm.multitenancy.dto.MigrationVerificationResult;
 import com.pgcrm.multitenancy.dto.TenantSummaryResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,17 @@ import java.util.Map;
 public class PlatformAdminController {
 
     private final TenantProvisioningService tenantProvisioningService;
+    private final TenantMigrationVerifier tenantMigrationVerifier;
+
+    @GetMapping("/{slug}/verify-migration")
+    public ResponseEntity<MigrationVerificationResult> verifyMigration(
+            @PathVariable String slug,
+            @RequestParam(defaultValue = "public") String sourceSchema) {
+        log.info("Received request to verify migration for tenant '{}' against source schema '{}'", slug, sourceSchema);
+        String targetSchema = "t_" + slug;
+        MigrationVerificationResult result = tenantMigrationVerifier.verifyMigration(sourceSchema, targetSchema);
+        return ResponseEntity.ok(result);
+    }
 
     @PostMapping
     public ResponseEntity<CreateTenantResult> createTenant(@RequestBody CreateTenantRequest request) {

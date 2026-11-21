@@ -332,6 +332,90 @@ Phase 5 represents the hard gate required prior to moving real clients to shared
 | **Filesystem Isolation** | Per-tenant directory paths (`data/storage/{tenantSlug}/`) with traversal protection. | `TenantFileStorageServiceTest` | ✅ PASSED |
 | **Provisioning Rollback** | Automated rollback drops schema (`DROP SCHEMA CASCADE`) and deletes registry records on failure. | `TenantProvisioningServiceTest` | ✅ PASSED |
 
+---
+
+## 11. Client Migration & Transition Architecture (Phase 6)
+
+Phase 6 provides complete, bi-directional migration tooling allowing single-tenant client databases to migrate into multi-tenant shared schemas (`t_<slug>`), and allowing any shared tenant to transition back to a dedicated instance at any time.
+
+### 11.1 Single-Tenant to Shared Schema Migration Pipeline
+
+The client migration pipeline transitions a standalone client database (where operational tables reside in `public` or a single database) into an isolated tenant schema within the shared PostgreSQL database.
+
+```
+[Legacy Client DB]
+        │
+        ▼ (pg_dump --data-only)
+[Stream Transformation: public. → t_<slug>.]
+        │
+        ▼ (psql with replica role & search_path)
+[Shared Database: t_<slug>]
+        │
+        ▼
+[TenantMigrationVerifier: Row counts (19 tables) + Invoice/Payment samples]
+        │
+   ┌────┴──────────────┐
+   ▼ (Match 100%)       ▼ (Any Discrepancy)
+[Status: ACTIVE]     [Automated Rollback & Schema Drop]
+```
+
+#### Pipeline Stages:
+1. **Validation & Registration**:
+   - Validates tenant slug regex (`^[a-z][a-z0-9_]{2,40}$`).
+   - Inserts record into `platform.tenants` with status `PROVISIONING`.
+2. **Schema Creation & Flyway Execution**:
+   - Creates PostgreSQL schema `t_<slug>`.
+   - Executes all tenant Flyway migrations (`V1..V19`) to guarantee exact DDL schema alignment.
+3. **Data Dump & Stream Transformation**:
+   - Extracts source table data via `pg_dump --data-only --no-owner --no-privileges`.
+   - Remaps qualified schema references (`COPY public.` / `INSERT INTO public.` → `COPY t_<slug>.` / `INSERT INTO t_<slug>.`).
+   - Wraps ingestion stream in `SET session_replication_role = 'replica';` to prevent foreign-key insertion order deadlock, restoring to `'origin'` upon completion.
+4. **Sequence Alignment**:
+   - Queries all sequences in `t_<slug>` and executes `setval()` to synchronize to `MAX(id)`.
+5. **Data Integrity & Verification Suite (`TenantMigrationVerifier`)**:
+   - **Row Count Verification**: Compares exact `COUNT(*)` across all 19 core business tables (`users`, `buildings`, `building_configs`, `floors`, `blocks`, `rooms`, `beds`, `guests`, `guest_beds`, `invoices`, `invoice_line_items`, `eb_bills`, `eb_bill_guests`, `daily_logs`, `meter_readings`, `maintenance_tickets`, `notifications`, `pricing_config`, `audit_logs`).
+   - **Financial Sample Verification**: Inspects a sample of latest invoices (`id`, `total_amount`, `status`) and paid receipts between source and target schema.
+   - **Fail-Closed Rollback**: If ANY table count differs or sample value mismatches, the migration immediately triggers rollback (`DROP SCHEMA t_<slug> CASCADE`, registry deletion) and aborts.
+6. **Activation & Audit Reporting**:
+   - On 100% verification pass, updates `platform.tenants` to `ACTIVE`.
+   - Maps optional domain in `platform.tenant_domains`.
+   - Generates JSON audit report (`scripts/migration/reports/migration_report_<slug>_<timestamp>.json`).
+
+> [!IMPORTANT]
+> **Operational Cutover Rule**: The source single-tenant database and container stack MUST remain running until the PG owner has logged into the shared portal, reviewed their operational data, and explicitly confirmed data integrity.
+
+### 11.2 Shared Schema to Dedicated Migration Pipeline
+
+In accordance with Section 1 of the multi-tenancy specification:
+*"A tenant can move from shared to dedicated by exporting its schema (`pg_dump --schema`) and restoring it on a new instance. Dedicated mode is a configuration of the same code, not a fork (`app.deployment-mode=dedicated`, `app.dedicated-tenant=<slug>`)."*
+
+#### Tooling:
+- **PowerShell**: [`scripts/migration/export-tenant-to-dedicated.ps1`](file:///e:/PG-Project/scripts/migration/export-tenant-to-dedicated.ps1)
+- **POSIX Shell**: [`scripts/migration/export-tenant-to-dedicated.sh`](file:///e:/PG-Project/scripts/migration/export-tenant-to-dedicated.sh)
+
+#### Export Bundle Contents:
+1. **Schema Dump Archive**: `t_<slug>` exported using `pg_dump --schema=t_<slug> -F c -b -f <slug>_export.dump` and verified via `pg_restore --list`.
+2. **Dedicated Docker Compose Configuration**: Pre-configured `docker-compose.dedicated.yml` with:
+   ```yaml
+   environment:
+     APP_DEPLOYMENT_MODE: dedicated
+     APP_DEDICATED_TENANT: <slug>
+     APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+     DB_URL: jdbc:postgresql://pgcrm-db:5432/pgcrmdb
+   ```
+3. **Dedicated Restoration Script**: Automated `restore-dedicated.ps1` / `restore-dedicated.sh` restoring `t_<slug>` into the dedicated PostgreSQL instance and registering the tenant in `platform.tenants`.
+
+### 11.3 Standalone Verification & Platform API
+
+- **Standalone Script**: [`scripts/migration/verify-migration.ps1`](file:///e:/PG-Project/scripts/migration/verify-migration.ps1) and [`scripts/migration/verify-migration.sh`](file:///e:/PG-Project/scripts/migration/verify-migration.sh) allow operators to re-run data verification at any time prior to decommissioning the old single-tenant stack.
+- **REST API**: Platform administrators can verify migration integrity via:
+  ```http
+  GET /platform/api/tenants/{slug}/verify-migration?sourceSchema=public
+  Headers: X-Platform-Key: <key>
+  ```
+  Returns `MigrationVerificationResult` detailing table count matches, sample comparisons, and overall pass/fail status.
+
+
 
 
 

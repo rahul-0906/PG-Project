@@ -133,8 +133,8 @@ public class TenantProvisioningService {
             final String passwordHash = passwordEncoder.encode(tempPassword);
             final String insertOwnerSql = String.format("""
                     INSERT INTO %s.users (
-                        id, full_name, email, password_hash, role, must_change_password, is_deleted, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, 'PG_OWNER', true, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        id, full_name, email, password, role, active, must_change_password, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, 'PG_OWNER', true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     """, schemaName);
             jdbcTemplate.update(insertOwnerSql, ownerUserId, ownerName, ownerEmail, passwordHash);
             log.info("✓ Created PG_OWNER account '{}' in schema '{}'", ownerEmail, schemaName);

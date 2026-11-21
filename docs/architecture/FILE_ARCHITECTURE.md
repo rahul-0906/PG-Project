@@ -101,8 +101,10 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 * **`entity/TenantSettings.java`**: JPA entity mapped to `t_<slug>.tenant_settings` containing per-tenant branding, feature toggles, and encrypted credentials.
 * **`service/TenantSettingsService.java`**: Manages CRUD for tenant settings with transparent AES-GCM encryption on save and decryption on read.
 * **`TenantProvisioningService.java`**: End-to-end tenant provisioning engine (schema creation, Flyway execution, default settings, owner account) with automated rollback on failure.
+* **`TenantMigrationVerifier.java`**: Comprehensive data integrity verification engine for client migrations. Compares exact row counts across all 19 core business tables and inspects invoice/payment samples with fail-closed discrepancy reporting.
+* **`dto/MigrationVerificationResult.java`**: Structured data transfer record conveying table count matches, sample comparisons, discrepancies, and overall migration verification status.
 * **`PlatformAdminAuthFilter.java`**: Authenticates platform administration endpoints (`/platform/api/**`) using `X-Platform-Key` header with `ROLE_PLATFORM_ADMIN`.
-* **`controller/PlatformAdminController.java`**: Exposes REST endpoints for tenant creation, suspension, activation, listing, and soft-deletion.
+* **`controller/PlatformAdminController.java`**: Exposes REST endpoints for tenant creation, suspension, activation, listing, soft-deletion, and migration verification (`GET /platform/api/tenants/{slug}/verify-migration`).
 
 #### `TwilioConfig.java`
 * **Structural Purpose**: Twilio integration settings mapping.
@@ -436,10 +438,13 @@ The backend codebase is written in Java 23 and built on Spring Boot 3.2.5. It fo
 
 ---
 
-## 5. Root-Level Files Registry
+## 5. Root-Level Files Registry & Migration Tooling
 
-The root-level directory contains critical launch scripts, compliance documentation, and general guidelines:
+The root-level and scripts directory contains critical launch scripts, compliance documentation, and migration utilities:
 
+* **`scripts/migration/migrate-client-to-tenant.ps1` / `.sh`**: Full-lifecycle migration script migrating a single-tenant database into an isolated `t_<slug>` schema with automated DDL migration, data streaming with foreign key disable, sequence synchronization, and 100% data integrity verification.
+* **`scripts/migration/export-tenant-to-dedicated.ps1` / `.sh`**: Exports a shared tenant schema (`t_<slug>`) into a verified compressed dump and generates dedicated deployment bundle (`docker-compose.dedicated.yml`, `restore-dedicated.ps1`/`.sh`).
+* **`scripts/migration/verify-migration.ps1` / `.sh`**: Standalone read-only data integrity verifier comparing source DB tables/samples against target `t_<slug>`.
 * **`scripts/dev/start_core.bat`**: The local development startup launcher for PG-CORE (hostel operations).
 * **`docker-compose.yml`**: Docker Compose configuration for the full PG-Core stack (database, backend, frontend).
 * **`AGENTS.md`**: The AI Agent operational manual with mandatory rules and architecture guide.

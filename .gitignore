@@ -71,7 +71,10 @@ tenants/
 # ── Mockup designs ────────────────────────────────────────
 PG UI.png
 
-# PostgreSQL backup dumps
+# PostgreSQL backup dumps & migration artifacts
 backups/*.dump
 backups/*.sql
+*.dump
+scripts/migration/exports/
+scripts/migration/reports/
 
