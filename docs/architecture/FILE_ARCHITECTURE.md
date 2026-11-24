@@ -21,31 +21,43 @@ This document acts as a granular registry of the entire codebase, detail by deta
 │   │   ├── ARCHITECTURE.md
 │   │   ├── CALCULATIONS_ENGINE.md
 │   │   ├── FILE_ARCHITECTURE.md    # This file
+│   │   ├── POC_DOCUMENT.md         # Consolidated POC specifications & test accounts
 │   │   ├── WORKFLOWS.md
 │   │   └── sop.md
 │   ├── API_REFERENCE.md
+│   ├── AUDIT.md                    # Multi-Tenancy Architecture Audit
 │   ├── CODING_STANDARDS.md
 │   ├── DATA_MODEL.md
-│   ├── DEVELOPER_SETUP.md
-│   ├── DOCKER_E2E_RUNBOOK.md
+│   ├── DEVELOPER_SETUP.md          # Environment setup & Dev Wipe/Persistence Guide
+│   ├── E2E_TESTING_RUNBOOK.md      # Consolidated E2E test & Docker launch runbook
 │   ├── OPERATIONS.md
 │   └── SECURITY.md
 ├── scripts/
 │   ├── dev/
 │   │   └── start_core.bat          # Windows launcher for PG-CORE services
+│   ├── migration/                  # Tenant migration & export tooling
+│   │   ├── migrate-client-to-tenant.ps1 / .sh
+│   │   ├── export-tenant-to-dedicated.ps1 / .sh
+│   │   └── verify-migration.ps1 / .sh
 │   └── ops/
-│       ├── backup_pgcrmdb.bat      # Windows backup script
-│       ├── backup_pgcrmdb.sh       # Linux backup script
-│       ├── restore_pgcrmdb.bat     # Windows restore script
-│       ├── restore_pgcrmdb.sh      # Linux restore script
+│       ├── backup-all-tenants.ps1  # Nightly per-schema backup with tested restore
+│       ├── backup-all-tenants.sh   # POSIX bash nightly backup runner
+│       ├── backup_pgcrmdb.bat      # Single-tenant Windows backup script
+│       ├── backup_pgcrmdb.sh       # Single-tenant Linux backup script
+│       ├── restore_pgcrmdb.bat     # Windows test restore script
+│       ├── restore_pgcrmdb.sh      # Linux test restore script
 │       ├── healthcheck.bat         # Windows health check
-│       ├── healthcheck.sh          # Linux health check
-│       └── backup.sh               # Legacy backup script
-├── infrastructure/                 # Infrastructure configuration
+│       └── healthcheck.sh          # Linux health check
+├── infrastructure/
+│   └── prod/                       # Production deployment templates
+│       ├── docker-compose.prod.yml
+│       ├── nginx-site.conf
+│       ├── tenant-config.yml
+│       └── .env.example
 ├── .env.example                    # Template Environment File
-├── docker-compose.yml              # Docker Compose (pgcore-db, pgcore-backend, pgcore-frontend)
-├── AGENTS.md                       # AI Agent Operational Manual
-└── README.md
+├── docker-compose.yml              # Local Docker Compose (pgcore-db, pgcore-backend, pgcore-frontend)
+├── AGENTS.md                       # AI Agent Operational Manual & Architectural Rules
+└── README.md                       # System Overview & Dual-Deployment Documentation
 ```
 
 ---

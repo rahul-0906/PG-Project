@@ -828,9 +828,9 @@ Once staging is validated, deploy the production stack on the production domain 
 
 ## 8. Summary of Maintenance Operations
 
-* **Database Backups**: Execute backups on the PostgreSQL container using the backup utility script `/opt/pgcrm/scripts/backup.sh` scheduled via cron:
+* **Database Backups**: Execute automated nightly backups with tested restore verification using `/opt/pgcrm/scripts/ops/backup-all-tenants.sh` scheduled via cron:
   ```bash
-  0 2 * * * /bin/bash /opt/pgcrm/scripts/backup.sh
+  0 2 * * * /bin/bash /opt/pgcrm/scripts/ops/backup-all-tenants.sh
   ```
 * **Monitoring Logs**: Monitor live container output using standard Docker logging tools:
   ```bash

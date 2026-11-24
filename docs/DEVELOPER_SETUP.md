@@ -119,33 +119,58 @@ Frontend will be available at: **http://localhost:5173**
 
 ## 5. Flyway Database Migrations
 
-Flyway automatically runs **all pending migrations** when Spring Boot starts.
+Flyway automatically runs **all pending migrations** when Spring Boot starts:
+- `db/migration/platform/` applied once to the `platform` registry schema.
+- `db/migration/tenant/` applied to each active tenant schema (`t_<slug>`).
 
-### Migration Directory
+### Migration Directories
 
 ```
 core-pg-crm/backend/src/main/resources/db/migration/
-├── V1__init_schema.sql
-├── V2__drop_multi_tenant.sql
-...
-└── V17__add_allow_super_admin_access.sql
+├── platform/
+│   └── V1__init_platform.sql
+└── tenant/
+    ├── V1__init_schema.sql
+    ├── ...
+    ├── V18__add_invoice_overdue_audit_action.sql
+    └── V19__create_tenant_settings.sql
 ```
 
-### How It Works
+### 5.1 Dev Profile: Database Reset & Persistence Strategy
 
-1. On startup, Flyway checks the `flyway_schema_history` table in the database.
-2. Any migration file with a version number not yet recorded is executed in order.
-3. Applied migrations are checksummed — modifying them causes a startup error.
+During development, it is often necessary to reset the local database to a clean, well-defined initial state with demo data. However, for subsequent development runs, you want database modifications and user data to persist across application restarts.
 
-### Adding a New Migration
+The database clean-and-migration behavior is controlled by the `DB_WIPE_ON_STARTUP` environment variable, which is parsed by Spring Boot under the `dev` profile.
 
+> [!CAUTION]
+> **`DB_WIPE_ON_STARTUP=true` is ONLY effective in the `dev` and `test` profiles.**
+> `MultiTenantFlywayConfig.java` strictly forbids wiping when running under the `prod` profile, and `application-prod.yml` enforces `spring.flyway.clean-disabled: true` as an additional safeguard.
+
+#### Phase 1: The Wipe (Initial Boot)
+To completely wipe your local `pgcrmdb` and populate it with fresh schema structures and seeded data:
+1. Open your root `.env` file at `E:\PG-Project\.env`.
+2. Set:
+   ```env
+   DB_WIPE_ON_STARTUP=true
+   ```
+3. Start the application (`scripts/dev/start_core.bat` or `mvn spring-boot:run`).
+4. On startup, Flyway drops all existing tables and views, runs migrations from scratch, and triggers `DatabaseSeeder` to load default administrative credentials.
+
+#### Phase 2: Persistence (Subsequent Development Runs)
+Once your database is initialized, preserve your data across restarts:
+1. Open `.env`.
+2. Set:
+   ```env
+   DB_WIPE_ON_STARTUP=false
+   ```
+3. Restart the backend. Flyway skips the clean operation, only applies new migrations, and preserves all existing records.
+
+### 5.2 Adding a New Migration
+Examine the highest existing version under `db/migration/tenant/` (currently `V19`) and increment:
 ```powershell
-# Create new file (replace N with next version number after V17)
-# Current latest: V17 → New migration starts at V18
-New-Item "E:\PG-Project\core-pg-crm\backend\src\main\resources\db\migration\V18__your_description.sql"
+New-Item "E:\PG-Project\core-pg-crm\backend\src\main\resources\db\migration\tenant\V20__your_description.sql"
 ```
-
-Then write your SQL and restart the backend.
+Write your SQL and restart the backend. Never modify existing migration files.
 
 ---
 

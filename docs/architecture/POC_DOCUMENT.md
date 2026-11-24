@@ -123,3 +123,15 @@ All secrets (DB password, JWT secret, API keys) are passed via `.env` environmen
 - [x] PII anonymization scheduler operational (daily 3AM)
 - [x] Audit trail captures all business operations
 - [x] Role-based access enforced at the endpoint level
+
+---
+
+## 8. Test Accounts (Dev Seed Reference)
+
+| Role | Email | Default Password | Must Change Password |
+| :--- | :--- | :--- | :--- |
+| `SUPER_ADMIN` | Configured in `DatabaseSeeder.java` | `TempPass@123` | Yes (`mustChangePassword = true`) |
+| `PG_OWNER` | Configured in `DatabaseSeeder.java` | `TempPass@123` | Yes (`mustChangePassword = true`) |
+
+> [!WARNING]
+> All seeded demo credentials are strictly for `dev` and `test` environments and must never appear in production.

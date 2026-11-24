@@ -55,7 +55,7 @@ crontab -e
 | Script | Platform |
 | :--- | :--- |
 | `restore_pgcrmdb.bat` | Windows |
-| `restore_pgcrmdb_linux.sh` | Linux |
+| `restore_pgcrmdb.sh` | Linux |
 
 ### 2.2 Running a Restore Test
 
@@ -66,8 +66,8 @@ E:\PG-Project\scripts\ops\restore_pgcrmdb.bat E:\PG-Project\backups\pgcrmdb_2026
 
 **Linux:**
 ```bash
-chmod +x /opt/pgcrm/scripts/ops/restore_pgcrmdb_linux.sh
-/opt/pgcrm/scripts/ops/restore_pgcrmdb_linux.sh /opt/pgcrm/backups/pgcrmdb_2026-11-19_02-00.dump
+chmod +x /opt/pgcrm/scripts/ops/restore_pgcrmdb.sh
+/opt/pgcrm/scripts/ops/restore_pgcrmdb.sh /opt/pgcrm/backups/pgcrmdb_2026-11-19_02-00.dump
 ```
 
 ### 2.3 Verifying the Restore
