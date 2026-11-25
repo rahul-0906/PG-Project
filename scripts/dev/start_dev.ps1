@@ -94,7 +94,11 @@ Write-Host ""
 
 # 4. Launch React Frontend
 Write-Host "[4/4] Starting React Frontend (Port 5173)..." -ForegroundColor Yellow
-$frontendCmd = "cd /d `"$frontendDir`" && title PG CRM Frontend [Port 5173] && if not exist node_modules (echo Installing dependencies... && call npm install) && echo Starting Vite Dev Server... && npm run dev"
+if (-not (Test-Path "$frontendDir\node_modules")) {
+    Write-Host "      Installing frontend dependencies (first run)..." -ForegroundColor DarkGray
+    Start-Process cmd.exe -ArgumentList "/c", "cd /d `"$frontendDir`" && npm install" -Wait -NoNewWindow
+}
+$frontendCmd = "cd /d `"$frontendDir`" && title PG CRM Frontend [Port 5173] && echo Starting Vite Dev Server... && npm run dev"
 Start-Process cmd.exe -ArgumentList "/k", $frontendCmd
 Write-Host "      [OK] Frontend window launched in background." -ForegroundColor Green
 Write-Host ""
