@@ -1357,8 +1357,8 @@ export default function ManagerGuests() {
 
       {showCheckInModal && selectedBedInfo && createPortal(
         <div className="modal-overlay" style={{ backdropFilter: 'none', WebkitBackdropFilter: 'none' }}>
-          <div className="modal-content card fade-in-up animate-fade-in" style={{ maxWidth: 650, width: '100%' }}>
-            <div className="flex justify-between items-center mb-4">
+          <div className="modal-content card fade-in-up animate-fade-in" style={{ maxWidth: 650, width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+            <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 flex-shrink-0">
               <h3 className="font-heading text-base font-semibold text-slate-900">
                 New Guest Check-In
               </h3>
@@ -1371,8 +1371,9 @@ export default function ManagerGuests() {
               </button>
             </div>
 
-            <form onSubmit={checkIn}>
-              <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 text-xs font-semibold text-slate-600 mb-4 flex justify-between items-center">
+            <form onSubmit={checkIn} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto flex-1 pr-1.5 space-y-4 py-1">
+                <div className="bg-slate-50 px-4 py-3 rounded-xl border border-slate-100 text-xs font-semibold text-slate-600 mb-0 flex justify-between items-center">
                 <div>
                   <span className="text-slate-400">Selected Bed: </span>
                   <span className="text-primary font-bold">{displayedBedAllocation}</span>
@@ -1587,8 +1588,9 @@ export default function ManagerGuests() {
                   </div>
                 )}
               </div>
+              </div>
 
-              <div className="flex justify-end gap-2 mt-6">
+              <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-slate-100 bg-white flex-shrink-0">
                 <button type="button" className="btn btn-ghost" onClick={handleCloseCheckInModal}>Cancel</button>
                 <button 
                   type="submit" 
